@@ -46,6 +46,10 @@ dependencies:
   lmt_models:
     path: ../../packages/lmt_models
   http: ^1.2.2
+  package_info_plus: ^8.1.2
+  flutter_map_marker_popup: ^8.1.0
+  flutter_map_animations: ^0.9.0
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:

@@ -57,7 +57,8 @@ class LastMileTracker:
 
     def _init_device_id(self):
         saved_id = self.config.get("device_id")
-        if saved_id: return saved_id
+        if saved_id:
+            return saved_id
         mac = ubinascii.hexlify(machine.unique_id()).decode()
         new_id = f"Last-Mile-{mac[-4:].upper()}"
         self.config.set("device_id", new_id)
@@ -101,7 +102,7 @@ class LastMileTracker:
                     if new_data['shock'] > shock_threshold:
                         Logger.log(f"Shock Alert: {new_data['shock']}")
                         self.shock_buffer.add(new_data['shock'], time.ticks_ms())
-                except Exception as e:
+                except Exception:
                     self.diagnostics.increment("sensor_read_fails")
             
             await asyncio.sleep_ms(100) # 10Hz sampling
@@ -164,11 +165,39 @@ class LastMileTracker:
             await asyncio.sleep(5) # Every 5s
 
     async def main_loop(self):
+        # Initialize WiFi
+        from lib.wifi_manager import WiFiManager
+        self.wifi = WiFiManager(self.config, self._set_led)
+        
+        # Handle BLE writes
+        def handle_ble_write(conn_handle, value_handle, value):
+            if value_handle == self.ble._wifi_config_handle:
+                try:
+                    # Format: "SSID:PASSWORD"
+                    config_str = value.decode()
+                    if ":" in config_str:
+                        ssid, password = config_str.split(":", 1)
+                        if ssid:
+                            Logger.log(f"BLE: Received WiFi Config: {ssid}")
+                            self.config.set("wifi_ssid", ssid)
+                            self.config.set("wifi_pass", password)
+                            # Trigger connection attempt (async)
+                            asyncio.create_task(self.wifi.connect())
+                except Exception as e:
+                    Logger.log(f"BLE: WiFi Config Error: {e}")
+            else:
+                # Pass to OTA handler
+                self.ota.handle_command(conn_handle, value_handle, value)
+
+        self.ble.set_write_callback(handle_ble_write)
         self.ble.start_advertising()
+        
+        # Start tasks
         await asyncio.gather(
             self.sensor_task(),
             self.update_task(),
-            self.maintenance_task()
+            self.maintenance_task(),
+            self.wifi.manage_connection()
         )
 
 if __name__ == "__main__":

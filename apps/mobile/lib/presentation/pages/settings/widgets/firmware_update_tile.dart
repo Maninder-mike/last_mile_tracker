@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/constants/ble_constants.dart';
 import '../../../../data/services/ota_service.dart';
-import '../../../providers/providers.dart';
+import '../../../providers/service_providers.dart';
+import '../../../providers/ble_providers.dart';
 
 class FirmwareUpdateTile extends ConsumerWidget {
   const FirmwareUpdateTile({super.key});
@@ -84,11 +84,17 @@ class FirmwareUpdateTile extends ConsumerWidget {
       ),
       trailing: isChecking
           ? const CupertinoActivityIndicator(radius: 8)
-          : const Icon(
-              CupertinoIcons.chevron_right,
-              size: 16,
-              color: CupertinoColors.systemGrey2,
-            ),
+          : (state.status == OtaStatus.error
+                ? const Icon(
+                    CupertinoIcons.refresh_bold,
+                    size: 16,
+                    color: CupertinoColors.activeBlue,
+                  )
+                : const Icon(
+                    CupertinoIcons.chevron_right,
+                    size: 16,
+                    color: CupertinoColors.systemGrey2,
+                  )),
       onTap: isChecking
           ? null
           : () {
@@ -159,15 +165,25 @@ class FirmwareUpdateTile extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: state.progress,
-              backgroundColor: CupertinoColors.systemGrey5,
-              valueColor: const AlwaysStoppedAnimation(
-                CupertinoColors.activeBlue,
-              ),
-              minHeight: 6,
+          Container(
+            height: 6,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: CupertinoColors.systemGrey5,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Stack(
+              children: [
+                FractionallySizedBox(
+                  widthFactor: state.progress.clamp(0.0, 1.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.activeBlue,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

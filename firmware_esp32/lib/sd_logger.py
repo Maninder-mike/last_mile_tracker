@@ -1,6 +1,7 @@
 # SD Card Logger for offline data backup
 from machine import Pin, SPI
 import os
+import time
 
 class SDLogger:
     """Log sensor data to SD card as CSV backup"""
@@ -25,7 +26,7 @@ class SDLogger:
             # Check if already mounted
             try:
                 os.stat('/sd')
-            except:
+            except OSError:
                 os.mount(self._sd, '/sd')
                 
             self._mounted = True

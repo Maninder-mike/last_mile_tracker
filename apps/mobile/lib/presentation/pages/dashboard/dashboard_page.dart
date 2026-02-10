@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:last_mile_tracker/core/constants/app_constants.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../providers/providers.dart';
+import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
 import '../../widgets/speedometer.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/floating_header.dart';

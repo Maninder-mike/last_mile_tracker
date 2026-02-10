@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../providers/providers.dart';
+import '../providers/ble_providers.dart';
 
 class ConnectionStatusIcon extends ConsumerWidget {
   const ConnectionStatusIcon({super.key});

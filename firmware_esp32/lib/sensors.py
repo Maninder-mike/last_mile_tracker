@@ -59,7 +59,8 @@ class SensorHub:
         except Exception as e:
             print(f"MPU6050 init failed: {e}")
             self._mpu = None
-            if self.diagnostics: self.diagnostics.increment("i2c_errors")
+            if self.diagnostics:
+                self.diagnostics.increment("i2c_errors")
             
         try:
             self._ow_pin = Pin(4)
@@ -71,7 +72,8 @@ class SensorHub:
         except Exception as e:
             print(f"DS18B20 init failed: {e}")
             self._temp_roms = []
-            if self.diagnostics: self.diagnostics.increment("onewire_errors")
+            if self.diagnostics:
+                self.diagnostics.increment("onewire_errors")
         
         self._gps_uart = UART(1, baudrate=9600, tx=21, rx=20)
         self._last_gps = {"lat": 0.0, "lon": 0.0, "speed": 0.0, "fix": False}
@@ -96,7 +98,8 @@ class SensorHub:
             self._bat_adc = None
 
     def read_battery_mv(self) -> int:
-        if not self._bat_adc: return 0
+        if not self._bat_adc:
+            return 0
         try:
             # Raw 0-4095. 
             # Voltage divider logic usually needed. 
@@ -106,14 +109,14 @@ class SensorHub:
             raw = self._bat_adc.read()
             mv = (raw * 3300 * 2) // 4095
             return int(mv)
-        except:
+        except Exception:
             return 0
 
     def read_internal_c(self) -> float:
         try:
             f = esp32.raw_temperature()
             return (f - 32) / 1.8
-        except:
+        except Exception:
             return 0.0
             
     async def read_all(self) -> dict:
@@ -134,7 +137,8 @@ class SensorHub:
             try:
                 shock = self._mpu.get_shock_value()
             except Exception:
-                if self.diagnostics: self.diagnostics.increment("i2c_errors")
+                if self.diagnostics:
+                    self.diagnostics.increment("i2c_errors")
 
         return {
             "lat": self._last_gps["lat"],
@@ -169,7 +173,8 @@ class SensorHub:
                 pass
     
     def _parse_coord(self, value: str, direction: str) -> float:
-        if not value or '.' not in value: return 0.0
+        if not value or '.' not in value:
+            return 0.0
         try:
             dot_idx = value.find('.')
             degrees = float(value[:dot_idx-2])

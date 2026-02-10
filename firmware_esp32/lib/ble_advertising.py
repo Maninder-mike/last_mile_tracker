@@ -49,13 +49,19 @@ class BLEAdvertiser:
             bluetooth.FLAG_WRITE_NO_RESPONSE,
         )
         
-        ENV_SERVICE = (
-            ENV_SENSING_UUID,
-            (SENSOR_CHAR, OTA_CONTROL_CHAR, OTA_DATA_CHAR),
+        # WiFi Config: Write Only
+        WIFI_CONFIG_CHAR = (
+            bluetooth.UUID("0000FF01-0000-1000-8000-00805F9B34FB"),
+            bluetooth.FLAG_WRITE,
         )
         
-        # handles: sensor, ota_ctrl, ota_data
-        ((self._sensor_handle, self._ota_ctrl_handle, self._ota_data_handle),) = self._ble.gatts_register_services((ENV_SERVICE,))
+        ENV_SERVICE = (
+            ENV_SENSING_UUID,
+            (SENSOR_CHAR, OTA_CONTROL_CHAR, OTA_DATA_CHAR, WIFI_CONFIG_CHAR),
+        )
+        
+        # handles: sensor, ota_ctrl, ota_data, wifi_config
+        ((self._sensor_handle, self._ota_ctrl_handle, self._ota_data_handle, self._wifi_config_handle),) = self._ble.gatts_register_services((ENV_SERVICE,))
     
     def _irq(self, event, data):
         if event == _IRQ_CENTRAL_CONNECT:

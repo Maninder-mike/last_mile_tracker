@@ -11,7 +11,9 @@ RETRY_DELAY=2
 FILES=(
     "boot.py:boot.py"
     "main.py:main.py"
+    "lib/wifi_manager.py:lib/wifi_manager.py"
     "lib/ble_advertising.py:lib/ble_advertising.py"
+    "lib/ble_ota.py:lib/ble_ota.py"
     "lib/sensors.py:lib/sensors.py"
     "lib/st7789_display.py:lib/st7789_display.py"
     "lib/sd_logger.py:lib/sd_logger.py"
@@ -78,8 +80,8 @@ build_upload_command() {
     local port="$1"
     local cmd="$MPREMOTE connect $port"
 
-    # Create lib directory first
-    cmd+=" + fs mkdir :lib"
+    # Create lib directory first (safely)
+    cmd+=" + run tools/ensure_lib.py"
 
     # Chain all file copy operations
     for entry in "${FILES[@]}"; do

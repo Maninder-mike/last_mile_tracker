@@ -22,6 +22,8 @@ class SensorReadings extends Table {
   IntColumn get rssi => integer().nullable()();
   IntColumn get resetReason => integer().nullable()();
   IntColumn get uptime => integer().nullable()();
+  TextColumn get wifiSsid => text().nullable()();
+  IntColumn get wifiSignal => integer().nullable()();
 
   // Sync Status
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();

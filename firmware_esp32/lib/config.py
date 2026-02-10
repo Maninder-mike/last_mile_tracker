@@ -1,5 +1,4 @@
 import json
-import os
 
 class Config:
     CONFIG_FILE = "config.json"

@@ -1,6 +1,5 @@
 import os
 import time
-import machine
 
 class Logger:
     MAX_SIZE = 10 * 1024  # 10KB
@@ -40,8 +39,10 @@ class Logger:
             try:
                 stat = os.stat(Logger.LOG_FILE)
                 if stat[6] > Logger.MAX_SIZE:
-                    try: os.remove("log.bak")
-                    except OSError: pass
+                    try:
+                        os.remove("log.bak")
+                    except OSError:
+                        pass
                     os.rename(Logger.LOG_FILE, "log.bak")
             except OSError:
                 pass

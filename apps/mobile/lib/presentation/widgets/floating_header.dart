@@ -4,50 +4,72 @@ import 'connection_status_icon.dart';
 
 class FloatingHeader extends StatelessWidget {
   final String title;
+  final bool showBackButton;
+  final Widget? trailing;
 
-  const FloatingHeader({super.key, required this.title});
+  const FloatingHeader({
+    super.key,
+    required this.title,
+    this.showBackButton = false,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = CupertinoTheme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final topPadding = MediaQuery.of(context).padding.top + 8;
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Left: Title
-        Positioned(
-          top: topPadding,
-          left: 16,
-          child: GlassContainer(
-            borderRadius: 30,
-            opacity: 0.1,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: isDark ? CupertinoColors.white : CupertinoColors.black,
-                letterSpacing: -0.5,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left: Back Button + Title
+            if (showBackButton) ...[
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => Navigator.maybePop(context),
+                child: GlassContainer(
+                  borderRadius: 30,
+                  opacity: 0.1,
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(
+                    CupertinoIcons.chevron_left,
+                    size: 20,
+                    color: isDark
+                        ? CupertinoColors.white
+                        : CupertinoColors.black,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            GlassContainer(
+              borderRadius: 30,
+              opacity: 0.1,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? CupertinoColors.white : CupertinoColors.black,
+                  letterSpacing: -0.5,
+                ),
               ),
             ),
-          ),
+            const Spacer(),
+            // Right: Trailing widget or default connection icon
+            GlassContainer(
+              borderRadius: 30,
+              opacity: 0.1,
+              padding: const EdgeInsets.all(12),
+              child: trailing ?? const ConnectionStatusIcon(),
+            ),
+          ],
         ),
-        // Right: Connection Status
-        Positioned(
-          top: topPadding,
-          right: 16,
-          child: GlassContainer(
-            borderRadius: 30,
-            opacity: 0.1,
-            padding: const EdgeInsets.all(12),
-            child: const ConnectionStatusIcon(),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

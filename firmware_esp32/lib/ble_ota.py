@@ -1,6 +1,5 @@
 import os
 import machine
-import ubinascii
 import hashlib
 from lib.logger import Logger
 
@@ -19,7 +18,8 @@ class BleOta:
     
     def handle_command(self, cmd_bytes):
         """Handle incoming OTA commands from BLE"""
-        if not cmd_bytes: return
+        if not cmd_bytes:
+            return
         
         cmd = cmd_bytes[0]
         data = cmd_bytes[1:]
@@ -57,7 +57,8 @@ class BleOta:
 
     def _handle_data(self, data):
         """Append data chunk"""
-        if not self._file_handle: return
+        if not self._file_handle:
+            return
         
         try:
             self._file_handle.write(data)
@@ -74,7 +75,8 @@ class BleOta:
 
     def _handle_end(self, data):
         """Finish: [checksum(32)]"""
-        if not self._file_handle: return
+        if not self._file_handle:
+            return
         self._close_file()
         
         try:
@@ -86,8 +88,10 @@ class BleOta:
                 self._apply_update()
             else:
                 Logger.log("OTA: Checksum MISMATCH!")
-                try: os.remove(self._update_filename)
-                except: pass
+                try:
+                    os.remove(self._update_filename)
+                except OSError:
+                    pass
                 
         except Exception as e:
             Logger.log(f"OTA End Error: {e}")
@@ -105,11 +109,13 @@ class BleOta:
             # Backup
             try: 
                 os.remove(f"{target}.bak")
-            except: pass
+            except OSError:
+                pass
             
             try:
                 os.rename(target, f"{target}.bak")
-            except: pass
+            except OSError:
+                pass
             
             # Rename
             os.rename(self._update_filename, target)

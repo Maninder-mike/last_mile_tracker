@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:last_mile_tracker/core/constants/app_constants.dart';
-import 'package:last_mile_tracker/data/database/app_database.dart';
-import 'package:last_mile_tracker/presentation/providers/providers.dart';
+import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
+import 'package:lmt_models/lmt_models.dart' as models;
 import '../../widgets/glass_container.dart';
 import '../../widgets/floating_header.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -89,7 +89,7 @@ class LogsPage extends ConsumerWidget {
 }
 
 class _LogItem extends StatelessWidget {
-  final SensorReading reading;
+  final models.SensorReading reading;
   const _LogItem({required this.reading});
 
   @override
@@ -155,7 +155,7 @@ class _LogItem extends StatelessWidget {
 }
 
 class _LogCard extends StatelessWidget {
-  final SensorReading reading;
+  final models.SensorReading reading;
   const _LogCard({required this.reading});
 
   @override

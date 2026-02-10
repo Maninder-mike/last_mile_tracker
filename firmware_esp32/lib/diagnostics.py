@@ -1,4 +1,4 @@
-import time
+
 try:
     from lib.config import Config
 except ImportError:

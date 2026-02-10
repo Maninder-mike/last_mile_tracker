@@ -5,6 +5,8 @@
 venv/
 ENV/
 env/
+.env
+
 
 # IDEs
 .vscode/

@@ -28,13 +28,12 @@ class GlassContainer extends StatelessWidget {
     final theme = CupertinoTheme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return ClipRRect(
+    Widget current = ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
         child: Container(
           padding: padding,
-          margin: margin,
           decoration:
               decoration ??
               BoxDecoration(
@@ -66,5 +65,11 @@ class GlassContainer extends StatelessWidget {
         ),
       ),
     );
+
+    if (margin != null) {
+      current = Padding(padding: margin!, child: current);
+    }
+
+    return current;
   }
 }
