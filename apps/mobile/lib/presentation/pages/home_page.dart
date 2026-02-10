@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show VerticalDivider;
+import 'package:flutter/material.dart' show VerticalDivider, Colors;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:last_mile_tracker/core/constants/app_constants.dart';
@@ -20,7 +20,7 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  int _currentIndex = 0;
+  int _currentIndex = 1; // Default to Dashboard (index 1)
   bool _checkedForUpdate = false;
 
   @override
@@ -33,6 +33,16 @@ class _HomePageState extends ConsumerState<HomePage> {
         ref.read(otaServiceProvider).checkForUpdate(isAutoCheck: true);
       }
     });
+
+    // Enter full-screen mode
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
   }
 
   final List<({Widget child, String title, IconData icon})> _pages = [
@@ -82,10 +92,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             Expanded(
               child: CupertinoPageScaffold(
-                navigationBar: CupertinoNavigationBar(
-                  middle: Text(_pages[_currentIndex].title),
-                  trailing: const ConnectionStatusIcon(),
-                ),
+                // Removed navigationBar for full screen experience
                 child: _pages[_currentIndex].child,
               ),
             ),

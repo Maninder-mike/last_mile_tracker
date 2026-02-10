@@ -1,14 +1,14 @@
-name: Flutter CI
+name: Mobile CI
 
 on:
   push:
     branches: [ main ]
     paths:
-      - 'apps/driver/**'
+      - 'apps/mobile/**'
   pull_request:
     branches: [ main ]
     paths:
-      - 'apps/driver/**'
+      - 'apps/mobile/**'
 
 jobs:
   build:
@@ -16,7 +16,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: apps/driver
+        working-directory: apps/mobile
 
     steps:
       - uses: actions/checkout@v6

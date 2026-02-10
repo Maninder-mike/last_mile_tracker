@@ -1,12 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
 import 'package:last_mile_tracker/core/constants/app_constants.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../providers/providers.dart';
 import '../../widgets/speedometer.dart';
-import '../../widgets/connection_status_icon.dart';
 import '../../widgets/glass_container.dart';
+import '../../widgets/floating_header.dart';
+import '../../widgets/empty_state_widget.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -14,8 +15,6 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final readingAsync = ref.watch(latestReadingProvider);
-    final theme = CupertinoTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final width = MediaQuery.of(context).size.width;
     final isTablet = width >= AppConstants.tabletBreakpoint;
 
@@ -24,18 +23,14 @@ class DashboardPage extends ConsumerWidget {
         children: [
           SingleChildScrollView(
             padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 60,
+              top: MediaQuery.of(context).padding.top + 16,
               left: 16,
               right: 16,
               bottom: 100,
             ),
             child: Column(
               children: [
-                _buildConnectionStatus(ref)
-                    .animate()
-                    .fadeIn(duration: 400.ms)
-                    .slideY(begin: -0.2, end: 0),
-                const SizedBox(height: 32),
+                const SizedBox(height: 80),
 
                 // Speedometer Section
                 readingAsync.when(
@@ -66,23 +61,32 @@ class DashboardPage extends ConsumerWidget {
 
                 readingAsync.when(
                   data: (reading) {
+                    if (reading == null) {
+                      return const Padding(
+                        padding: EdgeInsets.only(top: 40),
+                        child: EmptyStateWidget(
+                          icon: CupertinoIcons.device_laptop,
+                          title: 'Ready to Connect',
+                          message:
+                              'Scan for devices to start receiving telemetry data.',
+                          useGlass: true,
+                        ),
+                      );
+                    }
+
                     final children = [
                       StatCard(
                         title: 'Temperature',
-                        value: reading != null
-                            ? '${reading.temp.toStringAsFixed(1)} °C'
-                            : '---',
+                        value: '${reading.temp.toStringAsFixed(1)} °C',
                         icon: CupertinoIcons.thermometer,
                         color: CupertinoColors.systemOrange,
                       ),
                       const SizedBox(height: 16),
                       StatCard(
                         title: 'Shock',
-                        value: reading != null
-                            ? '${reading.shockValue}'
-                            : '---',
+                        value: '${reading.shockValue}',
                         icon: CupertinoIcons.waveform_circle_fill,
-                        color: (reading?.shockValue ?? 0) > 100
+                        color: (reading.shockValue) > 100
                             ? CupertinoColors.systemRed
                             : CupertinoColors.systemGreen,
                       ),
@@ -96,127 +100,14 @@ class DashboardPage extends ConsumerWidget {
                     );
                   },
                   loading: () => const SizedBox.shrink(),
-                  error: (err, _) => Text('Error: $err'),
+                  error: (err, _) => const SizedBox.shrink(),
                 ),
               ],
             ),
           ),
-
-          // Custom Glass Header
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: GlassContainer(
-              padding: const EdgeInsets.only(bottom: 12),
-              borderRadius: 0,
-              opacity: 0.1,
-              border: Border(
-                bottom: BorderSide(
-                  color: isDark
-                      ? CupertinoColors.white.withValues(alpha: 0.1)
-                      : CupertinoColors.black.withValues(alpha: 0.05),
-                  width: 0.5,
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    height: 44,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Text(
-                          'Dashboard',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? CupertinoColors.white
-                                : CupertinoColors.black,
-                          ),
-                        ),
-                        const Positioned(
-                          right: 0,
-                          child: ConnectionStatusIcon(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          const FloatingHeader(title: 'Dashboard'),
         ],
       ),
-    );
-  }
-
-  Widget _buildConnectionStatus(WidgetRef ref) {
-    final connectionState = ref.watch(bleConnectionStateProvider);
-    final bleService = ref.watch(bleServiceProvider);
-
-    return connectionState.when(
-      data: (state) {
-        final isConnected = state == BluetoothConnectionState.connected;
-
-        if (!isConnected && bleService.isScanning) {
-          return GlassContainer(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            borderRadius: 20,
-            opacity: 0.05,
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CupertinoActivityIndicator(radius: 8),
-                SizedBox(width: 8),
-                Text(
-                  'Searching for device...',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: CupertinoColors.secondaryLabel,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return GlassContainer(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          borderRadius: 20,
-          opacity: 0.1,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isConnected
-                    ? CupertinoIcons.check_mark_circled_solid
-                    : CupertinoIcons.xmark_circle_fill,
-                color: isConnected
-                    ? CupertinoColors.activeGreen
-                    : CupertinoColors.systemRed,
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isConnected ? 'Connected' : 'Disconnected',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: isConnected
-                      ? CupertinoColors.activeGreen
-                      : CupertinoColors.systemRed,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-      loading: () => const Center(child: CupertinoActivityIndicator()),
-      error: (err, _) => Text('Error: $err'),
     );
   }
 }

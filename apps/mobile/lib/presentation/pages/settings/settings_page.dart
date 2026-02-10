@@ -11,7 +11,7 @@ import '../../providers/providers.dart';
 import '../../../core/utils/file_logger.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../widgets/glass_container.dart';
-import '../../widgets/connection_status_icon.dart';
+import '../../widgets/floating_header.dart';
 import 'connectivity_page.dart';
 import 'widgets/firmware_update_tile.dart';
 
@@ -30,8 +30,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final bleService = ref.watch(bleServiceProvider);
     final latestReading = ref.watch(latestReadingProvider).value;
-    final theme = CupertinoTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return CupertinoPageScaffold(
       backgroundColor: CupertinoColors.systemGroupedBackground,
@@ -125,6 +123,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                 await getApplicationDocumentsDirectory();
                             final file = File('${dir.path}/app_logs.txt');
                             if (await file.exists()) {
+                              // Share.shareXFiles is the correct API in share_plus 10.x
                               await Share.shareXFiles([
                                 XFile(file.path),
                               ], text: 'Last Mile Tracker Logs');
@@ -217,53 +216,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ],
           ),
 
-          // Custom Glass Header
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: GlassContainer(
-              padding: const EdgeInsets.only(bottom: 12),
-              borderRadius: 0,
-              opacity: 0.1,
-              border: Border(
-                bottom: BorderSide(
-                  color: isDark
-                      ? CupertinoColors.white.withValues(alpha: 0.1)
-                      : CupertinoColors.black.withValues(alpha: 0.05),
-                  width: 0.5,
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    height: 44,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Text(
-                          'Settings',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? CupertinoColors.white
-                                : CupertinoColors.black,
-                          ),
-                        ),
-                        const Positioned(
-                          right: 0,
-                          child: ConnectionStatusIcon(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          // Floating Header
+          const FloatingHeader(title: 'Settings'),
         ],
       ),
     );

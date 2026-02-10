@@ -164,7 +164,7 @@ class BleService {
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
     try {
-      await device.connect(autoConnect: true);
+      await device.connect();
       FileLogger.log("BLE: Connected to ${device.platformName}");
       _reconnectDelaySeconds = 1;
 

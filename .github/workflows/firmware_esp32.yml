@@ -1,0 +1,145 @@
+name: Firmware ESP32
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'firmware_esp32/**'
+      - '.github/workflows/firmware_esp32.yml'
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'firmware_esp32/**'
+      - '.github/workflows/firmware_esp32.yml'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name to release (manual run only)'
+        required: true
+        default: 'v0.0.0-manual'
+
+permissions:
+  contents: write
+
+jobs:
+  quality:
+    name: Lint & Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run Linter (Ruff)
+        run: |
+          ruff check firmware_esp32/
+          
+  build:
+    name: Build & Package
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Prepare Artifacts
+        run: |
+          mkdir -p dist
+          
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION_TAG="${{ inputs.tag_name }}"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VERSION_TAG="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION_TAG="dry-run-${{ github.sha }}"
+          fi
+          echo "Packing version: $VERSION_TAG"
+          
+          # Naming convention: firmware_<version>.zip
+          ARCHIVE_NAME="firmware_${VERSION_TAG}.zip"
+          
+          cd firmware_esp32
+          # Zip source code excluding unnecessary files
+          zip -r "../dist/$ARCHIVE_NAME" . -x "*.git*" "*.DS_Store" "venv/*" "__pycache__/*"
+          cd ..
+          
+          # Also copy main.py for raw OTA usage
+          cp firmware_esp32/main.py dist/main.py
+          
+          echo "Artifacts created in dist/:"
+          ls -l dist/
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-artifacts
+          path: dist/
+          retention-days: 1
+
+  release:
+    name: Publish Release
+    needs: build
+    # Run only on tag pushes or manual dispatch with tag
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      VERSION_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-artifacts
+          path: release_artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.VERSION_TAG }}
+          files: |
+            release_artifacts/main.py
+            release_artifacts/*.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cleanup:
+    name: Cleanup Old Releases
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Delete Older Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Cleaning up old releases, keeping the last 2..."
+          
+          # Get list of releases sorted by date descending, skipping the first 2
+          # We use json output to get reliable tag names
+          RELEASES_TO_DELETE=$(gh release list --limit 50 --json tagName --order desc --template '{{range .}}{{printf "%s\n" .tagName}}{{end}}' | tail -n +3)
+          
+          if [ -z "$RELEASES_TO_DELETE" ]; then
+            echo "No old releases to delete."
+          else
+            echo "Deleting the following releases:"
+            echo "$RELEASES_TO_DELETE"
+            
+            for tag in $RELEASES_TO_DELETE; do
+              echo "Deleting $tag..."
+              gh release delete "$tag" --yes --cleanup-tag
+            done
+          fi

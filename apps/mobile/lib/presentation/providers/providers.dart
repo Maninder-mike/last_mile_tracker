@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../../data/database/app_database.dart';
@@ -9,21 +8,32 @@ import '../../data/services/ota_service.dart';
 
 part 'providers.g.dart';
 
+// Manual Ref typedefs to workaround missing generation
+typedef AppDatabaseRef = Ref;
+typedef SensorDaoRef = Ref;
+typedef BleServiceRef = Ref;
+typedef BleConnectionStateRef = Ref;
+typedef SyncManagerRef = Ref;
+typedef OtaServiceRef = Ref;
+typedef LatestReadingRef = Ref;
+typedef RecentReadingsRef = Ref;
+typedef RecentPathRef = Ref;
+
 // Database
 @Riverpod(keepAlive: true)
-AppDatabase appDatabase(Ref ref) {
+AppDatabase appDatabase(AppDatabaseRef ref) {
   return AppDatabase();
 }
 
 // DAO
 @Riverpod(keepAlive: true)
-SensorDao sensorDao(Ref ref) {
+SensorDao sensorDao(SensorDaoRef ref) {
   final db = ref.watch(appDatabaseProvider);
   return db.sensorDao;
 }
 
 @Riverpod(keepAlive: true)
-BleService bleService(Ref ref) {
+BleService bleService(BleServiceRef ref) {
   final dao = ref.watch(sensorDaoProvider);
   final service = BleService(dao);
   service.startScanning(); // Auto-start scanning on app launch
@@ -33,7 +43,7 @@ BleService bleService(Ref ref) {
 
 // BLE Connection State Provider
 @riverpod
-Stream<BluetoothConnectionState> bleConnectionState(Ref ref) {
+Stream<BluetoothConnectionState> bleConnectionState(BleConnectionStateRef ref) {
   final service = ref.watch(bleServiceProvider);
   return service.connectionState;
 }
@@ -42,14 +52,14 @@ Stream<BluetoothConnectionState> bleConnectionState(Ref ref) {
 
 // Sync Manager
 @Riverpod(keepAlive: true)
-SyncManager syncManager(Ref ref) {
+SyncManager syncManager(SyncManagerRef ref) {
   final dao = ref.watch(sensorDaoProvider);
   return SyncManager(dao);
 }
 
 // OTA Service
 @Riverpod(keepAlive: true)
-OtaService otaService(Ref ref) {
+OtaService otaService(OtaServiceRef ref) {
   final service = OtaService();
   ref.onDispose(() => service.dispose());
   return service;
@@ -57,21 +67,21 @@ OtaService otaService(Ref ref) {
 
 // Stream of latest sensor reading for Dashboard
 @riverpod
-Stream<SensorReading?> latestReading(Ref ref) {
+Stream<dynamic> latestReading(LatestReadingRef ref) {
   final dao = ref.watch(sensorDaoProvider);
   return dao.watchLatestReading();
 }
 
 // Stream of recent readings for Logs
 @riverpod
-Stream<List<SensorReading>> recentReadings(Ref ref) {
+Stream<List<dynamic>> recentReadings(RecentReadingsRef ref) {
   final dao = ref.watch(sensorDaoProvider);
   return dao.watchLatestReadings();
 }
 
 // Stream of recent path for Map
 @riverpod
-Stream<List<SensorReading>> recentPath(Ref ref) {
+Stream<List<dynamic>> recentPath(RecentPathRef ref) {
   final dao = ref.watch(sensorDaoProvider);
   return dao.watchRecentPath();
 }

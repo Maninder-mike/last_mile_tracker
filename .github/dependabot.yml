@@ -1,9 +1,17 @@
 version: 2
 updates:
   - package-ecosystem: "pub"
-    directory: "/apps/driver"
+    directory: "/apps/mobile"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/apps/fleet_dashboard"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
+    directory: "/packages/lmt_models"
+    schedule:
+      interval: "monthly"
   - package-ecosystem: "pip"
     directory: "/firmware_esp32"
     schedule:

@@ -5,8 +5,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:last_mile_tracker/core/constants/app_constants.dart';
 import 'package:last_mile_tracker/data/database/app_database.dart';
 import 'package:last_mile_tracker/presentation/providers/providers.dart';
-import '../../widgets/connection_status_icon.dart';
 import '../../widgets/glass_container.dart';
+import '../../widgets/floating_header.dart';
+import '../../widgets/empty_state_widget.dart';
 
 class LogsPage extends ConsumerWidget {
   const LogsPage({super.key});
@@ -14,26 +15,31 @@ class LogsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final readingsAsync = ref.watch(recentReadingsProvider);
-    final theme = CupertinoTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final width = MediaQuery.of(context).size.width;
     final isTablet = width >= AppConstants.tabletBreakpoint;
 
     return CupertinoPageScaffold(
       child: Stack(
         children: [
+          // Content
           CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: MediaQuery.of(context).padding.top + 60,
+                  height: MediaQuery.of(context).padding.top + 16,
                 ),
               ),
               readingsAsync.when(
                 data: (readings) {
                   if (readings.isEmpty) {
                     return const SliverFillRemaining(
-                      child: Center(child: Text('No logs available')),
+                      child: EmptyStateWidget(
+                        icon: CupertinoIcons.doc_text_search,
+                        title: 'No Logs Yet',
+                        message:
+                            'Trips and telemetry data will appear here once recorded.',
+                        useGlass: false,
+                      ),
                     );
                   }
 
@@ -75,54 +81,6 @@ class LogsPage extends ConsumerWidget {
               ),
               const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
             ],
-          ),
-
-          // Custom Glass Header
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: GlassContainer(
-              padding: const EdgeInsets.only(bottom: 12),
-              borderRadius: 0,
-              opacity: 0.1,
-              border: Border(
-                bottom: BorderSide(
-                  color: isDark
-                      ? CupertinoColors.white.withValues(alpha: 0.1)
-                      : CupertinoColors.black.withValues(alpha: 0.05),
-                  width: 0.5,
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    height: 44,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Text(
-                          'Trip Logs',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? CupertinoColors.white
-                                : CupertinoColors.black,
-                          ),
-                        ),
-                        const Positioned(
-                          right: 0,
-                          child: ConnectionStatusIcon(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -254,6 +212,7 @@ class _LogCard extends StatelessWidget {
               ),
             ],
           ),
+          const FloatingHeader(title: 'Logs'),
         ],
       ),
     );

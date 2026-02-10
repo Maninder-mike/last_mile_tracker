@@ -27,10 +27,7 @@ class ConnectionStatusIcon extends ConsumerWidget {
             break;
         }
 
-        return Padding(
-          padding: const EdgeInsets.only(right: 8.0),
-          child: Icon(iconData, color: color, size: 24),
-        );
+        return Icon(iconData, color: color, size: 24);
       },
       loading: () => const Icon(
         CupertinoIcons.bluetooth,

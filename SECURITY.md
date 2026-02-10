@@ -13,7 +13,7 @@ We currently support the following versions of Last Mile Tracker:
 
 We take the security of our project seriously. If you believe you have found a security vulnerability, please do NOT use the public issue tracker. Instead, please report it via the following process:
 
-1. **Email**: Send a detailed report to <security-placeholder@example.com>.
+1. **Email**: Send a detailed report to <info@maninder.co.in>.
 2. **Details**: Include a description of the vulnerability, steps to reproduce, and any potential impact.
 3. **Response**: We will acknowledge receipt of your report within 48 hours and provide a timeline for a fix.
 

@@ -33,7 +33,7 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 
 ## Style Guide
 
-### Flutter App (`apps/driver/`)
+### Flutter App (`apps/mobile/`)
 
 - Follow the official [Flutter style guide](https://flutter.dev/docs/development/style-guide).
 - Use `flutter format .` before committing.
