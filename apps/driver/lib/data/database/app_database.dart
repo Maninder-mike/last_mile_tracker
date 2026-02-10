@@ -1,0 +1,27 @@
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'dart:io';
+
+import 'tables/sensor_readings.dart';
+import 'tables/trips.dart';
+import 'daos/sensor_dao.dart';
+
+part 'app_database.g.dart';
+
+@DriftDatabase(tables: [SensorReadings, Trips], daos: [SensorDao])
+class AppDatabase extends _$AppDatabase {
+  AppDatabase() : super(_openConnection());
+
+  @override
+  int get schemaVersion => 1;
+}
+
+LazyDatabase _openConnection() {
+  return LazyDatabase(() async {
+    final dbFolder = await getApplicationDocumentsDirectory();
+    final file = File(p.join(dbFolder.path, 'milow_driver.sqlite'));
+    return NativeDatabase.createInBackground(file);
+  });
+}
