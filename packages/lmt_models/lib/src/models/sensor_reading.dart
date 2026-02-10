@@ -14,10 +14,13 @@ class SensorReading {
 
   // Sensors
   final double temp;
+  @JsonKey(defaultValue: {})
+  final Map<String, double> additionalTemps;
   final int shockValue;
   final double batteryLevel;
   final int tripState;
   final double internalTemp;
+  final double? batteryDrop; // Health metric
 
   // Diagnostics
   final int? rssi;
@@ -37,10 +40,12 @@ class SensorReading {
     required this.lon,
     required this.speed,
     required this.temp,
+    this.additionalTemps = const {},
     required this.shockValue,
     required this.batteryLevel,
     required this.tripState,
     required this.internalTemp,
+    this.batteryDrop,
     this.rssi,
     this.resetReason,
     this.uptime,

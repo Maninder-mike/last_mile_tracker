@@ -1,6 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:last_mile_tracker/data/database/app_database.dart' as db;
 import 'package:last_mile_tracker/data/database/daos/sensor_dao.dart';
+import 'package:last_mile_tracker/data/database/daos/tracker_dao.dart';
+import 'package:last_mile_tracker/data/database/daos/alert_dao.dart';
 import 'package:lmt_models/lmt_models.dart' as models;
 
 part 'database_providers.g.dart';
@@ -16,6 +18,18 @@ db.AppDatabase appDatabase(Ref ref) {
 SensorDao sensorDao(Ref ref) {
   final database = ref.watch(appDatabaseProvider);
   return database.sensorDao;
+}
+
+@Riverpod(keepAlive: true)
+TrackerDao trackerDao(Ref ref) {
+  final database = ref.watch(appDatabaseProvider);
+  return database.trackerDao;
+}
+
+@Riverpod(keepAlive: true)
+AlertDao alertDao(Ref ref) {
+  final database = ref.watch(appDatabaseProvider);
+  return database.alertDao;
 }
 
 @riverpod

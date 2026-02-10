@@ -6,6 +6,7 @@ class BleConstants {
 
   // Characteristics
   static const String tempCharUuid = "2A6E";
+  static const String extendedTempCharUuid = "2A6F";
   static const String locationCharUuid =
       "2A67"; // We re-purpose this for packed data
 
@@ -63,4 +64,14 @@ class BleConstants {
   static const int simBatteryRange = 30;
   static const double simInternalTempMin = 45.0;
   static const int simInternalTempRange = 100;
+
+  // Control Commands
+  static const String cmdScan = "CMD:SCAN";
+  static const String cmdIdentify = "CMD:IDENTIFY";
+  static const String cmdReboot = "CMD:REBOOT";
+  static const String cmdResetWifi = "CMD:RESET_WIFI";
+  static const String scanEnd = "SCAN:END";
+  static const String wifiPrefix = "WIFI:";
+  static const String wifiConnectedPrefix = "WIFI:CONNECTED:";
+  static const String wifiFailedPrefix = "WIFI:FAILED:";
 }

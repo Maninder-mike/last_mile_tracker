@@ -17,6 +17,8 @@ class SensorReadings extends Table {
   RealColumn get batteryLevel => real().withDefault(const Constant(0.0))();
   IntColumn get tripState => integer().withDefault(const Constant(0))();
   RealColumn get internalTemp => real().withDefault(const Constant(0.0))();
+  TextColumn get additionalTemps => text().nullable()(); // JSON Map
+  RealColumn get batteryDrop => real().nullable()(); // Health metric
 
   // Diagnostics
   IntColumn get rssi => integer().nullable()();

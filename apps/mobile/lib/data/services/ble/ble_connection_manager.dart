@@ -12,6 +12,7 @@ class BleConnectionManager {
 
   StreamSubscription? _connectionStateSubscription;
   StreamSubscription? _characteristicSubscription;
+  StreamSubscription? _extCharacteristicSubscription;
 
   BluetoothDevice? _device;
   BluetoothDevice? get device => _device;
@@ -113,6 +114,19 @@ class BleConnectionManager {
             FileLogger.log("ConnectionManager: Subscribed to Sensor Data");
           }
         }
+        // 2.5 Extended Sensor Data (2A6F)
+        else if (_isUuidMatch(charUuid, BleConstants.extendedTempCharUuid)) {
+          FileLogger.log("ConnectionManager: Identified Extended Sensor Char");
+          if (characteristic.properties.notify) {
+            await characteristic.setNotifyValue(true);
+            await _extCharacteristicSubscription?.cancel();
+            _extCharacteristicSubscription = characteristic.onValueReceived
+                .listen((value) {
+                  onDataReceived(value);
+                });
+            FileLogger.log("ConnectionManager: Subscribed to Extended Sensor");
+          }
+        }
         // 3. OTA Control (0001)
         else if (_isUuidMatch(charUuid, BleConstants.otaControlUuid)) {
           otaControl = characteristic;
@@ -154,7 +168,7 @@ class BleConnectionManager {
       final message = String.fromCharCodes(value).trim();
       FileLogger.log("ConnectionManager: Received WiFi Message: $message");
 
-      if (message == "SCAN:END") {
+      if (message == BleConstants.scanEnd) {
         FileLogger.log(
           "ConnectionManager: WiFi Scan complete. Found ${_currentScanResults.length} networks.",
         );
@@ -162,7 +176,7 @@ class BleConnectionManager {
         return;
       }
 
-      if (message.startsWith("WIFI:")) {
+      if (message.startsWith(BleConstants.wifiPrefix)) {
         _wifiStatusController.add(message);
         FileLogger.log("ConnectionManager: WiFi Status Update: $message");
         return;
@@ -201,8 +215,7 @@ class BleConnectionManager {
     _isWifiScanningController.add(true);
 
     try {
-      const command = "CMD:SCAN";
-      await _wifiChar!.write(command.codeUnits);
+      await _wifiChar!.write(BleConstants.cmdScan.codeUnits);
       FileLogger.log("ConnectionManager: Sent WiFi Scan Command");
 
       // Timeout safety
@@ -228,25 +241,27 @@ class BleConnectionManager {
 
   Future<void> identifyDevice() async {
     if (_wifiChar == null) throw Exception("WiFi Characteristic not found");
-    await _wifiChar!.write("CMD:IDENTIFY".codeUnits);
+    await _wifiChar!.write(BleConstants.cmdIdentify.codeUnits);
     FileLogger.log("ConnectionManager: Sent Identify Command");
   }
 
   Future<void> rebootDevice() async {
     if (_wifiChar == null) throw Exception("WiFi Characteristic not found");
-    await _wifiChar!.write("CMD:REBOOT".codeUnits);
+    await _wifiChar!.write(BleConstants.cmdReboot.codeUnits);
     FileLogger.log("ConnectionManager: Sent Reboot Command");
   }
 
   Future<void> resetWifiConfig() async {
     if (_wifiChar == null) throw Exception("WiFi Characteristic not found");
-    await _wifiChar!.write("CMD:RESET_WIFI".codeUnits);
+    await _wifiChar!.write(BleConstants.cmdResetWifi.codeUnits);
     FileLogger.log("ConnectionManager: Sent Reset WiFi Command");
   }
 
   void _cleanupConnectionResources() {
     _characteristicSubscription?.cancel();
     _characteristicSubscription = null;
+    _extCharacteristicSubscription?.cancel();
+    _extCharacteristicSubscription = null;
     _wifiSubscription?.cancel();
     _wifiSubscription = null;
   }

@@ -31,9 +31,15 @@ class BLEAdvertiser:
         # Service and characteristic definitions
         ENV_SENSING_UUID = bluetooth.UUID(int(service_uuid, 16))
         
-        # Sensor: Read + Notify
+        # Sensor: Read + Notify (V1 - 24 bytes)
         SENSOR_CHAR = (
             bluetooth.UUID(0x2A6E),
+            bluetooth.FLAG_READ | bluetooth.FLAG_NOTIFY,
+        )
+        
+        # Extended Sensor: Read + Notify (V2 - Variable)
+        EXTENDED_SENSOR_CHAR = (
+            bluetooth.UUID(0x2A6F),
             bluetooth.FLAG_READ | bluetooth.FLAG_NOTIFY,
         )
         
@@ -57,11 +63,15 @@ class BLEAdvertiser:
         
         ENV_SERVICE = (
             ENV_SENSING_UUID,
-            (SENSOR_CHAR, OTA_CONTROL_CHAR, OTA_DATA_CHAR, WIFI_CONFIG_CHAR),
+            (SENSOR_CHAR, EXTENDED_SENSOR_CHAR, OTA_CONTROL_CHAR, OTA_DATA_CHAR, WIFI_CONFIG_CHAR),
         )
         
-        # handles: sensor, ota_ctrl, ota_data, wifi_config
-        ((self._sensor_handle, self._ota_ctrl_handle, self._ota_data_handle, self._wifi_config_handle),) = self._ble.gatts_register_services((ENV_SERVICE,))
+        # handles: sensor, extended_sensor, ota_ctrl, ota_data, wifi_config
+        ((self._sensor_handle, self._ext_sensor_handle, self._ota_ctrl_handle, self._ota_data_handle, self._wifi_config_handle),) = self._ble.gatts_register_services((ENV_SERVICE,))
+
+    @property
+    def ext_sensor_handle(self):
+        return self._ext_sensor_handle
 
     @property
     def wifi_config_handle(self):
@@ -86,9 +96,17 @@ class BLEAdvertiser:
             if self._write_callback:
                 self._write_callback(conn_handle, value_handle, value)
     
+    def restart_advertising(self, name=None):
+        """Update advertising name and restart"""
+        if name:
+            self._name = name
+        self._ble.gap_advertise(None) # Stop
+        self.start_advertising()
+
     def start_advertising(self):
         """Start BLE advertising"""
         payload = self._advertising_payload(self._name)
+        # 100ms = 100,000us
         self._ble.gap_advertise(100_000, adv_data=payload)
         print(f"Advertising as '{self._name}'")
     
@@ -113,4 +131,7 @@ class BLEAdvertiser:
         if self._connected and self._conn_handle is not None:
              # Default to sensor handle if none provided
             target_handle = handle if handle is not None else self._sensor_handle
-            self._ble.gatts_notify(self._conn_handle, target_handle, data)
+            try:
+                self._ble.gatts_notify(self._conn_handle, target_handle, data)
+            except Exception as e:
+                print(f"BLE Notify Error: {e}")

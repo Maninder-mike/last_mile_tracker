@@ -2,36 +2,38 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:lmt_models/lmt_models.dart';
 import '../../../core/constants/ble_constants.dart';
 import '../../../core/utils/file_logger.dart';
+import 'scanned_tracker.dart';
+import 'sensor_data_parser.dart';
 
 class BleScanner {
-  final Function(BluetoothDevice) onDeviceFound;
-
   StreamSubscription? _scanSubscription;
   bool _isScanning = false;
   bool get isScanning => _isScanning;
 
   /// Accumulated list of unique devices found during the current/last scan.
-  final List<ScanResult> _discoveredDevices = [];
-  StreamController<List<ScanResult>> _discoveredController =
-      StreamController<List<ScanResult>>.broadcast();
+  final List<ScannedTracker> _discoveredDevices = [];
+  StreamController<List<ScannedTracker>> _discoveredController =
+      StreamController<List<ScannedTracker>>.broadcast();
   bool _isDisposed = false;
 
-  /// Stream of all discovered devices (persists after auto-connect).
-  Stream<List<ScanResult>> get discoveredDevices async* {
+  /// Stream of all discovered devices
+  Stream<List<ScannedTracker>> get discoveredDevices async* {
     yield List.unmodifiable(_discoveredDevices);
     if (!_isDisposed) {
       yield* _discoveredController.stream;
     }
   }
 
-  BleScanner({required this.onDeviceFound});
+  BleScanner();
 
   /// Re-creates the broadcast controller if it was previously closed.
   void _ensureController() {
     if (_isDisposed) {
-      _discoveredController = StreamController<List<ScanResult>>.broadcast();
+      _discoveredController =
+          StreamController<List<ScannedTracker>>.broadcast();
       _isDisposed = false;
     }
   }
@@ -61,32 +63,38 @@ class BleScanner {
       if (!await _requestPermissions()) return;
     }
 
-    FileLogger.log("Scanner: Starting scan...");
+    FileLogger.log("Scanner: Starting fleet scan...");
     _isScanning = true;
-    // Don't clear previous results so we keep the connected device visible
-    // even if it stops advertising or doesn't show up in a new scan.
+    _discoveredDevices
+        .clear(); // Clear previous results on new scan?? Or keep them?
     _discoveredController.add(List.unmodifiable(_discoveredDevices));
 
     await _scanSubscription?.cancel();
     _scanSubscription = FlutterBluePlus.onScanResults.listen((results) {
       for (ScanResult result in results) {
-        // Accumulate unique devices for the UI list
-        final alreadySeen = _discoveredDevices.any(
-          (d) => d.device.remoteId == result.device.remoteId,
-        );
-        if (!alreadySeen && result.device.platformName.isNotEmpty) {
-          _discoveredDevices.add(result);
-          _discoveredController.add(List.unmodifiable(_discoveredDevices));
-        }
-
-        // Auto-connect to the target device
         if (_isTargetDevice(result)) {
-          FileLogger.log("Scanner: Found ${result.device.platformName}!");
-          onDeviceFound(result.device);
-          stop();
-          return;
+          final telemetry = _extractTelemetry(result);
+          final newTracker = ScannedTracker(
+            device: result.device,
+            rssi: result.rssi,
+            lastSeen: DateTime.now(),
+            telemetry: telemetry,
+          );
+
+          final index = _discoveredDevices.indexWhere(
+            (t) => t.device.remoteId == result.device.remoteId,
+          );
+          if (index != -1) {
+            _discoveredDevices[index] = newTracker;
+          } else {
+            _discoveredDevices.add(newTracker);
+            FileLogger.log(
+              "Scanner: Discovered ${result.device.platformName} [RSSI: ${result.rssi}]",
+            );
+          }
         }
       }
+      _discoveredController.add(List.unmodifiable(_discoveredDevices));
     }, onError: (e) => FileLogger.log("Scanner: Scan stream error: $e"));
 
     try {
@@ -98,6 +106,29 @@ class BleScanner {
       FileLogger.log("Scanner: Start scan error: $e");
       _isScanning = false;
     }
+  }
+
+  SensorReading? _extractTelemetry(ScanResult result) {
+    // 1. Try Service Data (UUID 181A)
+    final serviceData = result.advertisementData.serviceData;
+
+    for (final entry in serviceData.entries) {
+      if (entry.key.toString().toUpperCase().contains(
+        BleConstants.serviceUuid,
+      )) {
+        return SensorDataParser.parse(entry.value);
+      }
+    }
+
+    // 2. Try Manufacturer Data (Any ID)
+    final manufData = result.advertisementData.manufacturerData;
+    for (final entry in manufData.entries) {
+      if (entry.value.length >= BleConstants.packetLength) {
+        return SensorDataParser.parse(entry.value);
+      }
+    }
+
+    return null;
   }
 
   Future<void> stop() async {

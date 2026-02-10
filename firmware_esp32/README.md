@@ -41,7 +41,35 @@ This directory contains the MicroPython firmware for the Last Mile Tracker hardw
 3. **Run**:
     Reset the device. `main.py` will start automatically.
 
+## Configuration & Scalability
+
+The device uses `config.json` for persistence. New keys added for fleet management:
+
+- `provisioned_id`: Stable identity for multi-tenant fleets (overrides auto-MAC).
+- `tenant_id`: Logical ownership ID.
+- `ingest_url`: Endpoint for WiFi telemetry upload.
+- `ingest_interval_sec`: Upload frequency (default: 60s).
+- `config_url`: Remote configuration JSON endpoint.
+- `ota_url`: URL for firmware manifest and WiFi OTA updates.
+
+## BLE Packet Formats
+
+### V1 (Legacy) - Characteristic `0x2A6E`
+
+Fixed 24-byte packed payload: `Lat(4), Lon(4), Speed(2), Temp(2), Shock(2), Bat(2), IntTemp(2), Trip(1), Reset(1), Uptime(4)`.
+
+### V2 (Extended) - Characteristic `0x2A6F`
+
+Variable-length payload: `Version(1), NumTemps(1), Temps[N*2], ...other sensors`.
+
 ## Development
 
 - **Linting**: Run `ruff check .` to verify code quality (enforced by CI).
 - **Architecture**: The `main.py` orchestrates tasks via `uasyncio.gather()`. Avoid blocking code in the main loop.
+
+## Scale Features
+
+- **Cloud Ingest**: Periodic WiFi telemetry upload with in-memory retry buffer.
+- **Offline Backup**: Automatic CSV logging to SD card (if present).
+- **Remote Management**: Daily check for remote config and OTA updates.
+- **Observability**: Detailed diagnostics for HTTP failures, SD errors, and sensor health.

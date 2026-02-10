@@ -13,6 +13,9 @@ class Diagnostics:
             "gps_lost": 0,
             "watchdog_resets": 0,
             "sensor_read_fails": 0,
+            "http_post_ok": 0,
+            "http_post_fail": 0,
+            "sd_write_fail": 0,
             "exceptions": 0
         }
         self._unsaved_count = 0

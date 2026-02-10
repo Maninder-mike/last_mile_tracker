@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:last_mile_tracker/core/constants/ble_constants.dart';
@@ -9,6 +10,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:lmt_models/lmt_models.dart' as models;
 
 import 'ble/ble_scanner.dart';
+import 'ble/scanned_tracker.dart';
 import 'ble/ble_connection_manager.dart';
 import 'ble/ble_ota_manager.dart';
 import 'ble/sensor_data_parser.dart';
@@ -31,7 +33,8 @@ class BleService {
   BluetoothConnectionState get lastState => _lastState;
 
   bool get isScanning => _scanner.isScanning;
-  Stream<List<ScanResult>> get discoveredDevices => _scanner.discoveredDevices;
+  Stream<List<ScannedTracker>> get discoveredDevices =>
+      _scanner.discoveredDevices;
   bool get simulationActive => _simulationService.isSimulating;
 
   // Data buffering for high-frequency sensor readings
@@ -39,9 +42,7 @@ class BleService {
   Timer? _bufferTimer;
 
   BleService(this._sensorDao) {
-    _scanner = BleScanner(
-      onDeviceFound: (device) => _connectionManager.connect(device),
-    );
+    _scanner = BleScanner();
 
     _connectionManager = BleConnectionManager(
       onStateChanged: (state) {
@@ -80,6 +81,12 @@ class BleService {
       batteryLevel: drift.Value(reading.batteryLevel),
       internalTemp: drift.Value(reading.internalTemp),
       tripState: drift.Value(reading.tripState),
+      additionalTemps: drift.Value(
+        reading.additionalTemps.isNotEmpty
+            ? jsonEncode(reading.additionalTemps)
+            : null,
+      ),
+      batteryDrop: drift.Value(reading.batteryDrop),
       rssi: drift.Value(reading.rssi),
       resetReason: drift.Value(reading.resetReason),
       uptime: drift.Value(reading.uptime),

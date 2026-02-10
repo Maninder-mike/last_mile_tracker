@@ -1,17 +1,18 @@
+import 'package:last_mile_tracker/presentation/pages/devices/devices_list_page.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show VerticalDivider, Colors;
+import 'package:flutter/material.dart' show Colors;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:last_mile_tracker/core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 
-import 'dashboard/dashboard_page.dart';
+// import 'dashboard/dashboard_page.dart'; // Removed
 import 'map/map_page.dart';
-import 'logs/logs_page.dart';
 import 'settings/settings_page.dart';
+import 'fleet/fleet_overview_page.dart'; // New
+import 'shipments/shipments_page.dart'; // New
 
-import 'home/widgets/mobile_bottom_nav.dart';
-import 'home/widgets/tablet_sidebar.dart';
+import 'package:last_mile_tracker/presentation/layout/main_layout.dart'; // New
+import 'package:last_mile_tracker/presentation/widgets/blur_navbar.dart'; // New
 import 'home/widgets/connection_overlay.dart';
 
 import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
@@ -25,7 +26,7 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  int _currentIndex = 1; // Default to Dashboard (index 1)
+  // int _currentIndex = 1; // Handled by MainLayout now
   bool _checkedForUpdate = false;
 
   @override
@@ -50,36 +51,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  final List<HomeMenuItem> _menuItems = const [
-    HomeMenuItem(
-      icon: CupertinoIcons.map,
-      activeIcon: CupertinoIcons.map_fill,
-      label: 'Map',
-    ),
-    HomeMenuItem(
-      icon: CupertinoIcons.speedometer,
-      activeIcon: CupertinoIcons.speedometer,
-      label: 'Dashboard',
-    ),
-    HomeMenuItem(
-      icon: CupertinoIcons.list_bullet,
-      activeIcon: CupertinoIcons.list_bullet,
-      label: 'Logs',
-    ),
-    HomeMenuItem(
-      icon: CupertinoIcons.settings,
-      activeIcon: CupertinoIcons.settings_solid,
-      label: 'Settings',
-    ),
-  ];
-
-  final List<Widget> _pageWidgets = const [
-    MapPage(),
-    DashboardPage(),
-    LogsPage(),
-    SettingsPage(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     // Listen for connection state changes to show notifications
@@ -94,45 +65,47 @@ class _HomePageState extends ConsumerState<HomePage> {
       },
     );
 
-    final width = MediaQuery.of(context).size.width;
-    final isTablet = width >= AppConstants.tabletBreakpoint;
+    // Prepare pages for the new MainLayout
+    // Index 0: Fleet Overview (New)
+    // Index 1: Map (Old)
+    // Index 2: Devices (Connect/Disconnect - Old Dashboard/Logs mixed)
+    // Index 3: Settings (Old)
+    final pages = [
+      const FleetOverviewPage(),
+      const MapPage(),
+      const ShipmentsPage(),
+      const DevicesListPage(), // Added Devices Page
+      const SettingsPage(),
+    ];
 
-    if (isTablet) {
-      return CupertinoPageScaffold(
-        child: Row(
-          children: [
-            TabletSidebar(
-              currentIndex: _currentIndex,
-              items: _menuItems,
-              onTap: (index) => setState(() => _currentIndex = index),
-            ),
-            const VerticalDivider(
-              width: 1,
-              thickness: 1,
-              color: CupertinoColors.systemGrey5,
-            ),
-            Expanded(
-              child: CupertinoPageScaffold(child: _pageWidgets[_currentIndex]),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return CupertinoPageScaffold(
-      child: Stack(
-        children: [
-          IndexedStack(index: _currentIndex, children: _pageWidgets),
-          MobileBottomNav(
-            currentIndex: _currentIndex,
-            items: _menuItems,
-            onTap: (index) {
-              HapticFeedback.selectionClick();
-              setState(() => _currentIndex = index);
-            },
-          ),
-        ],
+    final navItems = [
+      const BlurNavbarItem(
+        icon: CupertinoIcons.home,
+        activeIcon: CupertinoIcons.home,
+        label: 'Home',
       ),
-    );
+      const BlurNavbarItem(
+        icon: CupertinoIcons.map,
+        activeIcon: CupertinoIcons.map_fill,
+        label: 'Map',
+      ),
+      const BlurNavbarItem(
+        icon: CupertinoIcons.cube_box,
+        activeIcon: CupertinoIcons.cube_box_fill,
+        label: 'Shipments',
+      ),
+      const BlurNavbarItem(
+        icon: CupertinoIcons.device_phone_portrait,
+        activeIcon: CupertinoIcons.device_phone_portrait,
+        label: 'Devices',
+      ),
+      const BlurNavbarItem(
+        icon: CupertinoIcons.settings,
+        activeIcon: CupertinoIcons.settings_solid,
+        label: 'Settings',
+      ),
+    ];
+
+    return MainLayout(pages: pages, navItems: navItems);
   }
 }

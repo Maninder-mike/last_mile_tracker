@@ -77,7 +77,7 @@ class SensorHub:
         
         self._gps_uart = UART(1, baudrate=9600, tx=21, rx=20)
         self._last_gps = {"lat": 0.0, "lon": 0.0, "speed": 0.0, "fix": False}
-        self._last_temp = 0.0
+        self._last_temps = {} # ROM ID: Value
         self._last_temp_read = 0
         
         self._init_battery()
@@ -120,14 +120,17 @@ class SensorHub:
             return 0.0
             
     async def read_all(self) -> dict:
-        """Async-ready unified read"""
+        """Async-ready unified read with multi-sensor support"""
         self._read_gps()
         
-        # Temperature Logic: Non-blocking state machine
+        # Temperature Logic: Non-blocking state machine for ALL roms
         if self._temp_roms and (time.ticks_ms() - self._last_temp_read > 1000):
             try:
-                self._last_temp = self._ds.read_temp(self._temp_roms[0])
-                self._ds.convert_temp()
+                for rom in self._temp_roms:
+                    rom_id = "".join("{:02x}".format(b) for b in rom)
+                    self._last_temps[rom_id] = self._ds.read_temp(rom)
+                
+                self._ds.convert_temp() # Trigger next conversion for all
                 self._last_temp_read = time.ticks_ms()
             except Exception:
                 pass
@@ -140,12 +143,20 @@ class SensorHub:
                 if self.diagnostics:
                     self.diagnostics.increment("i2c_errors")
 
+        # Primary temp is still first one or internal if none
+        primary_temp = 0.0
+        if self._last_temps:
+            primary_temp = list(self._last_temps.values())[0]
+        else:
+            primary_temp = self.read_internal_c()
+
         return {
             "lat": self._last_gps["lat"],
             "lon": self._last_gps["lon"],
             "speed": self._last_gps["speed"],
             "gps_fix": self._last_gps["fix"],
-            "temp": self._last_temp,
+            "temp": primary_temp,
+            "all_temps": self._last_temps, # New: Dictionary of all DS18B20s
             "shock": shock,
             "battery_mv": self.read_battery_mv(),
             "internal_temp": self.read_internal_c(),

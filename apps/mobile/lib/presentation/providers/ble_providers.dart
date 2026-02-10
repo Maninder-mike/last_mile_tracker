@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:last_mile_tracker/data/services/ble_service.dart';
 import 'package:last_mile_tracker/data/services/ble/ble_connection_manager.dart';
+import 'package:last_mile_tracker/data/services/ble/scanned_tracker.dart';
 import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
 
 part 'ble_providers.g.dart';
@@ -24,7 +25,7 @@ Stream<BluetoothConnectionState> bleConnectionState(Ref ref) {
 
 // BLE Discovered Devices Provider
 @riverpod
-Stream<List<ScanResult>> bleScanResults(Ref ref) {
+Stream<List<ScannedTracker>> bleScanResults(Ref ref) {
   final service = ref.watch(bleServiceProvider);
   return service.discoveredDevices;
 }

@@ -1,75 +1,77 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
+import 'package:last_mile_tracker/presentation/theme/app_theme.dart';
 
 class GlassContainer extends StatelessWidget {
   final Widget child;
   final double blur;
   final double opacity;
-  final double borderRadius;
-  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
-  final BoxBorder? border;
-  final Decoration? decoration;
+  final double borderRadius;
+  final Color? color;
+  final Border? border;
 
   const GlassContainer({
     super.key,
     required this.child,
-    this.blur = 20.0,
-    this.opacity = 0.1,
-    this.borderRadius = 24.0,
-    this.padding,
+    this.blur = 15.0,
+    this.opacity = 0.7,
+    this.padding = const EdgeInsets.all(16.0),
     this.margin,
+    this.borderRadius = 16.0,
+    this.color,
     this.border,
-    this.decoration,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = CupertinoTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    // Use the provided color or fallback to the theme's glass surface color
+    final effectiveColor = CupertinoDynamicColor.resolve(
+      color ?? AppTheme.surfaceGlass,
+      context,
+    );
 
-    Widget current = ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Container(
-          padding: padding,
-          decoration:
-              decoration ??
-              BoxDecoration(
-                color: (isDark ? CupertinoColors.black : CupertinoColors.white)
-                    .withValues(alpha: opacity),
-                borderRadius: BorderRadius.circular(borderRadius),
-                border:
-                    border ??
-                    Border.all(
-                      color:
-                          (isDark
-                                  ? CupertinoColors.white
-                                  : CupertinoColors.black)
-                              .withValues(alpha: 0.1),
-                      width: 0.5,
-                    ),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    (isDark ? CupertinoColors.white : CupertinoColors.white)
-                        .withValues(alpha: isDark ? 0.05 : 0.2),
-                    (isDark ? CupertinoColors.black : CupertinoColors.black)
-                        .withValues(alpha: isDark ? 0.1 : 0.05),
-                  ],
-                ),
-              ),
-          child: child,
+    // Calculate effective opacity based on whether it's the dynamic theme color or custom
+    final finalColor = effectiveColor.withValues(
+      alpha: color == null
+          ? (_isDark(context) ? 0.6 : 0.8) // Tuning opacity for light/dark
+          : opacity,
+    );
+
+    return Container(
+      margin: margin,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        border:
+            border ??
+            Border.all(
+              color: CupertinoDynamicColor.resolve(
+                AppTheme.textSecondary,
+                context,
+              ).withValues(alpha: 0.1),
+              width: 0.5,
+            ),
+        // Subtle shadow for depth
+        boxShadow: [
+          BoxShadow(
+            color: CupertinoColors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: Container(padding: padding, color: finalColor, child: child),
         ),
       ),
     );
+  }
 
-    if (margin != null) {
-      current = Padding(padding: margin!, child: current);
-    }
-
-    return current;
+  bool _isDark(BuildContext context) {
+    return CupertinoTheme.of(context).brightness == Brightness.dark;
   }
 }

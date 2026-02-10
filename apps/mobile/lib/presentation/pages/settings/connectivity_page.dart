@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:last_mile_tracker/core/constants/ble_constants.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:lmt_models/lmt_models.dart' as models;
@@ -113,13 +114,13 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
     ref.listen<AsyncValue<String>>(wifiStatusProvider, (previous, next) {
       if (next.hasValue && next.value != null) {
         final status = next.value!;
-        if (status.startsWith("WIFI:CONNECTED:")) {
+        if (status.startsWith(BleConstants.wifiConnectedPrefix)) {
           final ssid = status.split(":").last;
           _showSuccess(
             "WiFi Connected",
             "Device successfully connected to $ssid",
           );
-        } else if (status.startsWith("WIFI:FAILED:")) {
+        } else if (status.startsWith(BleConstants.wifiFailedPrefix)) {
           final reason = status.split(":").last;
           _showError("WiFi Connection Failed: $reason");
         }

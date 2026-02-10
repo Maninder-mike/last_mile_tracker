@@ -14,6 +14,8 @@ from lib.diagnostics import Diagnostics
 from lib.shock_buffer import ShockBuffer
 from lib.ble_ota import BleOta
 from lib.logger import Logger
+from lib.sd_logger import SDLogger
+from lib.http_poster import HttpPoster
 
 # Constants
 NEOPIXEL_PIN = 8
@@ -47,6 +49,8 @@ class LastMileTracker:
         except Exception:
             self.sensors = None
         
+        self.sd_logger = SDLogger()
+        self.http_poster = HttpPoster(self.config, self.diagnostics)
         self.shock_buffer = ShockBuffer()
         self.ble = BLEAdvertiser(name=self.device_id, service_uuid=SERVICE_UUID)
         self.ota = BleOta()
@@ -56,9 +60,18 @@ class LastMileTracker:
         self.data_store = {'lat':0.0, 'lon':0.0, 'speed':0.0, 'temp':0.0, 'shock':0, 'gps_fix':False}
 
     def _init_device_id(self):
+        # 1. Check for provisioned ID first (for fleet scale)
+        p_id = self.config.get("provisioned_id")
+        if p_id:
+            Logger.log(f"Identity: Using Provisioned ID: {p_id}")
+            return p_id
+            
+        # 2. Check for saved manual ID
         saved_id = self.config.get("device_id")
         if saved_id:
             return saved_id
+            
+        # 3. Fallback to MAC-based ID
         mac = ubinascii.hexlify(machine.unique_id()).decode()
         new_id = f"Last-Mile-{mac[-4:].upper()}"
         self.config.set("device_id", new_id)
@@ -72,6 +85,8 @@ class LastMileTracker:
     def _pack_sensor_data(self, data):
         # Format: Lat(4), Lon(4), Speed(2), Temp(2), Shock(2), Bat(2), IntTemp(2), Trip(1), Reset(1), Uptime(4)
         # Total: 24 bytes
+        trip_state = 1 if data.get('speed', 0) > 1.0 or data.get('shock', 0) > 100 else 0
+        
         return struct.pack('<ffHhHHHBBI', 
                            data['lat'], data['lon'], 
                            int(data['speed'] * 100), 
@@ -79,9 +94,27 @@ class LastMileTracker:
                            data['shock'],
                            data.get('battery_mv', 0),
                            int(data.get('internal_temp', 0) * 100),
-                           0, # Trip state (0=Idle, 1=Moving) - logic to be added
+                           trip_state,
                            machine.reset_cause(),
                            time.ticks_ms() // 1000)
+
+    def _pack_extended_data(self, data):
+        """Pack V2 extended data: Version(1), NumTemps(1), Temps[N*2], Humidity(2), etc."""
+        # Header: Version 2
+        all_temps = data.get('all_temps', {})
+        num_temps = len(all_temps)
+        
+        # We'll pack: [Version, NumTemps, Temp1, Temp2..., BatDrop]
+        # For now, let's just do: Version(1), Count(1), List of Int16, Int16(BatDrop)
+        bat_drop = int(data.get('bat_drop', 0))
+        
+        fmt = f'<BB{num_temps}hh'
+        payload = [2, num_temps]
+        for t in all_temps.values():
+            payload.append(int(t * 100))
+        payload.append(bat_drop)
+            
+        return struct.pack(fmt, *payload)
 
     async def sensor_task(self):
         """High-frequency sensor monitoring"""
@@ -102,6 +135,12 @@ class LastMileTracker:
                     if new_data['shock'] > shock_threshold:
                         Logger.log(f"Shock Alert: {new_data['shock']}")
                         self.shock_buffer.add(new_data['shock'], time.ticks_ms())
+                        
+                    # SD Logging (Local backup)
+                    # For now, log if we have a fix or every 10 samples to save SD life
+                    if new_data['gps_fix'] or (int(time.time()) % 10 == 0):
+                         self.sd_logger.log(new_data)
+                         
                 except Exception:
                     self.diagnostics.increment("sensor_read_fails")
             
@@ -130,8 +169,14 @@ class LastMileTracker:
 
             # 3. BLE Notify
             if self.ble.is_connected():
-                packed = self._pack_sensor_data(self.data_store)
-                self.ble.notify(packed)
+                # V1 Legacy Data
+                packed_v1 = self._pack_sensor_data(self.data_store)
+                self.ble.notify(packed_v1)
+                
+                # V2 Extended Data (Optional delay to avoid congestion)
+                await asyncio.sleep_ms(50)
+                packed_ext = self._pack_extended_data(self.data_store)
+                self.ble.notify(packed_ext, self.ble.ext_sensor_handle)
             
             await asyncio.sleep_ms(update_interval)
 
@@ -242,6 +287,85 @@ class LastMileTracker:
             # Pass to OTA handler (expects data with CMD prefix)
             self.ota.handle_command(value)
 
+    async def cloud_upload_task(self):
+        """Periodic telemetry upload to cloud via WiFi with Adaptive Sampling"""
+        Logger.log("Task: Cloud ingest started.")
+        retry_buffer = [] # Simple in-memory retry buffer
+        
+        while True:
+            # Adaptive Sampling Logic
+            # Default to config or standard intervals
+            ingest_int = self.config.get("ingest_interval_sec") or 60
+            idle_int = self.config.get("ingest_interval_idle") or 900 # 15 min default idle
+            
+            # Use data_store trip_state (1 if moving, 0 if idle)
+            trip_state = self.data_store.get('trip_state', 0)
+            
+            # If idle for too long, switch to idle_int
+            current_time = time.time()
+            if trip_state == 0 and (current_time - self._last_activity > 300):
+                interval = idle_int
+            else:
+                interval = ingest_int
+                
+            url = self.config.get("ingest_url")
+            
+            if url and self.wifi.is_connected():
+                # Measure battery before upload for profiling
+                v_before = self.sensors.read_battery_mv() if self.sensors else 0
+                
+                # 1. Try to post current data
+                success = await self.http_poster.post_telemetry(self.data_store)
+                
+                # Measure battery after upload
+                v_after = self.sensors.read_battery_mv() if self.sensors else 0
+                if success and v_before > 0:
+                    drop = v_before - v_after
+                    self.data_store['bat_drop'] = drop # Store for next reporting cycle
+                
+                # 2. If success, try to flush retry buffer
+                if success and retry_buffer:
+                    Logger.log(f"WiFi: Flushing {len(retry_buffer)} buffered readings")
+                    while retry_buffer:
+                        buffered = retry_buffer.pop(0)
+                        if not await self.http_poster.post_telemetry(buffered):
+                            retry_buffer.insert(0, buffered) # Partial failure
+                            break
+                elif not success:
+                    # Buffer current data on failure
+                    if len(retry_buffer) < 50: # Limit buffer size
+                        retry_buffer.append(self.data_store.copy())
+            
+            await asyncio.sleep(interval)
+
+    async def remote_management_task(self):
+        """Check for remote config and OTA updates monthly/daily"""
+        Logger.log("Task: Remote management started.")
+        import urequests
+        
+        while True:
+            # 1. Remote Config
+            config_url = self.config.get("config_url")
+            if config_url and self.wifi.is_connected():
+                try:
+                    Logger.log("WiFi: Fetching remote config...")
+                    res = urequests.get(config_url)
+                    if res.status_code == 200:
+                        new_cfg = res.json()
+                        if self.config.merge_config(new_cfg):
+                            Logger.log("WiFi: Remote config applied.")
+                    res.close()
+                except Exception as e:
+                    Logger.log(f"WiFi: Remote config check failed: {e}")
+
+            # 2. WiFi OTA (Simplified check)
+            ota_url = self.config.get("ota_url")
+            if ota_url and self.wifi.is_connected():
+                 # Future implementation: compare version from metadata
+                 pass
+
+            await asyncio.sleep(3600 * 24) # Check daily
+
     async def main_loop(self):
         # Initialize WiFi
         from lib.wifi_manager import WiFiManager
@@ -256,7 +380,9 @@ class LastMileTracker:
             self.sensor_task(),
             self.update_task(),
             self.maintenance_task(),
-            self.wifi.manage_connection()
+            self.wifi.manage_connection(),
+            self.cloud_upload_task(),
+            self.remote_management_task()
         )
 
 if __name__ == "__main__":

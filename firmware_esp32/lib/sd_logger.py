@@ -41,16 +41,16 @@ class SDLogger:
             os.stat('/sd/sensor_log.csv')
         except OSError:
             with open('/sd/sensor_log.csv', 'w') as f:
-                f.write('timestamp,lat,lon,speed,temp,shock\n')
+                # Version 2 Header
+                f.write('timestamp,lat,lon,speed,temp,shock,battery_mv,int_temp\n')
     
     def log(self, data: dict):
         """Append sensor reading to CSV"""
         if not self._mounted:
             return
         try:
-            # MicroPython might not have full datetime, using uptime or gps time if avail
             ts = time.time() 
-            line = f"{ts},{data['lat']},{data['lon']},{data['speed']},{data['temp']},{data['shock']}\n"
+            line = f"{ts},{data['lat']},{data['lon']},{data['speed']},{data['temp']},{data['shock']},{data.get('battery_mv', 0)},{data.get('internal_temp', 0)}\n"
             with open('/sd/sensor_log.csv', 'a') as f:
                 f.write(line)
         except Exception as e:
