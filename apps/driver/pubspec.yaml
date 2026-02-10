@@ -51,7 +51,7 @@ dependencies:
   
   # Networking
   connectivity_plus: ^6.1.0
-  share_plus: ^10.0.0
+  share_plus: ^12.0.1
   
   # Supabase (Future)
   supabase_flutter: ^2.8.4
