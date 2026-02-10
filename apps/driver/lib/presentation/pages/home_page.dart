@@ -21,6 +21,19 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   int _currentIndex = 0;
+  bool _checkedForUpdate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-check for firmware updates on startup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_checkedForUpdate) {
+        _checkedForUpdate = true;
+        ref.read(otaServiceProvider).checkForUpdate(isAutoCheck: true);
+      }
+    });
+  }
 
   final List<({Widget child, String title, IconData icon})> _pages = [
     (child: const MapPage(), title: 'Map', icon: CupertinoIcons.map),

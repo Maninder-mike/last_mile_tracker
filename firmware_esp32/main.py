@@ -12,6 +12,7 @@ from lib.st7789_display import Display
 from lib.config import Config
 from lib.diagnostics import Diagnostics
 from lib.shock_buffer import ShockBuffer
+from lib.ble_ota import BleOta
 from lib.logger import Logger
 
 # Constants
@@ -48,6 +49,8 @@ class LastMileTracker:
         
         self.shock_buffer = ShockBuffer()
         self.ble = BLEAdvertiser(name=self.device_id, service_uuid=SERVICE_UUID)
+        self.ota = BleOta()
+        self.ble.set_write_callback(self.ota.handle_command)
         
         self._last_activity = time.time()
         self.data_store = {'lat':0.0, 'lon':0.0, 'speed':0.0, 'temp':0.0, 'shock':0, 'gps_fix':False}
@@ -66,8 +69,18 @@ class LastMileTracker:
             self.np.write()
 
     def _pack_sensor_data(self, data):
-        return struct.pack('<ffHhH', data['lat'], data['lon'], 
-                           int(data['speed'] * 100), int(data['temp'] * 100), data['shock'])
+        # Format: Lat(4), Lon(4), Speed(2), Temp(2), Shock(2), Bat(2), IntTemp(2), Trip(1), Reset(1), Uptime(4)
+        # Total: 24 bytes
+        return struct.pack('<ffHhHHHBBI', 
+                           data['lat'], data['lon'], 
+                           int(data['speed'] * 100), 
+                           int(data['temp'] * 100), 
+                           data['shock'],
+                           data.get('battery_mv', 0),
+                           int(data.get('internal_temp', 0) * 100),
+                           0, # Trip state (0=Idle, 1=Moving) - logic to be added
+                           machine.reset_cause(),
+                           time.ticks_ms() // 1000)
 
     async def sensor_task(self):
         """High-frequency sensor monitoring"""

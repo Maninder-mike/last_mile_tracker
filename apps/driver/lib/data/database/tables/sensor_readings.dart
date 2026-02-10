@@ -14,6 +14,14 @@ class SensorReadings extends Table {
   // Sensors
   RealColumn get temp => real()();
   IntColumn get shockValue => integer()();
+  RealColumn get batteryLevel => real().withDefault(const Constant(0.0))();
+  IntColumn get tripState => integer().withDefault(const Constant(0))();
+  RealColumn get internalTemp => real().withDefault(const Constant(0.0))();
+
+  // Diagnostics
+  IntColumn get rssi => integer().nullable()();
+  IntColumn get resetReason => integer().nullable()();
+  IntColumn get uptime => integer().nullable()();
 
   // Sync Status
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();

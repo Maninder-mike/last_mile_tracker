@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../database/daos/sensor_dao.dart';

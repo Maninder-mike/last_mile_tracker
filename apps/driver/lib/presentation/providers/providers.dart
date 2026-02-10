@@ -5,6 +5,7 @@ import '../../data/database/app_database.dart';
 import '../../data/database/daos/sensor_dao.dart';
 import '../../data/services/ble_service.dart';
 import '../../data/services/sync_manager.dart';
+import '../../data/services/ota_service.dart';
 
 part 'providers.g.dart';
 
@@ -44,6 +45,14 @@ Stream<BluetoothConnectionState> bleConnectionState(Ref ref) {
 SyncManager syncManager(Ref ref) {
   final dao = ref.watch(sensorDaoProvider);
   return SyncManager(dao);
+}
+
+// OTA Service
+@Riverpod(keepAlive: true)
+OtaService otaService(Ref ref) {
+  final service = OtaService();
+  ref.onDispose(() => service.dispose());
+  return service;
 }
 
 // Stream of latest sensor reading for Dashboard

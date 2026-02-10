@@ -13,6 +13,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/connection_status_icon.dart';
 import 'connectivity_page.dart';
+import 'widgets/firmware_update_tile.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -156,6 +157,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           setState(() => bleService.toggleSimulation()),
                     ),
                   ),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final otaService = ref.watch(otaServiceProvider);
+                      return _SettingsTile(
+                        title: 'Auto-Check Updates',
+                        subtitle: 'Check for firmware on startup',
+                        icon: CupertinoIcons.arrow_2_circlepath,
+                        iconColor: CupertinoColors.systemOrange,
+                        trailing: CupertinoSwitch(
+                          value: otaService.currentState.isAutoCheckEnabled,
+                          onChanged: (v) => otaService.toggleAutoCheck(v),
+                        ),
+                      );
+                    },
+                  ),
+                  const FirmwareUpdateTile(),
                 ],
               ),
 
@@ -334,8 +351,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   label: 'Temp',
                   value: '${latest.temp.toStringAsFixed(1)}°C',
                 ),
-                _HeroStat(label: 'Signal', value: 'Excellent'),
-                _HeroStat(label: 'Battery', value: '84%'),
+                _HeroStat(label: 'Signal', value: '${latest.rssi ?? -60} dBm'),
+                _HeroStat(
+                  label: 'Battery',
+                  value: '${latest.batteryLevel.toStringAsFixed(1)}V',
+                ),
               ],
             ),
           ],

@@ -1,9 +1,9 @@
-# Sensor Hub for DS18B20, MPU-6050, GPS
 import math
-from machine import Pin, I2C, UART
+from machine import Pin, I2C, UART, ADC
 import onewire
 import ds18x20
 import time
+import esp32
 
 class MPU6050:
     """MPU-6050 6-axis Accelerometer/Gyroscope driver"""
@@ -77,7 +77,45 @@ class SensorHub:
         self._last_gps = {"lat": 0.0, "lon": 0.0, "speed": 0.0, "fix": False}
         self._last_temp = 0.0
         self._last_temp_read = 0
-    
+        
+        self._init_battery()
+
+    def _init_battery(self):
+        try:
+            # GPIO 2 is often used for battery Sense on generic boards, 
+            # but user should verify. Using GPIO 0 as placeholder or config.
+            # Ideally this comes from config.
+            bat_pin = 2 
+            if self.diagnostics and self.diagnostics.config:
+                bat_pin = self.diagnostics.config.get("battery_pin") or 2
+                
+            self._bat_adc = ADC(Pin(bat_pin))
+            self._bat_adc.atten(ADC.ATTN_11DB) # Full range: 3.3v
+        except Exception as e:
+            print(f"Battery init failed: {e}")
+            self._bat_adc = None
+
+    def read_battery_mv(self) -> int:
+        if not self._bat_adc: return 0
+        try:
+            # Raw 0-4095. 
+            # Voltage divider logic usually needed. 
+            # Assuming 100k/100k divider -> x2 multiplier.
+            # 3.3V ref. 
+            # raw / 4095 * 3300 * 2
+            raw = self._bat_adc.read()
+            mv = (raw * 3300 * 2) // 4095
+            return int(mv)
+        except:
+            return 0
+
+    def read_internal_c(self) -> float:
+        try:
+            f = esp32.raw_temperature()
+            return (f - 32) / 1.8
+        except:
+            return 0.0
+            
     async def read_all(self) -> dict:
         """Async-ready unified read"""
         self._read_gps()
@@ -105,6 +143,8 @@ class SensorHub:
             "gps_fix": self._last_gps["fix"],
             "temp": self._last_temp,
             "shock": shock,
+            "battery_mv": self.read_battery_mv(),
+            "internal_temp": self.read_internal_c(),
         }
     
     def _read_gps(self):

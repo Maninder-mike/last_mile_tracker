@@ -1,0 +1,61 @@
+name: Firmware CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'firmware_esp32/**'
+      - '.github/workflows/firmware_ci.yml'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'firmware_esp32/**'
+      - '.github/workflows/firmware_ci.yml'
+  workflow_dispatch:
+
+jobs:
+  quality:
+    name: Lint & Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run Linter (Ruff)
+        run: |
+          ruff check firmware_esp32/
+          
+  build-dry-run:
+    name: Packaging Dry Run
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Simulate Artifact Packaging
+        run: |
+          mkdir -p dist
+          # Verify key files exist
+          if [ ! -f firmware_esp32/main.py ]; then
+            echo "Error: main.py not found!"
+            exit 1
+          fi
+          
+          # Try zipping to ensure zip command works and paths are correct
+          cd firmware_esp32
+          zip -r ../dist/firmware_dry_run.zip . -x "*.git*" "*.DS_Store" "venv/*" "__pycache__/*"
+          cd ..
+          
+          echo "Dry run successful. Artifacts created in dist/"
+          ls -l dist/

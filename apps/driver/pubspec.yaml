@@ -63,6 +63,7 @@ dependencies:
   firebase_crashlytics: ^5.0.7
   lmt_models:
     path: ../../packages/lmt_models
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

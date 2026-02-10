@@ -4,36 +4,58 @@ from micropython import const
 
 _IRQ_CENTRAL_CONNECT = const(1)
 _IRQ_CENTRAL_DISCONNECT = const(2)
+_IRQ_GATTS_WRITE = const(3)
 _IRQ_GATTS_INDICATE_DONE = const(20)
 
 class BLEAdvertiser:
-    def __init__(self, name="Last-Mile-Tracker", service_uuid=None):
+    def __init__(self, name="Last-Mile-Tracker", service_uuid=None, version=1):
         self._ble = bluetooth.BLE()
         self._ble.active(True)
         self._ble.irq(self._irq)
         
         self._name = name
+        self._version = version # Firmware version
         self._connected = False
         self._conn_handle = None
+        self._write_callback = None
         
         # Register GATT service
         if service_uuid:
             self._register_services(service_uuid)
+            
+    def set_write_callback(self, callback):
+        self._write_callback = callback
     
     def _register_services(self, service_uuid):
-        """Register Environmental Sensing Service"""
+        """Register Environmental Sensing + OTA Service"""
         # Service and characteristic definitions
         ENV_SENSING_UUID = bluetooth.UUID(int(service_uuid, 16))
+        
+        # Sensor: Read + Notify
         SENSOR_CHAR = (
-            bluetooth.UUID(0x2A6E),  # Temperature characteristic
+            bluetooth.UUID(0x2A6E),
             bluetooth.FLAG_READ | bluetooth.FLAG_NOTIFY,
         )
-        ENV_SERVICE = (
-            ENV_SENSING_UUID,
-            (SENSOR_CHAR,),
+        
+        # OTA Control: Write + Notify
+        OTA_CONTROL_CHAR = (
+            bluetooth.UUID("00000001-0000-1000-8000-00805F9B34FB"),
+            bluetooth.FLAG_WRITE | bluetooth.FLAG_NOTIFY,
         )
         
-        ((self._sensor_handle,),) = self._ble.gatts_register_services((ENV_SERVICE,))
+        # OTA Data: Write (No Response for speed)
+        OTA_DATA_CHAR = (
+            bluetooth.UUID("00000002-0000-1000-8000-00805F9B34FB"),
+            bluetooth.FLAG_WRITE_NO_RESPONSE,
+        )
+        
+        ENV_SERVICE = (
+            ENV_SENSING_UUID,
+            (SENSOR_CHAR, OTA_CONTROL_CHAR, OTA_DATA_CHAR),
+        )
+        
+        # handles: sensor, ota_ctrl, ota_data
+        ((self._sensor_handle, self._ota_ctrl_handle, self._ota_data_handle),) = self._ble.gatts_register_services((ENV_SERVICE,))
     
     def _irq(self, event, data):
         if event == _IRQ_CENTRAL_CONNECT:
@@ -47,6 +69,12 @@ class BLEAdvertiser:
             print("Disconnected")
             # Restart advertising
             self.start_advertising()
+            
+        elif event == _IRQ_GATTS_WRITE:
+            conn_handle, value_handle = data
+            value = self._ble.gatts_read(value_handle)
+            if self._write_callback:
+                self._write_callback(conn_handle, value_handle, value)
     
     def start_advertising(self):
         """Start BLE advertising"""
