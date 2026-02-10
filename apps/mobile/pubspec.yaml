@@ -28,12 +28,12 @@ dependencies:
   path: ^1.9.1
   
   # BLE
-  flutter_blue_plus: ^1.36.8
-  permission_handler: ^11.3.1
+  flutter_blue_plus: ^2.1.0
+  permission_handler: ^12.0.1
   
   # Networking
-  connectivity_plus: ^6.1.5
-  share_plus: ^10.1.4
+  connectivity_plus: ^7.0.0
+  share_plus: ^12.0.1
   
   # Supabase (Future)
   supabase_flutter: ^2.8.4
@@ -46,7 +46,7 @@ dependencies:
   lmt_models:
     path: ../../packages/lmt_models
   http: ^1.2.2
-  package_info_plus: ^8.1.2
+  package_info_plus: ^9.0.0
   flutter_map_marker_popup: ^8.1.0
   flutter_map_animations: ^0.9.0
   geolocator: ^14.0.2
@@ -54,7 +54,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   
   # Code Generation
   build_runner: ^2.6.1

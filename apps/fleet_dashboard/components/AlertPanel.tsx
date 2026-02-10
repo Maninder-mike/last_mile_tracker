@@ -1,22 +1,12 @@
 'use client';
 
 import { DeviceReading } from '@/utils/types';
-import { useEffect, useState } from 'react';
+
 
 export default function AlertPanel({ devices }: { devices: DeviceReading[] }) {
-    const [alerts, setAlerts] = useState<DeviceReading[]>([]);
-    const [isVisible, setIsVisible] = useState(false);
-
-    useEffect(() => {
-        // Collect devices with high shock (> 500)
-        const critical = devices.filter((d) => d.shock > 500);
-        if (critical.length > 0) {
-            setAlerts(critical);
-            setIsVisible(true);
-        } else {
-            setIsVisible(false);
-        }
-    }, [devices]);
+    // Collect devices with high shock (> 500)
+    const alerts = devices.filter((d) => d.shock > 500);
+    const isVisible = alerts.length > 0;
 
     if (!isVisible) return null;
 

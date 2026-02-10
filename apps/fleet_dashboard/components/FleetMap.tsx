@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { DeviceReading } from '@/utils/types';
@@ -27,10 +27,42 @@ const createCustomIcon = (isHighShock: boolean) => {
     });
 };
 
-export default function FleetMap({ devices }: { devices: DeviceReading[] }) {
+// Map Controller to handle programmatic navigation
+const MapController = ({
+    selectedDeviceId,
+    devices
+}: {
+    selectedDeviceId: string | null;
+    devices: DeviceReading[]
+}) => {
+    const map = useMap();
+
+    useEffect(() => {
+        if (selectedDeviceId) {
+            const device = devices.find(d => d.id === selectedDeviceId);
+            if (device) {
+                map.flyTo([device.lat, device.lon], 16, {
+                    animate: true,
+                    duration: 1.5
+                });
+            }
+        }
+    }, [selectedDeviceId, devices, map]);
+
+    return null;
+};
+
+export default function FleetMap({
+    devices,
+    selectedDeviceId
+}: {
+    devices: DeviceReading[];
+    selectedDeviceId: string | null;
+}) {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMounted(true);
     }, []);
 
@@ -41,12 +73,16 @@ export default function FleetMap({ devices }: { devices: DeviceReading[] }) {
             center={[37.7749, -122.4194]}
             zoom={13}
             zoomControl={false}
-            style={{ height: '100%', width: '100%', background: '#0f172a' }}
+            style={{ height: '100%', width: '100%', background: '#f8fafc' }}
         >
             <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                // Using Voyager (light/neutral) style for cleanest look
+                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             />
+
+            <MapController selectedDeviceId={selectedDeviceId} devices={devices} />
+
             {devices.map((device) => (
                 <Marker
                     key={device.id}

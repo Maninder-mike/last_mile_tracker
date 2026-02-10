@@ -51,7 +51,7 @@ class DashboardPage extends ConsumerWidget {
                     height: 200,
                     child: CupertinoActivityIndicator(),
                   ),
-                  error: (_, __) => const SizedBox(
+                  error: (error, stackTrace) => const SizedBox(
                     height: 200,
                     child: Icon(CupertinoIcons.exclamationmark_triangle),
                   ),

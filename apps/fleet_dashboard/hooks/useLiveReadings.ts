@@ -2,6 +2,16 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/utils/supabase';
 import { DeviceReading } from '@/utils/types';
 
+interface SensorReadingRaw {
+    device_id: string;
+    lat: number;
+    lon: number;
+    speed: number;
+    temp: number;
+    shock_value: number;
+    timestamp: string;
+}
+
 export function useLiveReadings(initialData: DeviceReading[]) {
     const [devices, setDevices] = useState<DeviceReading[]>(initialData);
 
@@ -17,7 +27,8 @@ export function useLiveReadings(initialData: DeviceReading[]) {
             if (!error && data) {
                 // Simple logic to keep only the latest reading per device ID
                 const latestPerDevice: Record<string, DeviceReading> = {};
-                data.forEach((r: any) => {
+                // Cast data to known type instead of any
+                (data as SensorReadingRaw[]).forEach((r) => {
                     if (!latestPerDevice[r.device_id] || new Date(r.timestamp) > new Date(latestPerDevice[r.device_id].timestamp)) {
                         latestPerDevice[r.device_id] = {
                             id: r.device_id,
@@ -43,7 +54,7 @@ export function useLiveReadings(initialData: DeviceReading[]) {
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'sensor_readings' },
                 (payload) => {
-                    const newReading = payload.new as any;
+                    const newReading = payload.new as SensorReadingRaw;
                     setDevices((prev) => {
                         const index = prev.findIndex((d) => d.id === newReading.device_id);
                         const updatedReading: DeviceReading = {

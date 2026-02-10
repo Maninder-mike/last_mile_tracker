@@ -100,7 +100,7 @@ class _MapPageState extends ConsumerState<MapPage>
                   setState(() => _isFollowingMode = false);
                 }
               },
-              onTap: (_, __) => _popupController.hideAllPopups(),
+              onTap: (tapPosition, point) => _popupController.hideAllPopups(),
             ),
             children: [
               TileLayer(

@@ -49,10 +49,10 @@ class BLEAdvertiser:
             bluetooth.FLAG_WRITE_NO_RESPONSE,
         )
         
-        # WiFi Config: Write Only
+        # WiFi Config: Write + Notify (for scan results)
         WIFI_CONFIG_CHAR = (
             bluetooth.UUID("0000FF01-0000-1000-8000-00805F9B34FB"),
-            bluetooth.FLAG_WRITE,
+            bluetooth.FLAG_WRITE | bluetooth.FLAG_NOTIFY,
         )
         
         ENV_SERVICE = (
@@ -62,6 +62,10 @@ class BLEAdvertiser:
         
         # handles: sensor, ota_ctrl, ota_data, wifi_config
         ((self._sensor_handle, self._ota_ctrl_handle, self._ota_data_handle, self._wifi_config_handle),) = self._ble.gatts_register_services((ENV_SERVICE,))
+
+    @property
+    def wifi_config_handle(self):
+        return self._wifi_config_handle
     
     def _irq(self, event, data):
         if event == _IRQ_CENTRAL_CONNECT:
@@ -104,7 +108,9 @@ class BLEAdvertiser:
     def is_connected(self) -> bool:
         return self._connected
     
-    def notify(self, data: bytes):
+    def notify(self, data: bytes, handle=None):
         """Send notification to connected central"""
         if self._connected and self._conn_handle is not None:
-            self._ble.gatts_notify(self._conn_handle, self._sensor_handle, data)
+             # Default to sensor handle if none provided
+            target_handle = handle if handle is not None else self._sensor_handle
+            self._ble.gatts_notify(self._conn_handle, target_handle, data)

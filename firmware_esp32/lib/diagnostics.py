@@ -1,8 +1,5 @@
 
-try:
-    from lib.config import Config
-except ImportError:
-    pass
+
 
 class Diagnostics:
     SAVE_THRESHOLD = 5 # Save every 5 increments

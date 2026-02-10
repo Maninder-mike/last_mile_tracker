@@ -123,6 +123,17 @@ class BleService {
   Future<void> writeWifiConfig(String ssid, String password) =>
       _connectionManager.writeWifiConfig(ssid, password);
 
+  Stream<List<WifiScanResult>> get wifiScanResults =>
+      _connectionManager.wifiScanResults;
+
+  Stream<bool> get isWifiScanning => _connectionManager.isWifiScanning;
+  Stream<String> get wifiStatus => _connectionManager.wifiStatus;
+
+  Future<void> scanForWifi() => _connectionManager.scanForWifi();
+  Future<void> identifyDevice() => _connectionManager.identifyDevice();
+  Future<void> rebootDevice() => _connectionManager.rebootDevice();
+  Future<void> resetWifiConfig() => _connectionManager.resetWifiConfig();
+
   void toggleSimulation() {
     if (_simulationService.isSimulating) {
       _simulationService.stop();

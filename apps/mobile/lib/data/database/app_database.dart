@@ -15,7 +15,27 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async {
+      await m.createAll();
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        // Add missing columns to sensor_readings if upgrading from v1
+        await m.addColumn(sensorReadings, sensorReadings.batteryLevel);
+        await m.addColumn(sensorReadings, sensorReadings.tripState);
+        await m.addColumn(sensorReadings, sensorReadings.internalTemp);
+        await m.addColumn(sensorReadings, sensorReadings.rssi);
+        await m.addColumn(sensorReadings, sensorReadings.resetReason);
+        await m.addColumn(sensorReadings, sensorReadings.uptime);
+        await m.addColumn(sensorReadings, sensorReadings.wifiSsid);
+        await m.addColumn(sensorReadings, sensorReadings.wifiSignal);
+      }
+    },
+  );
 }
 
 LazyDatabase _openConnection() {

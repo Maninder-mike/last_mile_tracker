@@ -1,5 +1,5 @@
 import network
-import time
+
 import uasyncio as asyncio
 from lib.logger import Logger
 
@@ -11,34 +11,56 @@ class WiFiManager:
         self._set_led = status_led_callback
         self._connecting = False
 
-    async def connect(self):
+    async def connect(self, on_status_change=None):
         """Attempt to connect to WiFi using configured credentials"""
         ssid = self.config.get("wifi_ssid")
         password = self.config.get("wifi_pass")
 
         if not ssid:
             Logger.log("WiFi: No SSID configured.")
-            return
+            if on_status_change: on_status_change("FAILED", "No SSID")
+            return False
 
         if self.wlan.isconnected():
             Logger.log(f"WiFi: Already connected to {ssid}")
-            return
+            if on_status_change: on_status_change("CONNECTED", ssid)
+            return True
 
         Logger.log(f"WiFi: Connecting to {ssid}...")
         self._connecting = True
+        self.wlan.active(True)
         self.wlan.connect(ssid, password)
 
+        # Status mapping for MicroPython network.WLAN
+        # 1000: STAT_IDLE
+        # 1001: STAT_CONNECTING
+        # 1010: STAT_GOT_IP
+        # 201:  STAT_NO_AP_FOUND
+        # 202:  STAT_WRONG_PASSWORD
+        # 203:  STAT_BEACON_TIMEOUT
+        # 204:  STAT_ASSOC_FAIL
+
         # Wait for connection with timeout
-        for _ in range(20): # 20 attempts * 0.5s = 10s timeout
+        for i in range(30): # 30 attempts * 0.5s = 15s timeout
+            status = self.wlan.status()
             if self.wlan.isconnected():
                 Logger.log(f"WiFi: Connected! IP: {self.wlan.ifconfig()[0]}")
                 self._connecting = False
                 if self._set_led:
                     self._set_led((0, 10, 0)) # Green success flash
-                    await asyncio.sleep_ms(500)
-                    self._set_led((0, 0, 0))
-                return
+                if on_status_change: on_status_change("CONNECTED", ssid)
+                return True
             
+            if status == 202: # STAT_WRONG_PASSWORD
+                Logger.log("WiFi: Error - Wrong Password")
+                break
+            elif status == 201: # STAT_NO_AP_FOUND
+                Logger.log("WiFi: Error - AP Not Found")
+                break
+            
+            if i % 4 == 0:
+                Logger.log(f"WiFi: Status={status}...")
+
             if self._set_led:
                 self._set_led((0, 0, 10)) # Blue working flash
             await asyncio.sleep_ms(250)
@@ -46,12 +68,20 @@ class WiFiManager:
                 self._set_led((0, 0, 0))
             await asyncio.sleep_ms(250)
 
-        Logger.log("WiFi: Connection failed.")
+        Logger.log(f"WiFi: Connection failed. Status: {self.wlan.status()}")
         self._connecting = False
         if self._set_led:
             self._set_led((10, 0, 0)) # Red failure flash
             await asyncio.sleep_ms(500)
             self._set_led((0, 0, 0))
+        
+        if on_status_change:
+            err = "Timeout"
+            if self.wlan.status() == 202: err = "Wrong Password"
+            elif self.wlan.status() == 201: err = "AP Not Found"
+            on_status_change("FAILED", err)
+            
+        return False
 
     def is_connected(self):
         return self.wlan.isconnected()
@@ -65,3 +95,30 @@ class WiFiManager:
                      await self.connect()
             
             await asyncio.sleep(60) # Check every minute
+
+    async def scan_networks(self):
+        """Scan for available WiFi networks"""
+        Logger.log("WiFi: Scanning networks...")
+        self.wlan.active(True)
+        try:
+            # scan() returns list of tuples: (ssid, bssid, channel, RSSI, authmode, hidden)
+            networks = self.wlan.scan()
+            
+            # Filter empty SSIDs and sort by RSSI (signal strength)
+            # Tuple index 0 is SSID, 3 is RSSI
+            valid_networks = [n for n in networks if n[0]]
+            valid_networks.sort(key=lambda x: x[3], reverse=True)
+            
+            unique_ssids = []
+            seen = set()
+            for n in valid_networks:
+                ssid = n[0].decode('utf-8')
+                if ssid not in seen:
+                    unique_ssids.append((ssid, n[3]))
+                    seen.add(ssid)
+            
+            Logger.log(f"WiFi: Found {len(unique_ssids)} networks")
+            return unique_ssids
+        except Exception as e:
+            Logger.log(f"WiFi: Scan error: {e}")
+            return []

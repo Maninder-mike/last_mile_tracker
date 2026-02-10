@@ -235,7 +235,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
               ),
               loading: () => const CupertinoActivityIndicator(radius: 8),
-              error: (_, __) => const Text('vUnknown'),
+              error: (error, stackTrace) => const Text('vUnknown'),
             ),
       ),
     );
@@ -267,9 +267,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/app_logs.txt');
     if (await file.exists()) {
-      await Share.shareXFiles([
-        XFile(file.path),
-      ], text: 'Last Mile Tracker Logs');
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], text: 'Last Mile Tracker Logs'),
+      );
     }
     setState(() => _isExporting = false);
   }

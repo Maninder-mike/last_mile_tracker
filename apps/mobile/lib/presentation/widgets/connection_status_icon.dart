@@ -34,7 +34,7 @@ class ConnectionStatusIcon extends ConsumerWidget {
         color: CupertinoColors.systemGrey,
         size: 20,
       ),
-      error: (_, __) => const Icon(
+      error: (error, stackTrace) => const Icon(
         CupertinoIcons.bluetooth,
         color: CupertinoColors.systemRed,
         size: 20,

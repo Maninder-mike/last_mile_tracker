@@ -1,6 +1,6 @@
 import bluetooth
 import time
-from machine import Pin
+
 
 print("Init BLE...")
 ble = bluetooth.BLE()

@@ -29,7 +29,7 @@ class BleConnectionManager {
   Future<void> connect(BluetoothDevice device) async {
     _device = device;
     try {
-      await device.connect();
+      await device.connect(license: License.free);
       FileLogger.log("ConnectionManager: Connected to ${device.platformName}");
       _reconnectDelaySeconds = BleConstants.initialReconnectDelay.inSeconds;
 
@@ -59,51 +59,159 @@ class BleConnectionManager {
     }
   }
 
+  StreamSubscription? _wifiSubscription;
+  final _wifiScanController =
+      StreamController<List<WifiScanResult>>.broadcast();
+  Stream<List<WifiScanResult>> get wifiScanResults =>
+      _wifiScanController.stream;
+
+  final _isWifiScanningController = StreamController<bool>.broadcast();
+  Stream<bool> get isWifiScanning => _isWifiScanningController.stream;
+
+  final _wifiStatusController = StreamController<String>.broadcast();
+  Stream<String> get wifiStatus => _wifiStatusController.stream;
+
+  final List<WifiScanResult> _currentScanResults = [];
+
   Future<void> _discoverServices(BluetoothDevice device) async {
     List<BluetoothService> services = await device.discoverServices();
     BluetoothCharacteristic? otaControl;
     BluetoothCharacteristic? otaData;
 
     for (var service in services) {
-      final uuid = service.uuid.toString().toUpperCase();
+      final serviceUuid = service.uuid.toString().toUpperCase();
+      FileLogger.log("ConnectionManager: Found Service $serviceUuid");
 
-      // Environmental Sensing Service (for live data)
-      if (uuid.contains(BleConstants.serviceUuid)) {
-        FileLogger.log("ConnectionManager: Found Service ${service.uuid}");
-        for (var characteristic in service.characteristics) {
+      for (var characteristic in service.characteristics) {
+        final charUuid = characteristic.uuid.toString().toUpperCase();
+        FileLogger.log("ConnectionManager: Found Characteristic $charUuid");
+
+        // 1. WiFi Config (FF01)
+        if (_isUuidMatch(charUuid, BleConstants.wifiConfigUuid)) {
+          _wifiChar = characteristic;
+          FileLogger.log("ConnectionManager: Identified WiFi Config Char");
+          if (characteristic.properties.notify) {
+            await characteristic.setNotifyValue(true);
+            await _wifiSubscription?.cancel();
+            _wifiSubscription = characteristic.onValueReceived.listen((value) {
+              _handleWifiNotification(value);
+            });
+            FileLogger.log("ConnectionManager: Subscribed to WiFi Results");
+          }
+        }
+        // 2. Sensor Data (2A6E)
+        else if (_isUuidMatch(charUuid, BleConstants.tempCharUuid)) {
+          FileLogger.log("ConnectionManager: Identified Sensor Data Char");
           if (characteristic.properties.notify) {
             await characteristic.setNotifyValue(true);
             await _characteristicSubscription?.cancel();
-            _characteristicSubscription = characteristic.lastValueStream.listen(
+            _characteristicSubscription = characteristic.onValueReceived.listen(
               (value) {
                 onDataReceived(value);
               },
             );
-            FileLogger.log(
-              "ConnectionManager: Subscribed to ${characteristic.uuid}",
-            );
+            FileLogger.log("ConnectionManager: Subscribed to Sensor Data");
           }
         }
-      }
-
-      // Check for OTA characteristics
-      for (var characteristic in service.characteristics) {
-        final charUuid = characteristic.uuid.toString().toUpperCase();
-        if (charUuid == BleConstants.otaControlUuid.toUpperCase()) {
+        // 3. OTA Control (0001)
+        else if (_isUuidMatch(charUuid, BleConstants.otaControlUuid)) {
           otaControl = characteristic;
-          FileLogger.log("ConnectionManager: Found OTA Control characteristic");
-        } else if (charUuid == BleConstants.otaDataUuid.toUpperCase()) {
+          FileLogger.log("ConnectionManager: Identified OTA Control Char");
+        }
+        // 4. OTA Data (0002)
+        else if (_isUuidMatch(charUuid, BleConstants.otaDataUuid)) {
           otaData = characteristic;
-          FileLogger.log("ConnectionManager: Found OTA Data characteristic");
-        } else if (charUuid == BleConstants.wifiConfigUuid.toUpperCase()) {
-          _wifiChar = characteristic;
-          FileLogger.log("ConnectionManager: Found WiFi Config characteristic");
+          FileLogger.log("ConnectionManager: Identified OTA Data Char");
         }
       }
     }
 
     if (otaControl != null && otaData != null) {
       onOtaCharsFound(otaControl, otaData);
+    }
+  }
+
+  bool _isUuidMatch(String foundUuid, String constantUuid) {
+    foundUuid = foundUuid.toUpperCase();
+    constantUuid = constantUuid.toUpperCase();
+
+    // Direct match
+    if (foundUuid == constantUuid) return true;
+
+    // Short form match (e.g. "FF01" matches "0000FF01-0000-1000-8000-00805F9B34FB")
+    if (constantUuid.contains(foundUuid) && foundUuid.length <= 8) return true;
+
+    // 128-bit match ignoring dashes
+    if (foundUuid.replaceAll('-', '') == constantUuid.replaceAll('-', '')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  void _handleWifiNotification(List<int> value) {
+    try {
+      final message = String.fromCharCodes(value).trim();
+      FileLogger.log("ConnectionManager: Received WiFi Message: $message");
+
+      if (message == "SCAN:END") {
+        FileLogger.log(
+          "ConnectionManager: WiFi Scan complete. Found ${_currentScanResults.length} networks.",
+        );
+        _isWifiScanningController.add(false);
+        return;
+      }
+
+      if (message.startsWith("WIFI:")) {
+        _wifiStatusController.add(message);
+        FileLogger.log("ConnectionManager: WiFi Status Update: $message");
+        return;
+      }
+
+      // Expected format: "SSID,RSSI"
+      final parts = message.split(',');
+      if (parts.length == 2) {
+        final ssid = parts[0];
+        final rssi = int.tryParse(parts[1]) ?? -100;
+
+        // Add or update
+        final existingIndex = _currentScanResults.indexWhere(
+          (r) => r.ssid == ssid,
+        );
+        if (existingIndex >= 0) {
+          _currentScanResults[existingIndex] = WifiScanResult(ssid, rssi);
+        } else {
+          _currentScanResults.add(WifiScanResult(ssid, rssi));
+        }
+
+        // Sort by RSSI
+        _currentScanResults.sort((a, b) => b.rssi.compareTo(a.rssi));
+        _wifiScanController.add(List.from(_currentScanResults));
+      }
+    } catch (e) {
+      FileLogger.log("ConnectionManager: Error parsing WiFi notification: $e");
+    }
+  }
+
+  Future<void> scanForWifi() async {
+    if (_wifiChar == null) throw Exception("WiFi Characteristic not found");
+
+    _currentScanResults.clear();
+    _wifiScanController.add([]);
+    _isWifiScanningController.add(true);
+
+    try {
+      const command = "CMD:SCAN";
+      await _wifiChar!.write(command.codeUnits);
+      FileLogger.log("ConnectionManager: Sent WiFi Scan Command");
+
+      // Timeout safety
+      Future.delayed(const Duration(seconds: 15), () {
+        _isWifiScanningController.add(false);
+      });
+    } catch (e) {
+      _isWifiScanningController.add(false);
+      rethrow;
     }
   }
 
@@ -118,9 +226,29 @@ class BleConnectionManager {
     FileLogger.log("ConnectionManager: Wrote WiFi config for $ssid");
   }
 
+  Future<void> identifyDevice() async {
+    if (_wifiChar == null) throw Exception("WiFi Characteristic not found");
+    await _wifiChar!.write("CMD:IDENTIFY".codeUnits);
+    FileLogger.log("ConnectionManager: Sent Identify Command");
+  }
+
+  Future<void> rebootDevice() async {
+    if (_wifiChar == null) throw Exception("WiFi Characteristic not found");
+    await _wifiChar!.write("CMD:REBOOT".codeUnits);
+    FileLogger.log("ConnectionManager: Sent Reboot Command");
+  }
+
+  Future<void> resetWifiConfig() async {
+    if (_wifiChar == null) throw Exception("WiFi Characteristic not found");
+    await _wifiChar!.write("CMD:RESET_WIFI".codeUnits);
+    FileLogger.log("ConnectionManager: Sent Reset WiFi Command");
+  }
+
   void _cleanupConnectionResources() {
     _characteristicSubscription?.cancel();
     _characteristicSubscription = null;
+    _wifiSubscription?.cancel();
+    _wifiSubscription = null;
   }
 
   Future<void> disconnect() async {
@@ -133,5 +261,13 @@ class BleConnectionManager {
 
   void dispose() {
     disconnect();
+    _wifiScanController.close();
   }
+}
+
+class WifiScanResult {
+  final String ssid;
+  final int rssi;
+
+  WifiScanResult(this.ssid, this.rssi);
 }
