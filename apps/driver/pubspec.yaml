@@ -33,14 +33,14 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # State Management
-  flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
+  flutter_riverpod: ^3.1.0
+  riverpod_annotation: ^4.0.0
   
   # Utilities
   intl: ^0.20.2
   
   # Database (Offline-First)
-  drift: ^2.25.0
+  drift: ^2.31.0
   sqlite3_flutter_libs: ^0.5.28
   path_provider: ^2.1.5
   path: ^1.9.1
@@ -71,10 +71,10 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   
   # Code Generation
-  build_runner: ^2.4.15
-  drift_dev: ^2.25.0
-  riverpod_generator: ^2.6.5
-  json_serializable: ^6.9.3
+  build_runner: ^2.6.1
+  drift_dev: ^2.31.0
+  riverpod_generator: ^4.0.0+1
+  json_serializable: ^6.11.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
