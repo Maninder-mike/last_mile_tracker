@@ -37,7 +37,7 @@ dependencies:
   riverpod_annotation: ^2.6.1
   
   # Utilities
-  intl: ^0.19.0
+  intl: ^0.20.2
   
   # Database (Offline-First)
   drift: ^2.25.0
