@@ -6,12 +6,14 @@ print("Init BLE...")
 ble = bluetooth.BLE()
 ble.active(True)
 
+
 def adv_payload(name):
     payload = bytearray()
     payload += bytes([0x02, 0x01, 0x06])
     name_bytes = name.encode()
     payload += bytes([len(name_bytes) + 1, 0x09]) + name_bytes
     return payload
+
 
 payload = adv_payload("ESP-TEST")
 print("Advertising as 'ESP-TEST'...")

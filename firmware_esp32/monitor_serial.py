@@ -1,7 +1,6 @@
 import serial
-import sys
 
-port = '/dev/cu.usbmodem1101'
+port = "/dev/cu.usbmodem1101"
 baud = 115200
 
 print(f"Opening {port} at {baud}...")
@@ -11,6 +10,6 @@ try:
         while True:
             line = ser.readline()
             if line:
-                print(line.decode('utf-8', errors='replace').strip())
+                print(line.decode("utf-8", errors="replace").strip())
 except Exception as e:
     print(f"Error: {e}")

@@ -1,5 +1,6 @@
 import os
+
 try:
-    os.mkdir('lib')
+    os.mkdir("lib")
 except OSError:
     pass

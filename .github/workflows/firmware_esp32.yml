@@ -44,6 +44,9 @@ jobs:
       - name: Run Linter (Ruff)
         run: |
           ruff check firmware_esp32/
+      - name: Check Format (Ruff)
+        run: |
+          ruff format firmware_esp32/ --check
           
   build:
     name: Build & Package
