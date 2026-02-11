@@ -1,86 +1,138 @@
 import 'package:flutter/cupertino.dart';
 import 'package:last_mile_tracker/presentation/pages/shipments/shipment_detail_page.dart';
+import 'package:last_mile_tracker/presentation/pages/shipments/add_shipment_page.dart';
+
 import 'package:flutter/material.dart' show Colors; // For transparent scaffold
 import 'package:last_mile_tracker/domain/models/shipment.dart'; // Import model
-import 'package:last_mile_tracker/presentation/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 
-class ShipmentsPage extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
+import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
+import 'package:collection/collection.dart';
+
+class ShipmentsPage extends ConsumerStatefulWidget {
   const ShipmentsPage({super.key});
 
   @override
-  State<ShipmentsPage> createState() => _ShipmentsPageState();
+  ConsumerState<ShipmentsPage> createState() => _ShipmentsPageState();
 }
 
-class _ShipmentsPageState extends State<ShipmentsPage> {
+class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<Shipment> _filteredShipments = Shipment.mockData;
+  // We no longer keep local state for filtered list, we derive it in build
+  String _searchQuery = '';
 
   void _onSearchChanged(String query) {
     setState(() {
-      _filteredShipments = Shipment.mockData.where((s) {
-        final q = query.toLowerCase();
-        return s.trackingNumber.toLowerCase().contains(q) ||
-            s.origin.toLowerCase().contains(q) ||
-            s.destination.toLowerCase().contains(q);
-      }).toList();
+      _searchQuery = query;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final trackersAsync = ref.watch(allTrackersProvider);
+    final trackers = trackersAsync.asData?.value ?? [];
+
+    // Merge Mock Data with Live Trackers
+    final mergedShipments = Shipment.mockData.map((s) {
+      final tracker = trackers.firstWhereOrNull(
+        (t) => s.deviceIds.contains(t.id),
+      );
+      if (tracker != null) {
+        return s.copyWith(
+          temperature: (tracker.temp ?? 0) != 0
+              ? (tracker.temp ?? 0)
+              : s.temperature,
+          // batteryLevel: tracker.batteryLevel != 0 ? tracker.batteryLevel.toInt() : s.batteryLevel, // Tracker DB has 0 default
+          batteryLevel: (tracker.batteryLevel ?? 0).toInt(),
+          shockValue: tracker.shockValue ?? 0,
+          latitude: (tracker.lat ?? 0) != 0 ? (tracker.lat ?? 0) : s.latitude,
+          longitude: (tracker.lon ?? 0) != 0 ? (tracker.lon ?? 0) : s.longitude,
+          lastUpdate: tracker.lastSeen,
+        );
+      }
+      return s;
+    }).toList();
+
+    // Filter
+    final filteredShipments = mergedShipments.where((s) {
+      final q = _searchQuery.toLowerCase();
+      return s.trackingNumber.toLowerCase().contains(q) ||
+          s.origin.toLowerCase().contains(q) ||
+          s.destination.toLowerCase().contains(q);
+    }).toList();
+
     return CupertinoPageScaffold(
       backgroundColor: Colors.transparent, // Let MainLayout background show
-      child: CustomScrollView(
-        slivers: [
-          CupertinoSliverNavigationBar(
-            largeTitle: const Text('Shipments'),
-            backgroundColor: Colors.transparent,
-            border: null,
-            stretch: true,
-            trailing: CupertinoButton(
-              padding: EdgeInsets.zero,
-              child: const Icon(CupertinoIcons.add, size: 28),
-              onPressed: () {
-                // TODO: Navigate to Add Shipment
-              },
-            ),
-          ),
-
-          // Search Bar
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: CupertinoSearchTextField(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                style: TextStyle(
-                  color: CupertinoDynamicColor.resolve(
-                    AppTheme.textPrimary,
-                    context,
-                  ),
+      child: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: MediaQuery.of(context).padding.top + 68,
                 ),
               ),
-            ),
-          ),
 
-          // Shipment List
-          SliverPadding(
-            padding: const EdgeInsets.only(bottom: 100), // Space for fab/navbar
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final shipment = _filteredShipments[index];
-                return Padding(
+              // Search Bar
+              SliverToBoxAdapter(
+                child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16.0,
                     vertical: 8.0,
                   ),
-                  child: _ShipmentListItem(shipment: shipment),
+                  child: CupertinoSearchTextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    style: TextStyle(
+                      color: CupertinoDynamicColor.resolve(
+                        AppTheme.textPrimary,
+                        context,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Shipment List
+              SliverPadding(
+                padding: const EdgeInsets.only(
+                  bottom: 100,
+                ), // Space for fab/navbar
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final shipment = filteredShipments[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      child: _ShipmentListItem(shipment: shipment),
+                    );
+                  }, childCount: filteredShipments.length),
+                ),
+              ),
+            ],
+          ),
+          FloatingHeader(
+            title: 'Shipments',
+            trailing: CupertinoButton(
+              minimumSize: Size.zero,
+              padding: EdgeInsets.zero,
+              onPressed: () {
+                Navigator.of(context).push(
+                  CupertinoPageRoute(
+                    builder: (context) => const AddShipmentPage(),
+                  ),
                 );
-              }, childCount: _filteredShipments.length),
+              },
+              child: const Icon(
+                CupertinoIcons.add,
+                size: 20,
+                color: CupertinoColors.activeBlue,
+              ),
             ),
           ),
         ],
@@ -116,9 +168,10 @@ class _ShipmentListItem extends StatelessWidget {
               children: [
                 Text(
                   shipment.trackingNumber,
-                  style: const TextStyle(
+                  style: AppTheme.body.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
                 Container(

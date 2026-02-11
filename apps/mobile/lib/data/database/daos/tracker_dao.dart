@@ -26,6 +26,13 @@ class TrackerDao extends DatabaseAccessor<AppDatabase> with _$TrackerDaoMixin {
     return (select(trackers)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
+  // Watch a single tracker
+  Stream<Tracker?> watchTracker(String id) {
+    return (select(
+      trackers,
+    )..where((t) => t.id.equals(id))).watchSingleOrNull();
+  }
+
   // Get active trackers (seen in last 5 minutes)
   Future<List<Tracker>> getActiveTrackers() {
     final threshold = DateTime.now().subtract(const Duration(minutes: 5));

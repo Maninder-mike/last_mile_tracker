@@ -30,3 +30,8 @@ final allTrackersProvider = StreamProvider<List<Tracker>>((ref) {
   final repository = ref.watch(trackerRepositoryProvider);
   return repository.watchAllTrackers();
 });
+
+final trackerProvider = StreamProvider.family<Tracker?, String>((ref, id) {
+  final repository = ref.watch(trackerRepositoryProvider);
+  return repository.watchTracker(id);
+});

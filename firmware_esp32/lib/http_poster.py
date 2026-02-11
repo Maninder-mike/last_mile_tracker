@@ -1,6 +1,5 @@
 # http_poster.py - Lightweight cloud ingest client
 import urequests
-import json
 import time
 
 class HttpPoster:
@@ -26,12 +25,19 @@ class HttpPoster:
         if d_lat > 0.0001 or d_lon > 0.0001:
             return True
             
-        # 2. Check major sensors
-        d_temp = abs(data['temp'] - self._last_sent_data['temp'])
+        # 2. Check major sensors (Primary)
+        d_temp = abs(data.get('temp', 0) - self._last_sent_data.get('temp', 0))
         if d_temp > 0.5:
             return True
+
+        # 2b. Check all other temps (V2)
+        current_temps = data.get('all_temps', {})
+        last_temps = self._last_sent_data.get('all_temps', {})
+        for rom, val in current_temps.items():
+            if abs(val - last_temps.get(rom, -999)) > 0.5:
+                return True
             
-        if data['shock'] > self.config.get("shock_threshold"):
+        if data.get('shock', 0) > self.config.get("shock_threshold"):
             return True
             
         # No significant change
@@ -48,11 +54,16 @@ class HttpPoster:
         if not url:
             return False
             
+        # Timestamp validity check
+        ts = time.time()
+        is_synced = ts > 1704067200 # Jan 1 2024
+            
         payload = {
             "device_id": self.config.get("device_id"),
             "provisioned_id": self.config.get("provisioned_id"),
             "tenant_id": self.config.get("tenant_id"),
-            "timestamp": time.time(),
+            "timestamp": ts,
+            "ts_synced": is_synced,
             "data": data
         }
         

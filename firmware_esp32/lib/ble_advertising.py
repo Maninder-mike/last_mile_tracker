@@ -105,23 +105,47 @@ class BLEAdvertiser:
 
     def start_advertising(self):
         """Start BLE advertising"""
-        payload = self._advertising_payload(self._name)
+        # Pre-allocate payload buffer (max 31 bytes for scan response/adv)
+        self._payload_buf = bytearray(31)
+        self._payload_len = 0
+        self._update_payload(name=self._name) # Pass self._name
         # 100ms = 100,000us
-        self._ble.gap_advertise(100_000, adv_data=payload)
+        self._ble.gap_advertise(100_000, adv_data=self._advertising_payload())
         print(f"Advertising as '{self._name}'")
     
-    def _advertising_payload(self, name):
-        """Build advertising payload"""
-        payload = bytearray()
-        
+    def _update_payload(self, name=None, services=None, appearance=0):
+        if not name:
+            name = "LMT-Device"
+            
+        # Manually construct payload into bytearray to avoid intermediate 'bytes' objects (Rule 3)
+        idx = 0
         # Flags
-        payload += bytes([0x02, 0x01, 0x06])
+        self._payload_buf[idx:idx+3] = bytes([0x02, 0x01, 0x06])
+        idx += 3
         
         # Complete local name
         name_bytes = name.encode()
-        payload += bytes([len(name_bytes) + 1, 0x09]) + name_bytes
-        
-        return payload
+        name_len = len(name_bytes)
+        if idx + name_len + 2 <= 31:
+            self._payload_buf[idx] = name_len + 1
+            self._payload_buf[idx+1] = 0x09
+            self._payload_buf[idx+2:idx+2+name_len] = name_bytes
+            idx += name_len + 2
+            
+        if services:
+            for uuid in services:
+                b = bluetooth.UUID(uuid).bin
+                if idx + len(b) + 2 <= 31:
+                    self._payload_buf[idx] = len(b) + 1
+                    self._payload_buf[idx+1] = 0x03 # Complete list of 16-bit Service UUIDs
+                    self._payload_buf[idx+2:idx+2+len(b)] = b
+                    idx += len(b) + 2
+                    
+        self._payload_len = idx
+
+    def _advertising_payload(self, name=None, services=None, appearance=0):
+        # Rule 3: Return a memoryview of the pre-allocated buffer
+        return memoryview(self._payload_buf)[:self._payload_len]
     
     def is_connected(self) -> bool:
         return self._connected

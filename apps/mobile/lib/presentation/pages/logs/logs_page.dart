@@ -26,7 +26,7 @@ class LogsPage extends ConsumerWidget {
             slivers: [
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: MediaQuery.of(context).padding.top + 16,
+                  height: MediaQuery.of(context).padding.top + 68,
                 ),
               ),
               readingsAsync.when(
@@ -82,6 +82,7 @@ class LogsPage extends ConsumerWidget {
               const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
             ],
           ),
+          const FloatingHeader(title: 'Logs'),
         ],
       ),
     );
@@ -212,7 +213,6 @@ class _LogCard extends StatelessWidget {
               ),
             ],
           ),
-          const FloatingHeader(title: 'Logs'),
         ],
       ),
     );

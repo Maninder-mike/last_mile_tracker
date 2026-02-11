@@ -47,3 +47,10 @@ Stream<String> wifiStatus(Ref ref) {
   final service = ref.watch(bleServiceProvider);
   return service.wifiStatus;
 }
+
+@riverpod
+Stream<bool> simulationState(Ref ref) async* {
+  final service = ref.watch(bleServiceProvider);
+  yield service.simulationActive;
+  yield* service.simulationState;
+}

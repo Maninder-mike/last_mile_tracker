@@ -44,8 +44,9 @@ class BleScanner {
     // Small delay to ensure previous UI transitions or adapter states settle
     await Future.delayed(BleConstants.scanStartDelay);
 
+    // Prevent hitting Android scan frequency limits
     if (await FlutterBluePlus.isScanning.first) {
-      FileLogger.log("Scanner: Already scanning. Skipping.");
+      FileLogger.log("Scanner: Already scanning. Skipping redundant start.");
       return;
     }
 
@@ -54,9 +55,21 @@ class BleScanner {
       return;
     }
 
-    if (await FlutterBluePlus.adapterState.first != BluetoothAdapterState.on) {
-      FileLogger.log("Scanner: Adapter is not on. Waiting...");
-      return;
+    // Wait for Bluetooth to be on
+    var adapterState = await FlutterBluePlus.adapterState.first;
+    if (adapterState != BluetoothAdapterState.on) {
+      FileLogger.log(
+        "Scanner: Adapter not ready (State: $adapterState). Waiting for Bluetooth...",
+      );
+      try {
+        await FlutterBluePlus.adapterState
+            .where((s) => s == BluetoothAdapterState.on)
+            .first
+            .timeout(const Duration(seconds: 5));
+      } catch (e) {
+        FileLogger.log("Scanner: Bluetooth failed to turn on in time.");
+        return;
+      }
     }
 
     if (Platform.isAndroid) {
@@ -72,12 +85,24 @@ class BleScanner {
     await _scanSubscription?.cancel();
     _scanSubscription = FlutterBluePlus.onScanResults.listen((results) {
       for (ScanResult result in results) {
+        // DEBUG LOGGING
+        final devName = result.device.platformName;
+        final advName = result.advertisementData.advName;
+        FileLogger.log(
+          "Scanner: Saw device: '$devName' / '$advName' [${result.rssi}]",
+        );
+
         if (_isTargetDevice(result)) {
+          FileLogger.log(
+            "Scanner: MATCHED device: '$devName' [${result.rssi}]",
+          );
+
           final telemetry = _extractTelemetry(result);
           final newTracker = ScannedTracker(
             device: result.device,
             rssi: result.rssi,
             lastSeen: DateTime.now(),
+            advertisementData: result.advertisementData,
             telemetry: telemetry,
           );
 
@@ -143,12 +168,26 @@ class BleScanner {
   }
 
   bool _isTargetDevice(ScanResult result) {
+    // 1. Check Name
     final name = result.device.platformName;
     final advName = result.advertisementData.advName;
-    return name == BleConstants.deviceName ||
+    final nameMatch =
+        name == BleConstants.deviceName ||
         advName == BleConstants.deviceName ||
         name.startsWith(BleConstants.deviceName) ||
         advName.startsWith(BleConstants.deviceName);
+
+    if (nameMatch) return true;
+
+    // 2. Check Service UUID (for cases where name is cached as empty)
+    // Guid comparison handles normalization
+    if (result.advertisementData.serviceUuids.contains(
+      Guid(BleConstants.serviceUuid),
+    )) {
+      return true;
+    }
+
+    return false;
   }
 
   Future<bool> _requestPermissions() async {

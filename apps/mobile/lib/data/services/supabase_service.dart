@@ -23,6 +23,19 @@ class SupabaseService {
     */
   }
 
+  /// Create a new shipment
+  Future<void> createShipment(Shipment shipment) async {
+    FileLogger.log("Supabase: Creating shipment ${shipment.id}");
+    // STUB: Simulate network request
+    await Future.delayed(const Duration(seconds: 1));
+
+    /* IMPACT: Future Implementation
+    await _client
+        .from('shipments')
+        .insert(shipment.toJson());
+    */
+  }
+
   /// Get details for a specific shipment
   Future<Shipment?> getShipment(String id) async {
     // STUB: Find in mock data

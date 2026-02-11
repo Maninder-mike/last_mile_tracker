@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:last_mile_tracker/data/database/app_database.dart' as db;
+import 'package:last_mile_tracker/data/database/app_database.dart';
 import 'package:last_mile_tracker/data/database/daos/sensor_dao.dart';
 import 'package:last_mile_tracker/data/database/daos/tracker_dao.dart';
 import 'package:last_mile_tracker/data/database/daos/alert_dao.dart';
@@ -7,13 +7,11 @@ import 'package:lmt_models/lmt_models.dart' as models;
 
 part 'database_providers.g.dart';
 
-// Database Provider
 @Riverpod(keepAlive: true)
-db.AppDatabase appDatabase(Ref ref) {
-  return db.AppDatabase();
+AppDatabase appDatabase(Ref ref) {
+  return AppDatabase();
 }
 
-// DAO Provider
 @Riverpod(keepAlive: true)
 SensorDao sensorDao(Ref ref) {
   final database = ref.watch(appDatabaseProvider);
@@ -33,7 +31,13 @@ AlertDao alertDao(Ref ref) {
 }
 
 @riverpod
-Stream<models.SensorReading?> latestReading(Ref ref) {
+Stream tracker(Ref ref, String id) {
+  final dao = ref.watch(trackerDaoProvider);
+  return dao.watchTracker(id);
+}
+
+@riverpod
+Stream latestReading(Ref ref) {
   final dao = ref.watch(sensorDaoProvider);
   return dao.watchLatestReading().map((r) => r?.toModel());
 }
@@ -54,7 +58,7 @@ Stream<List<models.SensorReading>> recentPath(Ref ref) {
   );
 }
 
-extension on db.SensorReading {
+extension on SensorReading {
   models.SensorReading toModel() {
     return models.SensorReading(
       id: id,

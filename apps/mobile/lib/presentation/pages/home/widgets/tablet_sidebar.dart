@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import '../../../widgets/connection_status_icon.dart';
 import 'mobile_bottom_nav.dart';
+import '../../../../core/theme/app_theme.dart';
 
 class TabletSidebar extends StatelessWidget {
   final int currentIndex;
@@ -18,21 +19,17 @@ class TabletSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 250,
-      color: CupertinoColors.systemGroupedBackground,
+      color: AppTheme.background,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SafeArea(
+          SafeArea(
             bottom: false,
             child: Padding(
               padding: EdgeInsets.all(24.0),
               child: Text(
                 'Tracker',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -1.0,
-                ),
+                style: AppTheme.heading1.copyWith(fontSize: 28),
               ),
             ),
           ),
@@ -54,7 +51,7 @@ class TabletSidebar extends StatelessWidget {
                       horizontal: 16,
                       vertical: 12,
                     ),
-                    color: isSelected ? CupertinoColors.activeBlue : null,
+                    color: isSelected ? AppTheme.primary : null,
                     borderRadius: BorderRadius.circular(12),
                     onPressed: () => onTap(index),
                     child: Row(
@@ -64,15 +61,15 @@ class TabletSidebar extends StatelessWidget {
                           size: 20,
                           color: isSelected
                               ? CupertinoColors.white
-                              : CupertinoColors.systemGrey,
+                              : AppTheme.textSecondary,
                         ),
                         const SizedBox(width: 16),
                         Text(
                           item.label,
-                          style: TextStyle(
+                          style: AppTheme.body.copyWith(
                             color: isSelected
                                 ? CupertinoColors.white
-                                : CupertinoColors.label,
+                                : AppTheme.textPrimary,
                             fontWeight: isSelected
                                 ? FontWeight.w600
                                 : FontWeight.normal,
@@ -92,7 +89,7 @@ class TabletSidebar extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: CupertinoColors.white,
+                  color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Row(

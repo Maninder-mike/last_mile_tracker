@@ -20,8 +20,8 @@ abstract final class SettingsTheme {
   static const dividerColorLight = CupertinoColors.systemGrey5;
 
   // Glassmorphism
-  static const glassOpacityDark = 0.05;
-  static const glassOpacityLight = 0.08;
+  static const glassOpacityDark = 0.60; // Increased from 0.05
+  static const glassOpacityLight = 0.80;
   static const glassBlur = 20.0;
   static const glassBorderOpacity = 0.1;
 

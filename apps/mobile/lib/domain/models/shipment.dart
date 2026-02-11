@@ -22,6 +22,11 @@ class Shipment {
   final double? batteryDrop;
   final bool hasAlerts;
 
+  // New Hardware V2 Fields
+  final double? latitude;
+  final double? longitude;
+  final int? shockValue;
+
   const Shipment({
     required this.id,
     required this.trackingNumber,
@@ -36,7 +41,48 @@ class Shipment {
     this.batteryLevel,
     this.batteryDrop,
     this.hasAlerts = false,
+    this.latitude,
+    this.longitude,
+    this.shockValue,
   });
+
+  Shipment copyWith({
+    String? id,
+    String? trackingNumber,
+    ShipmentStatus? status,
+    String? origin,
+    String? destination,
+    DateTime? eta,
+    DateTime? lastUpdate,
+    List<String>? deviceIds,
+    double? temperature,
+    Map<String, double>? additionalTemps,
+    int? batteryLevel,
+    double? batteryDrop,
+    bool? hasAlerts,
+    double? latitude,
+    double? longitude,
+    int? shockValue,
+  }) {
+    return Shipment(
+      id: id ?? this.id,
+      trackingNumber: trackingNumber ?? this.trackingNumber,
+      status: status ?? this.status,
+      origin: origin ?? this.origin,
+      destination: destination ?? this.destination,
+      eta: eta ?? this.eta,
+      lastUpdate: lastUpdate ?? this.lastUpdate,
+      deviceIds: deviceIds ?? this.deviceIds,
+      temperature: temperature ?? this.temperature,
+      additionalTemps: additionalTemps ?? this.additionalTemps,
+      batteryLevel: batteryLevel ?? this.batteryLevel,
+      batteryDrop: batteryDrop ?? this.batteryDrop,
+      hasAlerts: hasAlerts ?? this.hasAlerts,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      shockValue: shockValue ?? this.shockValue,
+    );
+  }
 
   factory Shipment.fromJson(Map<String, dynamic> json) =>
       _$ShipmentFromJson(json);
@@ -58,6 +104,9 @@ class Shipment {
       batteryDrop: 120, // mV
       hasAlerts: true,
       deviceIds: ['dev_001'],
+      shockValue: 125, // Mock shock
+      latitude: 37.7749, // SF
+      longitude: -122.4194, // SF
     ),
     Shipment(
       id: 'shp_002',

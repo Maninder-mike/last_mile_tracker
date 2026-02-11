@@ -8,14 +8,16 @@ import uasyncio as asyncio
 from machine import Pin, WDT
 from lib.ble_advertising import BLEAdvertiser
 from lib.sensors import SensorHub
-from lib.st7789_display import Display
+# from lib.st7789_display import Display
 from lib.config import Config
 from lib.diagnostics import Diagnostics
 from lib.shock_buffer import ShockBuffer
 from lib.ble_ota import BleOta
 from lib.logger import Logger
 from lib.sd_logger import SDLogger
+from lib.buzzer import Buzzer
 from lib.http_poster import HttpPoster
+from lib.ntp_time import NTPClient
 
 # Constants
 NEOPIXEL_PIN = 8
@@ -29,6 +31,25 @@ class LastMileTracker:
         self.config = Config()
         self.diagnostics = Diagnostics(self.config)
         self.wdt = WDT(timeout=30000)
+        
+        # Rule 2: Multi-task health monitoring for Rule 2 (Bounded Loops)
+        self._task_ticks = {
+            "sensor": time.ticks_ms(),
+            "update": time.ticks_ms(),
+            "cloud": time.ticks_ms()
+        }
+        
+        # Rule 5: Critical startup invariant assertions
+        assert self.config.get("shock_threshold") >= 0, "Invalid shock threshold"
+        assert self.config.get("ingest_interval") >= 1, "Ingest interval too low"
+        
+        # Rule 3: Pre-allocate BLE data buffers to avoid heap churn
+        self._v1_buf = bytearray(24)
+        self._v2_buf = bytearray(76)
+        self._v2_length = 0
+        
+        # Shared sensor state
+        self._reading = {}
         self.wdt.feed()
         
         self.device_id = self._init_device_id()
@@ -39,10 +60,12 @@ class LastMileTracker:
         except Exception:
             self.np = None
             
-        try:
-            self.display = Display()
-        except Exception:
-            self.display = None
+        # Display - Disabled for Prototype
+        self.display = None
+        # try:
+        #     self.display = Display()
+        # except Exception:
+        #     self.display = None
         
         try:
             self.sensors = SensorHub(self.diagnostics)
@@ -52,6 +75,12 @@ class LastMileTracker:
         self.sd_logger = SDLogger()
         self.http_poster = HttpPoster(self.config, self.diagnostics)
         self.shock_buffer = ShockBuffer()
+        
+        # Buzzer Init
+        buzzer_pin = self.config.get("buzzer_pin")
+        self.buzzer = Buzzer(buzzer_pin)
+        self.buzzer.beep(100) # Boot beep
+        
         self.ble = BLEAdvertiser(name=self.device_id, service_uuid=SERVICE_UUID)
         self.ota = BleOta()
         self.ble.set_write_callback(self.handle_ble_write)
@@ -83,38 +112,36 @@ class LastMileTracker:
             self.np.write()
 
     def _pack_sensor_data(self, data):
-        # Format: Lat(4), Lon(4), Speed(2), Temp(2), Shock(2), Bat(2), IntTemp(2), Trip(1), Reset(1), Uptime(4)
-        # Total: 24 bytes
-        trip_state = 1 if data.get('speed', 0) > 1.0 or data.get('shock', 0) > 100 else 0
-        
-        return struct.pack('<ffHhHHHBBI', 
-                           data['lat'], data['lon'], 
-                           int(data['speed'] * 100), 
-                           int(data['temp'] * 100), 
-                           data['shock'],
-                           data.get('battery_mv', 0),
-                           int(data.get('internal_temp', 0) * 100),
-                           trip_state,
-                           machine.reset_cause(),
-                           time.ticks_ms() // 1000)
+        """Rule 3: Use pre-allocated buffer for V1 packet"""
+        struct.pack_into("<ffffHHHBBH", self._v1_buf, 0,
+            data['lat'], data['lon'], data['speed'], data['temp'],
+            data['shock'], data['battery_mv'], int(data['internal_temp']),
+            1 if data['gps_fix'] else 0,
+            0, # Reset reason placeholder
+            int(time.time() % 65535))
+        return self._v1_buf
 
     def _pack_extended_data(self, data):
-        """Pack V2 extended data: Version(1), NumTemps(1), Temps[N*2], Humidity(2), etc."""
-        # Header: Version 2
-        all_temps = data.get('all_temps', {})
-        num_temps = len(all_temps)
+        """Rule 3: Build V2 packet into pre-allocated buffer"""
+        all_temps = data.get("all_temps", {})
+        num_temps = min(len(all_temps), 10)
         
-        # We'll pack: [Version, NumTemps, Temp1, Temp2..., BatDrop]
-        # For now, let's just do: Version(1), Count(1), List of Int16, Int16(BatDrop)
-        bat_drop = int(data.get('bat_drop', 0))
+        # Version 2 header (Rule 3: Writing directly to pre-allocated bytearray)
+        self._v2_buf[0] = 2 
+        self._v2_buf[1] = num_temps
         
-        fmt = f'<BB{num_temps}hh'
-        payload = [2, num_temps]
-        for t in all_temps.values():
-            payload.append(int(t * 100))
-        payload.append(bat_drop)
+        offset = 2
+        for i, (rom_id, val) in enumerate(all_temps.items()):
+            if i >= num_temps: break
+            struct.pack_into("<h", self._v2_buf, offset, int(val * 100))
+            offset += 2
             
-        return struct.pack(fmt, *payload)
+        # Battery Drop (scaled x1000)
+        struct.pack_into("<h", self._v2_buf, offset, int(data.get('bat_drop', 0) * 1000))
+        offset += 2
+        
+        self._v2_length = offset
+        return memoryview(self._v2_buf)[:self._v2_length]
 
     async def sensor_task(self):
         """High-frequency sensor monitoring"""
@@ -135,6 +162,7 @@ class LastMileTracker:
                     if new_data['shock'] > shock_threshold:
                         Logger.log(f"Shock Alert: {new_data['shock']}")
                         self.shock_buffer.add(new_data['shock'], time.ticks_ms())
+                        asyncio.create_task(self.buzzer.alarm())
                         
                     # SD Logging (Local backup)
                     # For now, log if we have a fix or every 10 samples to save SD life
@@ -144,6 +172,8 @@ class LastMileTracker:
                 except Exception:
                     self.diagnostics.increment("sensor_read_fails")
             
+            # Rule 2: Mark task as healthy
+            self._task_ticks["sensor"] = time.ticks_ms()
             await asyncio.sleep_ms(100) # 10Hz sampling
 
     async def update_task(self):
@@ -178,6 +208,8 @@ class LastMileTracker:
                 packed_ext = self._pack_extended_data(self.data_store)
                 self.ble.notify(packed_ext, self.ble.ext_sensor_handle)
             
+            # Rule 2: Mark task as healthy
+            self._task_ticks["update"] = time.ticks_ms()
             await asyncio.sleep_ms(update_interval)
 
     async def maintenance_task(self):
@@ -186,7 +218,16 @@ class LastMileTracker:
         sleep_timeout = self.config.get("sleep_timeout") or 300
         
         while True:
-            self.wdt.feed()
+            # Rule 2: Check health of all tasks before feeding hardware watchdog
+            now = time.ticks_ms()
+            all_healthy = True
+            for task, last_tick in self._task_ticks.items():
+                if time.ticks_diff(now, last_tick) > 60000: # 1 minute grace
+                    Logger.log(f"CRITICAL: Task {task} hung!")
+                    all_healthy = False
+            
+            if all_healthy:
+                self.wdt.feed()
             
             # Flush buffers
             Logger.flush()
@@ -260,7 +301,10 @@ class LastMileTracker:
                     Logger.log("BLE: Received Reset WiFi Command")
                     self.config.set("wifi_ssid", "")
                     self.config.set("wifi_pass", "")
-                    Logger.log("WiFi: Config cleared.")
+                    async def reset_wifi():
+                        await self.wifi.disconnect()
+                        Logger.log("WiFi: Config cleared and disconnected.")
+                    asyncio.create_task(reset_wifi())
                     return
 
                 # Format: "SSID:PASSWORD"
@@ -336,6 +380,8 @@ class LastMileTracker:
                     if len(retry_buffer) < 50: # Limit buffer size
                         retry_buffer.append(self.data_store.copy())
             
+            # Rule 2: Mark task as healthy
+            self._task_ticks["cloud"] = time.ticks_ms()
             await asyncio.sleep(interval)
 
     async def remote_management_task(self):
@@ -367,9 +413,12 @@ class LastMileTracker:
             await asyncio.sleep(3600 * 24) # Check daily
 
     async def main_loop(self):
+        # Initialize NTP
+        self.ntp = NTPClient(self.config)
+
         # Initialize WiFi
         from lib.wifi_manager import WiFiManager
-        self.wifi = WiFiManager(self.config, self._set_led)
+        self.wifi = WiFiManager(self.config, self._set_led, ntp_client=self.ntp)
         
         # Handle BLE writes
         self.ble.set_write_callback(self.handle_ble_write)

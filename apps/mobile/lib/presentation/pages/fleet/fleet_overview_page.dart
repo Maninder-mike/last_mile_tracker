@@ -2,9 +2,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart'
     show
         Colors; // Needed for transparent/white/black if not using CupertinoColors
-import 'package:last_mile_tracker/presentation/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 import 'package:last_mile_tracker/domain/models/shipment.dart';
+import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 
 class FleetOverviewPage extends StatelessWidget {
   const FleetOverviewPage({super.key});
@@ -13,84 +14,88 @@ class FleetOverviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       backgroundColor: Colors.transparent, // Let MainLayout background show
-      child: CustomScrollView(
-        slivers: [
-          const CupertinoSliverNavigationBar(
-            largeTitle: Text('Fleet Overview'),
-            backgroundColor: Colors.transparent,
-            border: null, // No border for cleaner look
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // KPI Grid
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _KpiCard(
-                          title: 'Active Shipments',
-                          value: '12',
-                          color: AppTheme.primary,
-                          icon: CupertinoIcons.cube_box,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _KpiCard(
-                          title: 'At Risk',
-                          value: '3',
-                          color: AppTheme.critical,
-                          icon: CupertinoIcons.exclamationmark_triangle,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _KpiCard(
-                          title: 'Offline',
-                          value: '1',
-                          color: AppTheme.textSecondary,
-                          icon: CupertinoIcons.wifi_slash,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _KpiCard(
-                          title: 'Avg Temp',
-                          value: '-4°C',
-                          color: AppTheme.success,
-                          icon: CupertinoIcons.thermometer,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-                  Text('Requires Attention', style: AppTheme.heading2),
-                  const SizedBox(height: 16),
-
-                  // Mock "At Risk" List
-                  ...Shipment.mockData
-                      .where((s) => s.status == ShipmentStatus.atRisk)
-                      .map(
-                        (s) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: _ShipmentCard(shipment: s),
-                        ),
-                      ),
-
-                  // Bottom padding for floating navbar
-                  const SizedBox(height: 100),
-                ],
+      child: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: MediaQuery.of(context).padding.top + 60,
+                ),
               ),
-            ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // KPI Grid
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _KpiCard(
+                              title: 'Active Shipments',
+                              value: '12',
+                              color: AppTheme.primary,
+                              icon: CupertinoIcons.cube_box,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _KpiCard(
+                              title: 'At Risk',
+                              value: '3',
+                              color: AppTheme.critical,
+                              icon: CupertinoIcons.exclamationmark_triangle,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _KpiCard(
+                              title: 'Offline',
+                              value: '1',
+                              color: AppTheme.textSecondary,
+                              icon: CupertinoIcons.wifi_slash,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _KpiCard(
+                              title: 'Avg Temp',
+                              value: '-4°C',
+                              color: AppTheme.success,
+                              icon: CupertinoIcons.thermometer,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 32),
+                      Text('Requires Attention', style: AppTheme.heading2),
+                      const SizedBox(height: 16),
+
+                      // Mock "At Risk" List
+                      ...Shipment.mockData
+                          .where((s) => s.status == ShipmentStatus.atRisk)
+                          .map(
+                            (s) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: _ShipmentCard(shipment: s),
+                            ),
+                          ),
+
+                      // Bottom padding for floating navbar
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
+          const FloatingHeader(title: 'Fleet Overview'),
         ],
       ),
     );

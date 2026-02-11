@@ -63,7 +63,8 @@ class SensorHub:
                 self.diagnostics.increment("i2c_errors")
             
         try:
-            self._ow_pin = Pin(4)
+            # Enable internal pull-up (~45k) for resistor-less operation
+            self._ow_pin = Pin(4, Pin.IN, Pin.PULL_UP)
             self._ow = onewire.OneWire(self._ow_pin)
             self._ds = ds18x20.DS18X20(self._ow)
             self._temp_roms = self._ds.scan()
@@ -75,10 +76,17 @@ class SensorHub:
             if self.diagnostics:
                 self.diagnostics.increment("onewire_errors")
         
-        self._gps_uart = UART(1, baudrate=9600, tx=21, rx=20)
+        self._gps_uart = UART(1, baudrate=115200, tx=21, rx=20)
         self._last_gps = {"lat": 0.0, "lon": 0.0, "speed": 0.0, "fix": False}
         self._last_temps = {} # ROM ID: Value
         self._last_temp_read = 0
+        
+        # Pre-allocated result dictionary to avoid heap allocation in main loop (Rule 3)
+        self._read_result = {
+            "lat": 0.0, "lon": 0.0, "speed": 0.0, "gps_fix": False,
+            "temp": 0.0, "all_temps": self._last_temps,
+            "shock": 0, "battery_mv": 0, "internal_temp": 0.0,
+        }
         
         self._init_battery()
 
@@ -150,17 +158,21 @@ class SensorHub:
         else:
             primary_temp = self.read_internal_c()
 
-        return {
-            "lat": self._last_gps["lat"],
-            "lon": self._last_gps["lon"],
-            "speed": self._last_gps["speed"],
-            "gps_fix": self._last_gps["fix"],
-            "temp": primary_temp,
-            "all_temps": self._last_temps, # New: Dictionary of all DS18B20s
-            "shock": shock,
-            "battery_mv": self.read_battery_mv(),
-            "internal_temp": self.read_internal_c(),
-        }
+        # Update pre-allocated dictionary instead of creating a new one (Rule 3)
+        self._read_result["lat"] = self._last_gps["lat"]
+        self._read_result["lon"] = self._last_gps["lon"]
+        self._read_result["speed"] = self._last_gps["speed"]
+        self._read_result["gps_fix"] = self._last_gps["fix"]
+        self._read_result["temp"] = primary_temp
+        self._read_result["shock"] = shock
+        self._read_result["battery_mv"] = self.read_battery_mv()
+        self._read_result["internal_temp"] = self.read_internal_c()
+
+        # Rule 5: Assertions for critical data sanity
+        assert -180 <= self._read_result["lon"] <= 180, "Lon out of bounds"
+        assert -90 <= self._read_result["lat"] <= 90, "Lat out of bounds"
+        
+        return self._read_result
     
     def _read_gps(self):
         """Parse NMEA sentences from GPS - Non-blocking"""

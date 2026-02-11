@@ -4,32 +4,48 @@ import uasyncio as asyncio
 from lib.logger import Logger
 
 class WiFiManager:
-    def __init__(self, config, status_led_callback=None):
+    def __init__(self, config, status_led_callback=None, ntp_client=None):
         self.config = config
         self.wlan = network.WLAN(network.STA_IF)
         self.wlan.active(True)
         self._set_led = status_led_callback
+        self.ntp_client = ntp_client
         self._connecting = False
 
     async def connect(self, on_status_change=None):
         """Attempt to connect to WiFi using configured credentials"""
+        if self._connecting:
+            Logger.log("WiFi: Connection already in progress. Skipping.")
+            return False
+
         ssid = self.config.get("wifi_ssid")
         password = self.config.get("wifi_pass")
 
         if not ssid:
             Logger.log("WiFi: No SSID configured.")
-            if on_status_change: on_status_change("FAILED", "No SSID")
+            if on_status_change:
+                on_status_change("FAILED", "No SSID")
             return False
 
         if self.wlan.isconnected():
             Logger.log(f"WiFi: Already connected to {ssid}")
-            if on_status_change: on_status_change("CONNECTED", ssid)
+            if on_status_change:
+                on_status_change("CONNECTED", ssid)
+            # Ensure time is synced even if already connected
+            if self.ntp_client and not self.ntp_client.is_synced():
+                self.ntp_client.sync()
             return True
 
         Logger.log(f"WiFi: Connecting to {ssid}...")
         self._connecting = True
-        self.wlan.active(True)
-        self.wlan.connect(ssid, password)
+        try:
+            if not self.wlan.active():
+                self.wlan.active(True)
+            self.wlan.connect(ssid, password)
+        except Exception as e:
+            Logger.log(f"WiFi: Immediate connect error: {e}")
+            self._connecting = False
+            return False
 
         # Status mapping for MicroPython network.WLAN
         # 1000: STAT_IDLE
@@ -48,7 +64,13 @@ class WiFiManager:
                 self._connecting = False
                 if self._set_led:
                     self._set_led((0, 10, 0)) # Green success flash
-                if on_status_change: on_status_change("CONNECTED", ssid)
+                
+                # Sync Time
+                if self.ntp_client:
+                    self.ntp_client.sync()
+
+                if on_status_change:
+                    on_status_change("CONNECTED", ssid)
                 return True
             
             if status == 202: # STAT_WRONG_PASSWORD
@@ -77,11 +99,21 @@ class WiFiManager:
         
         if on_status_change:
             err = "Timeout"
-            if self.wlan.status() == 202: err = "Wrong Password"
-            elif self.wlan.status() == 201: err = "AP Not Found"
+            if self.wlan.status() == 202:
+                err = "Wrong Password"
+            elif self.wlan.status() == 201:
+                err = "AP Not Found"
             on_status_change("FAILED", err)
             
         return False
+
+    async def disconnect(self):
+        """Disconnect from WiFi and de-activate interface"""
+        Logger.log("WiFi: Disconnecting...")
+        self.wlan.disconnect()
+        self.wlan.active(False)
+        self._connecting = False
+        return True
 
     def is_connected(self):
         return self.wlan.isconnected()

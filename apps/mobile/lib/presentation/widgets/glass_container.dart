@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
-import 'package:last_mile_tracker/presentation/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 
 class GlassContainer extends StatelessWidget {
   final Widget child;
@@ -26,17 +26,19 @@ class GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use the provided color or fallback to the theme's glass surface color
-    final effectiveColor = CupertinoDynamicColor.resolve(
-      color ?? AppTheme.surfaceGlass,
-      context,
-    );
+    // If color is not provided, use surfaceGlass which has built-in opacity/color for light/dark.
+    final baseColor = color ?? AppTheme.surfaceGlass;
 
-    // Calculate effective opacity based on whether it's the dynamic theme color or custom
-    final finalColor = effectiveColor.withValues(
-      alpha: color == null
-          ? (_isDark(context) ? 0.6 : 0.8) // Tuning opacity for light/dark
-          : opacity,
+    // Resolve dynamic color
+    final resolvedColor = CupertinoDynamicColor.resolve(baseColor, context);
+
+    // Only apply opacity override if specific color was NOT provided (to keep surfaceGlass effect)
+    // OR if we want to force the 'opacity' parameter.
+    // However, AppTheme.surfaceGlass already has 0xCC (80%).
+    // Let's just use the resolved color directly if it's the default,
+    // or apply opacity if it's a custom color without alpha.
+    final finalColor = resolvedColor.withValues(
+      alpha: color != null ? opacity : resolvedColor.a,
     );
 
     return Container(
@@ -69,9 +71,5 @@ class GlassContainer extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  bool _isDark(BuildContext context) {
-    return CupertinoTheme.of(context).brightness == Brightness.dark;
   }
 }

@@ -6,15 +6,28 @@ class Trackers extends Table {
   DateTimeColumn get lastSeen => dateTime()();
 
   // Latest Telemetry Snapshot
-  RealColumn get batteryLevel => real().withDefault(const Constant(0.0))();
-  RealColumn get temp => real().withDefault(const Constant(0.0))();
-  IntColumn get shockValue => integer().withDefault(const Constant(0))();
+  // Latest Telemetry Snapshot
+  RealColumn get batteryLevel => real().nullable()();
+  RealColumn get temp => real().nullable()();
+  IntColumn get shockValue => integer().nullable()();
   TextColumn get additionalTemps => text().nullable()();
   RealColumn get batteryDrop => real().nullable()();
 
+  // GPS Data
+  RealColumn get lat => real().nullable()();
+  RealColumn get lon => real().nullable()();
+
+  // New Telemetry Fields
+  RealColumn get internalTemp => real().nullable()();
+  RealColumn get speed => real().nullable()();
+  IntColumn get tripState => integer().nullable()();
+  IntColumn get resetReason => integer().nullable()();
+  IntColumn get uptime => integer().nullable()();
+
   // QC / Status
-  TextColumn get status =>
-      text().withDefault(const Constant('Unknown'))(); // Active, Inactive, etc.
+  TextColumn get status => text().withDefault(
+    const Constant('Unknown'),
+  )(); // Keep status with default
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
 
   @override

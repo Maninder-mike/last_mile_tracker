@@ -21,6 +21,9 @@ FILES=(
     "lib/diagnostics.py:lib/diagnostics.py"
     "lib/logger.py:lib/logger.py"
     "lib/shock_buffer.py:lib/shock_buffer.py"
+    "lib/buzzer.py:lib/buzzer.py"
+    "lib/http_poster.py:lib/http_poster.py"
+    "lib/ntp_time.py:lib/ntp_time.py"
 )
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────

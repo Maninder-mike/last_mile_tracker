@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
-import 'package:last_mile_tracker/presentation/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 
 class BlurNavbar extends StatelessWidget {
   final int currentIndex;

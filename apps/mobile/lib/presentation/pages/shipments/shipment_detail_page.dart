@@ -2,8 +2,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Colors;
 import 'package:last_mile_tracker/domain/models/shipment.dart';
-import 'package:last_mile_tracker/presentation/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
+import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 
 class ShipmentDetailPage extends StatelessWidget {
   final Shipment shipment;
@@ -35,7 +36,8 @@ class ShipmentDetailPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Map View Placeholder',
+                      'Map View Placeholder\n${shipment.latitude?.toStringAsFixed(4) ?? "--"}, ${shipment.longitude?.toStringAsFixed(4) ?? "--"}',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         color: CupertinoColors.systemGrey,
                         fontWeight: FontWeight.w500,
@@ -185,11 +187,14 @@ class ShipmentDetailPage extends StatelessWidget {
                                     ),
                                   ],
                                   const SizedBox(width: 12),
-                                  const _TelemetryCard(
+                                  _TelemetryCard(
                                     title: 'Shock',
-                                    value: '0G',
+                                    value:
+                                        '${shipment.shockValue ?? 0}mg', // Using mg or raw
                                     icon: CupertinoIcons.waveform_circle,
-                                    color: AppTheme.success,
+                                    color: (shipment.shockValue ?? 0) > 500
+                                        ? AppTheme.critical
+                                        : AppTheme.success,
                                   ),
                                 ],
                               ),
@@ -243,19 +248,7 @@ class ShipmentDetailPage extends StatelessWidget {
             ),
           ),
 
-          // Back Button
-          Positioned(
-            top: 50,
-            left: 16,
-            child: GlassContainer(
-              padding: const EdgeInsets.all(8),
-              borderRadius: 20,
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: const Icon(CupertinoIcons.back, size: 24),
-              ),
-            ),
-          ),
+          const FloatingHeader(title: 'Shipment Detail', showBackButton: true),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:last_mile_tracker/core/constants/ble_constants.dart';
 import 'package:last_mile_tracker/data/database/app_database.dart' as db;
 import 'package:last_mile_tracker/data/database/daos/sensor_dao.dart';
@@ -29,8 +30,20 @@ class BleService {
   Stream<BluetoothConnectionState> get connectionState =>
       _connectionStateController.stream;
 
+  final _simulationStateController = StreamController<bool>.broadcast();
+  Stream<bool> get simulationState => _simulationStateController.stream;
+
   BluetoothConnectionState _lastState = BluetoothConnectionState.disconnected;
   BluetoothConnectionState get lastState => _lastState;
+
+  final _liveTelemetryController =
+      StreamController<models.SensorReading>.broadcast();
+  Stream<models.SensorReading> get liveTelemetry =>
+      _liveTelemetryController.stream;
+
+  BluetoothDevice? get connectedDevice => _connectionManager.device;
+  final Set<String> _approvedDeviceIds = {};
+  bool _isAutoConnectEnabled = true;
 
   bool get isScanning => _scanner.isScanning;
   Stream<List<ScannedTracker>> get discoveredDevices =>
@@ -61,11 +74,69 @@ class BleService {
     );
 
     _startBufferTimer();
+    _setupWifiStreams();
+    _initAutoConnect();
+    _setupAutoConnectListener();
+  }
+
+  Future<void> _initAutoConnect() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('approved_device_ids') ?? [];
+    _approvedDeviceIds.addAll(list);
+    FileLogger.log(
+      "BLE: Loaded ${_approvedDeviceIds.length} approved device IDs.",
+    );
+  }
+
+  void _setupAutoConnectListener() {
+    discoveredDevices.listen((devices) {
+      if (!_isAutoConnectEnabled || _approvedDeviceIds.isEmpty) return;
+      if (_lastState != BluetoothConnectionState.disconnected) return;
+
+      for (final tracker in devices) {
+        if (_approvedDeviceIds.contains(tracker.device.remoteId.str)) {
+          FileLogger.log(
+            "BLE: Auto-connecting to approved device: ${tracker.device.remoteId.str}",
+          );
+          connect(tracker.device);
+          break;
+        }
+      }
+    });
+  }
+
+  // WiFi Streams
+  final _wifiScanResultsController =
+      StreamController<List<WifiScanResult>>.broadcast();
+  final _isWifiScanningController = StreamController<bool>.broadcast();
+
+  StreamSubscription? _cmWifiSub;
+  StreamSubscription? _simWifiSub;
+  StreamSubscription? _cmScanSub;
+  StreamSubscription? _simScanSub;
+
+  void _setupWifiStreams() {
+    _cmWifiSub = _connectionManager.wifiScanResults.listen((results) {
+      if (!simulationActive) _wifiScanResultsController.add(results);
+    });
+
+    _simWifiSub = _simulationService.wifiScanResults.listen((results) {
+      if (simulationActive) _wifiScanResultsController.add(results);
+    });
+
+    _cmScanSub = _connectionManager.isWifiScanning.listen((isScanning) {
+      if (!simulationActive) _isWifiScanningController.add(isScanning);
+    });
+
+    _simScanSub = _simulationService.isWifiScanning.listen((isScanning) {
+      if (simulationActive) _isWifiScanningController.add(isScanning);
+    });
   }
 
   void _handleRawData(List<int> bytes) {
     final reading = SensorDataParser.parse(bytes);
     if (reading != null) {
+      _liveTelemetryController.add(reading);
       _bufferReading(reading);
     }
   }
@@ -124,19 +195,41 @@ class BleService {
 
   Future<void> startScanning() => _scanner.start();
 
-  Future<void> connect(BluetoothDevice device) =>
-      _connectionManager.connect(device);
+  Future<void> connect(BluetoothDevice device) async {
+    await _connectionManager.connect(device);
+
+    // Save to approved devices list on successful connection
+    final prefs = await SharedPreferences.getInstance();
+    _approvedDeviceIds.add(device.remoteId.str);
+    await prefs.setStringList(
+      'approved_device_ids',
+      _approvedDeviceIds.toList(),
+    );
+    FileLogger.log("BLE: Added ${device.remoteId.str} to approved devices.");
+  }
+
+  bool isApproved(String deviceId) => _approvedDeviceIds.contains(deviceId);
+
+  void setAutoConnect(bool enabled) {
+    _isAutoConnectEnabled = enabled;
+  }
 
   Future<void> writeWifiConfig(String ssid, String password) =>
       _connectionManager.writeWifiConfig(ssid, password);
 
   Stream<List<WifiScanResult>> get wifiScanResults =>
-      _connectionManager.wifiScanResults;
+      _wifiScanResultsController.stream;
 
-  Stream<bool> get isWifiScanning => _connectionManager.isWifiScanning;
+  Stream<bool> get isWifiScanning => _isWifiScanningController.stream;
   Stream<String> get wifiStatus => _connectionManager.wifiStatus;
 
-  Future<void> scanForWifi() => _connectionManager.scanForWifi();
+  Future<void> scanForWifi() async {
+    if (simulationActive) {
+      return _simulationService.scanForWifi();
+    }
+    return _connectionManager.scanForWifi();
+  }
+
   Future<void> identifyDevice() => _connectionManager.identifyDevice();
   Future<void> rebootDevice() => _connectionManager.rebootDevice();
   Future<void> resetWifiConfig() => _connectionManager.resetWifiConfig();
@@ -145,8 +238,10 @@ class BleService {
     if (_simulationService.isSimulating) {
       _simulationService.stop();
       _flushBuffer();
+      _simulationStateController.add(false);
     } else {
       _simulationService.start();
+      _simulationStateController.add(true);
     }
   }
 
@@ -160,6 +255,13 @@ class BleService {
     _scanner.dispose();
     _connectionManager.dispose();
     _simulationService.dispose();
+    _cmWifiSub?.cancel();
+    _simWifiSub?.cancel();
+    _cmScanSub?.cancel();
+    _simScanSub?.cancel();
+    _wifiScanResultsController.close();
+    _isWifiScanningController.close();
+    _simulationStateController.close();
     _connectionStateController.close();
   }
 }

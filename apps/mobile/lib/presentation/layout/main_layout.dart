@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:last_mile_tracker/presentation/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/blur_navbar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';

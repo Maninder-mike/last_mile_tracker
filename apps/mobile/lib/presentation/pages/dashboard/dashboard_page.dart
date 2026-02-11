@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/constants/app_constants.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import '../../widgets/speedometer.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/floating_header.dart';
@@ -128,12 +129,9 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = CupertinoTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return GlassContainer(
       padding: const EdgeInsets.all(20),
-      opacity: isDark ? 0.05 : 0.08,
+      color: AppTheme.surfaceGlass,
       borderRadius: 24,
       child: Row(
         children: [
@@ -152,24 +150,12 @@ class StatCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: isDark
-                        ? CupertinoColors.systemGrey
-                        : CupertinoColors.secondaryLabel,
-                    fontSize: 14,
-                  ),
+                  style: AppTheme.body.copyWith(color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   value,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -1.0,
-                    color: isDark
-                        ? CupertinoColors.white
-                        : CupertinoColors.label,
-                  ),
+                  style: AppTheme.heading1.copyWith(letterSpacing: -1.0),
                 ),
               ],
             ),

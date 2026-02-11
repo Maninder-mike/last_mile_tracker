@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/constants/ble_constants.dart';
 import '../../../../data/services/ota_service.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../providers/service_providers.dart';
 import '../../../providers/ble_providers.dart';
 
@@ -42,17 +43,12 @@ class FirmwareUpdateTile extends ConsumerWidget {
     WidgetRef ref,
     OtaState state,
   ) {
-    final theme = CupertinoTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final isChecking = state.status == OtaStatus.checking;
 
     return CupertinoListTile(
       title: Text(
         'Firmware Update',
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-          color: isDark ? CupertinoColors.white : CupertinoColors.label,
-        ),
+        style: AppTheme.body.copyWith(fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
         state.status == OtaStatus.upToDate
@@ -60,25 +56,19 @@ class FirmwareUpdateTile extends ConsumerWidget {
             : state.status == OtaStatus.error
             ? 'Check failed'
             : 'Current v${BleConstants.currentFirmwareVersion}',
-        style: TextStyle(
-          color: state.status == OtaStatus.error
-              ? CupertinoColors.systemRed
-              : isDark
-              ? CupertinoColors.systemGrey
-              : CupertinoColors.secondaryLabel,
-        ),
+        style: state.status == OtaStatus.error
+            ? AppTheme.caption.copyWith(color: AppTheme.critical)
+            : AppTheme.caption,
       ),
       leading: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: CupertinoColors.systemOrange.withValues(
-            alpha: isDark ? 0.2 : 0.15,
-          ),
+          color: AppTheme.warning.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
         ),
         child: const Icon(
           CupertinoIcons.arrow_2_circlepath,
-          color: CupertinoColors.systemOrange,
+          color: AppTheme.warning,
           size: 20,
         ),
       ),
@@ -169,7 +159,7 @@ class FirmwareUpdateTile extends ConsumerWidget {
             height: 6,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: CupertinoColors.systemGrey5,
+              color: AppTheme.textSecondary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(3),
             ),
             child: Stack(
@@ -178,7 +168,7 @@ class FirmwareUpdateTile extends ConsumerWidget {
                   widthFactor: state.progress.clamp(0.0, 1.0),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: CupertinoColors.activeBlue,
+                      color: AppTheme.primary,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),

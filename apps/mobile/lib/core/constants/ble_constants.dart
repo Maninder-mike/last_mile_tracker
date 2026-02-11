@@ -27,7 +27,7 @@ class BleConstants {
 
   // Scan & Connection Settings
   static const Duration scanTimeout = Duration(seconds: 15);
-  static const Duration scanStartDelay = Duration(milliseconds: 500);
+  static const Duration scanStartDelay = Duration(milliseconds: 1000);
   static const Duration initialReconnectDelay = Duration(seconds: 1);
   static const Duration maxReconnectDelay = Duration(seconds: 32);
 
@@ -35,17 +35,17 @@ class BleConstants {
   static const int bufferThreshold = 10;
   static const Duration bufferFlushInterval = Duration(seconds: 5);
   // Packet Structure Offsets
-  static const int packetLength = 24;
+  static const int packetLength = 26;
   static const int offsetLat = 0;
   static const int offsetLon = 4;
   static const int offsetSpeed = 8;
-  static const int offsetTemp = 10;
-  static const int offsetShock = 12;
-  static const int offsetBattery = 14;
-  static const int offsetInternalTemp = 16;
-  static const int offsetTripState = 18;
-  static const int offsetResetReason = 19;
-  static const int offsetUptime = 20;
+  static const int offsetTemp = 12;
+  static const int offsetShock = 16;
+  static const int offsetBattery = 18;
+  static const int offsetInternalTemp = 20;
+  static const int offsetTripState = 22;
+  static const int offsetResetReason = 23;
+  static const int offsetUptime = 24;
 
   // Multipliers
   static const double multiplierSpeed = 100.0;

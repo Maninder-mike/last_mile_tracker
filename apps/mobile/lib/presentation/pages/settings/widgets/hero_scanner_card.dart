@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:lmt_models/lmt_models.dart' as models;
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import '../../../widgets/glass_container.dart';
 import '../settings_theme.dart';
 
@@ -23,9 +24,8 @@ class HeroScannerCard extends StatelessWidget {
     return GlassContainer(
       margin: SettingsTheme.heroMargin,
       padding: SettingsTheme.heroPadding,
-      opacity: isDark
-          ? SettingsTheme.glassOpacityDark
-          : SettingsTheme.glassOpacityLight,
+      // Use default GlassContainer opacity/color which adapts to theme
+      // opacity: isDark ? SettingsTheme.glassOpacityDark : SettingsTheme.glassOpacityLight,
       borderRadius: 24,
       child: Column(
         children: [
@@ -78,10 +78,10 @@ class HeroScannerCard extends StatelessWidget {
         children: [
           Text(
             isConnected ? 'Tracker Online' : 'Tracker Offline',
-            style: TextStyle(
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: SettingsTheme.heroTitleSize,
-              color: isDark ? CupertinoColors.white : CupertinoColors.label,
+              color: AppTheme.textPrimary,
             ),
           ),
           Row(

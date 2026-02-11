@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'ble_connection_manager.dart';
 import 'package:lmt_models/lmt_models.dart';
 import 'package:last_mile_tracker/core/constants/ble_constants.dart';
 
@@ -54,7 +55,33 @@ class BleSimulationService {
     _simulationTimer = null;
   }
 
+  // WiFi Simulation
+  final _wifiScanController =
+      StreamController<List<WifiScanResult>>.broadcast();
+  Stream<List<WifiScanResult>> get wifiScanResults =>
+      _wifiScanController.stream;
+
+  final _isWifiScanningController = StreamController<bool>.broadcast();
+  Stream<bool> get isWifiScanning => _isWifiScanningController.stream;
+
+  Future<void> scanForWifi() async {
+    _isWifiScanningController.add(true);
+    // Simulate scan delay
+    await Future.delayed(const Duration(seconds: 2));
+
+    final results = [
+      WifiScanResult("Simulated WiFi 1", -65),
+      WifiScanResult("Simulated WiFi 2", -72),
+      WifiScanResult("Simulated WiFi 3", -80),
+    ];
+
+    _wifiScanController.add(results);
+    _isWifiScanningController.add(false);
+  }
+
   void dispose() {
     stop();
+    _wifiScanController.close();
+    _isWifiScanningController.close();
   }
 }

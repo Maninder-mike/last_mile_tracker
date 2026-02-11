@@ -11,6 +11,10 @@ class Config:
         "sleep_timeout": 300,   # Seconds before deep sleep
         "adv_interval": 100,    # ms
         
+        # Hardware
+        "buzzer_pin": 5,        # GPIO connect to Buzzer
+        "battery_pin": 2,       # GPIO for Battery ADC
+        
         # Identity
         "provisioned_id": None,
         "tenant_id": None,
@@ -24,6 +28,10 @@ class Config:
         # Remote Management
         "config_url": "",
         "ota_url": "",
+        
+        # Time
+        "ntp_server": "pool.ntp.org",
+        "timezone_offset": 0, # Hours (0=UTC)
     }
     
     def __init__(self):
@@ -68,7 +76,8 @@ class Config:
         modified = False
         # Sensitive local keys we should protect if requested or just append others
         for k, v in new_data.items():
-            if k == "_sig": continue # Don't save signature in config
+            if k == "_sig":
+                continue # Don't save signature in config
             if k in self._config and self._config[k] == v:
                 continue
             self._config[k] = v

@@ -5,6 +5,7 @@ class ScannedTracker {
   final BluetoothDevice device;
   final int rssi;
   final DateTime lastSeen;
+  final AdvertisementData advertisementData;
   final SensorReading? telemetry;
 
   String get id => device.remoteId.str;
@@ -14,18 +15,21 @@ class ScannedTracker {
     required this.device,
     required this.rssi,
     required this.lastSeen,
+    required this.advertisementData,
     this.telemetry,
   });
 
   ScannedTracker copyWith({
     int? rssi,
     DateTime? lastSeen,
+    AdvertisementData? advertisementData,
     SensorReading? telemetry,
   }) {
     return ScannedTracker(
       device: device,
       rssi: rssi ?? this.rssi,
       lastSeen: lastSeen ?? this.lastSeen,
+      advertisementData: advertisementData ?? this.advertisementData,
       telemetry: telemetry ?? this.telemetry,
     );
   }

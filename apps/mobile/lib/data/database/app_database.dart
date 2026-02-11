@@ -12,6 +12,7 @@ import 'daos/alert_dao.dart';
 
 import 'tables/alerts.dart';
 import 'tables/trackers.dart';
+import '../../core/utils/file_logger.dart';
 
 part 'app_database.g.dart';
 
@@ -23,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -55,6 +56,38 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         await m.addColumn(trackers, trackers.additionalTemps);
         await m.addColumn(trackers, trackers.batteryDrop);
+      }
+      if (from < 7) {
+        try {
+          await m.addColumn(trackers, trackers.lat);
+        } catch (e) {
+          FileLogger.log('Migration: lat column already exists or error: $e');
+        }
+        try {
+          await m.addColumn(trackers, trackers.lon);
+        } catch (e) {
+          FileLogger.log('Migration: lon column already exists or error: $e');
+        }
+      }
+      if (from < 8) {
+        if (from >= 6) {
+          // Users on v6/v7 have 'batDrop' column. We need 'batteryDrop'.
+          // We add 'batteryDrop' as a new column. 'batDrop' becomes orphaned.
+          try {
+            await m.addColumn(trackers, trackers.batteryDrop);
+          } catch (e) {
+            FileLogger.log(
+              'Migration: batteryDrop column already exists or error: $e',
+            );
+          }
+        }
+      }
+      if (from < 9) {
+        await m.addColumn(trackers, trackers.internalTemp);
+        await m.addColumn(trackers, trackers.speed);
+        await m.addColumn(trackers, trackers.tripState);
+        await m.addColumn(trackers, trackers.resetReason);
+        await m.addColumn(trackers, trackers.uptime);
       }
     },
   );

@@ -8,9 +8,11 @@ import 'package:lmt_models/lmt_models.dart' as models;
 import 'package:last_mile_tracker/data/services/ble_service.dart';
 import '../../providers/ble_providers.dart';
 import '../../providers/database_providers.dart';
-import '../../providers/ota_providers.dart';
 import '../../widgets/glass_container.dart';
-import '../../widgets/floating_header.dart';
+import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
+import 'package:last_mile_tracker/data/services/ble/scanned_tracker.dart';
+import 'package:last_mile_tracker/core/utils/file_logger.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 
 class ConnectivityPage extends ConsumerStatefulWidget {
   const ConnectivityPage({super.key});
@@ -144,10 +146,9 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
                 isDark,
               ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
 
-              // WiFi Provisioning & Device Tools (Gated by connection)
+              // WiFi Provisioning (Gated by connection)
               if (isConnected) ...[
                 _buildProvisioningSection(isDark),
-                _buildFirmwareUpdateSection(isDark),
                 _buildDeviceToolsSection(isConnected, latestReading),
                 const SizedBox(height: 64),
               ] else ...[
@@ -179,30 +180,27 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
           Expanded(
             child: GlassContainer(
               padding: const EdgeInsets.all(16),
-              opacity: isDark ? 0.05 : 0.08,
+              color: AppTheme.surfaceGlass,
               child: Column(
                 children: [
                   Icon(
                     CupertinoIcons.bluetooth,
                     color: bleConnected
-                        ? CupertinoColors.activeGreen
-                        : CupertinoColors.systemGrey,
+                        ? AppTheme.success
+                        : AppTheme.textSecondary,
                     size: 24,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     bleConnected ? 'Connected' : 'Disconnected',
-                    style: const TextStyle(
-                      fontSize: 12,
+                    style: AppTheme.body.copyWith(
                       fontWeight: FontWeight.w600,
+                      fontSize: 12,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Bluetooth',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: CupertinoColors.systemGrey,
-                    ),
+                    style: AppTheme.caption.copyWith(fontSize: 10),
                   ),
                 ],
               ),
@@ -212,31 +210,28 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
           Expanded(
             child: GlassContainer(
               padding: const EdgeInsets.all(16),
-              opacity: isDark ? 0.05 : 0.08,
+              color: AppTheme.surfaceGlass,
               child: Column(
                 children: [
                   Icon(
                     CupertinoIcons.wifi,
                     color: (latest?.wifiSsid != null)
-                        ? CupertinoColors.activeGreen
-                        : CupertinoColors.systemGrey,
+                        ? AppTheme.success
+                        : AppTheme.textSecondary,
                     size: 24,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     latest?.wifiSsid ?? 'Not Linked',
-                    style: const TextStyle(
-                      fontSize: 12,
+                    style: AppTheme.body.copyWith(
                       fontWeight: FontWeight.w600,
+                      fontSize: 12,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const Text(
+                  Text(
                     'WiFi Network',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: CupertinoColors.systemGrey,
-                    ),
+                    style: AppTheme.caption.copyWith(fontSize: 10),
                   ),
                 ],
               ),
@@ -245,6 +240,97 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
         ],
       ),
     );
+  }
+
+  void _showDeviceDetails(ScannedTracker tracker) {
+    FileLogger.log(
+      "UI: Showing details for device ${tracker.device.remoteId.str}",
+    );
+    final device = tracker.device;
+    final adv = tracker.advertisementData;
+
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: Text(
+          device.platformName.isEmpty ? 'Unknown Device' : device.platformName,
+        ),
+        message: Column(
+          children: [
+            _buildDetailRow('Remote ID', device.remoteId.toString()),
+            _buildDetailRow('RSSI', '${tracker.rssi} dBm'),
+            _buildDetailRow('Connectable', adv.connectable.toString()),
+            if (adv.txPowerLevel != null)
+              _buildDetailRow('TX Power', '${adv.txPowerLevel} dBm'),
+            if (adv.serviceUuids.isNotEmpty)
+              _buildDetailRow('Service UUIDs', adv.serviceUuids.join(', ')),
+            if (adv.manufacturerData.isNotEmpty)
+              _buildDetailRow(
+                'Manuf. Data',
+                _formatBytes(adv.manufacturerData.values.first),
+              ),
+            if (adv.serviceData.isNotEmpty)
+              _buildDetailRow(
+                'Service Data',
+                _formatBytes(adv.serviceData.values.first),
+              ),
+          ],
+        ),
+        actions: [
+          CupertinoActionSheetAction(
+            child: const Text('Connect'),
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(bleServiceProvider).connect(device);
+            },
+          ),
+          CupertinoActionSheetAction(
+            child: const Text('Copy ID'),
+            onPressed: () {
+              Clipboard.setData(
+                ClipboardData(text: device.remoteId.toString()),
+              );
+              Navigator.pop(context);
+            },
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontFamily: 'Courier', fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatBytes(List<int> bytes) {
+    return bytes
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join(' ')
+        .toUpperCase();
   }
 
   Future<void> _handleDeviceAction({
@@ -330,9 +416,10 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
                   textAlign: TextAlign.right,
                   decoration: null,
                   style: TextStyle(
-                    color: isDark
-                        ? CupertinoColors.white
-                        : CupertinoColors.black,
+                    color: CupertinoDynamicColor.resolve(
+                      AppTheme.textPrimary,
+                      context,
+                    ),
                   ),
                 ),
               ),
@@ -365,9 +452,10 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
                   textAlign: TextAlign.right,
                   decoration: null,
                   style: TextStyle(
-                    color: isDark
-                        ? CupertinoColors.white
-                        : CupertinoColors.black,
+                    color: CupertinoDynamicColor.resolve(
+                      AppTheme.textPrimary,
+                      context,
+                    ),
                   ),
                 ),
               ),
@@ -401,131 +489,6 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
     );
   }
 
-  Widget _buildFirmwareUpdateSection(bool isDark) {
-    final autoCheck = ref.watch(autoCheckUpdatesProvider);
-    final otaStatus = ref.watch(firmwareUpdateStatusProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 16, top: 24, bottom: 8),
-          child: Text(
-            'DEVICE TOOLS',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: CupertinoColors.secondaryLabel,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
-        GlassContainer(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              _buildToggleAction(
-                icon: CupertinoIcons.refresh_circled,
-                title: 'Auto-Check Updates',
-                subtitle: 'Check for firmware on startup',
-                value: autoCheck,
-                onChanged: (val) =>
-                    ref.read(autoCheckUpdatesProvider.notifier).toggle(),
-              ),
-              _buildDivider(),
-              _buildToolAction(
-                icon: CupertinoIcons.refresh_circled,
-                title: 'Firmware Update',
-                subtitle: _getOtaStatusText(otaStatus),
-                onTap: otaStatus == OtaStatus.upToDate
-                    ? () => ref
-                          .read(firmwareUpdateStatusProvider.notifier)
-                          .checkForUpdates()
-                    : (otaStatus == OtaStatus.updateAvailable
-                          ? () => ref
-                                .read(firmwareUpdateStatusProvider.notifier)
-                                .performUpdate()
-                          : null),
-              ),
-            ],
-          ),
-        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
-      ],
-    );
-  }
-
-  String _getOtaStatusText(OtaStatus status) {
-    switch (status) {
-      case OtaStatus.checking:
-        return 'Checking for updates...';
-      case OtaStatus.upToDate:
-        return 'Up to date (v1)';
-      case OtaStatus.updateAvailable:
-        return 'Update available (v2)';
-      case OtaStatus.downloading:
-        return 'Downloading update...';
-      case OtaStatus.installing:
-        return 'Installing...';
-      case OtaStatus.success:
-        return 'Update successful!';
-      case OtaStatus.error:
-        return 'Update failed';
-      default:
-        return 'Ready';
-    }
-  }
-
-  Widget _buildToggleAction({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: CupertinoColors.activeOrange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: CupertinoColors.activeOrange, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: CupertinoColors.secondaryLabel,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          CupertinoSwitch(
-            value: value,
-            onChanged: onChanged,
-            activeTrackColor: CupertinoColors.activeGreen,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildDeviceToolsSection(
     bool isConnected,
     models.SensorReading? latestReading,
@@ -535,27 +498,23 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(left: 16, top: 24, bottom: 8),
           child: Text(
             'LIVE DIAGNOSTICS',
-            style: TextStyle(
-              fontSize: 13,
+            style: AppTheme.caption.copyWith(
               fontWeight: FontWeight.w600,
-              color: CupertinoColors.secondaryLabel,
               letterSpacing: 0.5,
             ),
           ),
         ),
         _buildDiagnosticsGrid(latestReading),
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(left: 16, top: 24, bottom: 8),
           child: Text(
             'DEVICE MANAGEMENT',
-            style: TextStyle(
-              fontSize: 13,
+            style: AppTheme.caption.copyWith(
               fontWeight: FontWeight.w600,
-              color: CupertinoColors.secondaryLabel,
               letterSpacing: 0.5,
             ),
           ),
@@ -658,6 +617,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
   }) {
     return GlassContainer(
       padding: const EdgeInsets.all(12),
+      color: AppTheme.surfaceGlass,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -665,18 +625,15 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            style: AppTheme.body.copyWith(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: CupertinoColors.secondaryLabel,
-            ),
-          ),
+          Text(label, style: AppTheme.caption.copyWith(fontSize: 10)),
         ],
       ),
     ).animate().fadeIn(duration: 400.ms).scale(begin: const Offset(0.9, 0.9));
@@ -936,8 +893,14 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
             ),
             subtitle: Text(result.device.remoteId.toString()),
             leading: const Icon(CupertinoIcons.bluetooth),
+            onTap: () {
+              FileLogger.log(
+                "UI: Tapped on device tile ${result.device.remoteId.str}",
+              );
+              _showDeviceDetails(result);
+            },
             trailing: CupertinoButton(
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: const Text('Connect'),
               onPressed: () => bleService.connect(result.device),
             ),
@@ -958,7 +921,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
             Icon(
               CupertinoIcons.antenna_radiowaves_left_right,
               size: 48,
-              color: CupertinoColors.systemGrey.withValues(alpha: 0.5),
+              color: AppTheme.textSecondary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             const Text(
@@ -967,9 +930,14 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Please connect to a Last Mile Tracker via Bluetooth to configure WiFi settings.',
+              'Connect to a tracker to configure WiFi & Tools.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: CupertinoColors.systemGrey),
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            CupertinoButton.filled(
+              onPressed: () => ref.read(bleServiceProvider).startScanning(),
+              child: const Text('Scan for Devices'),
             ),
           ],
         ),

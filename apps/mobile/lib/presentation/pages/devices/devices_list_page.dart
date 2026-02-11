@@ -1,10 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Colors;
-import 'package:last_mile_tracker/presentation/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
+import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
+import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'device_detail_page.dart';
 
 class DevicesListPage extends ConsumerWidget {
   const DevicesListPage({super.key});
@@ -12,63 +16,93 @@ class DevicesListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scannedDevicesAsync = ref.watch(allTrackersProvider);
+    final connectionState =
+        ref.watch(bleConnectionStateProvider).value ??
+        BluetoothConnectionState.disconnected;
+    final connectedDevice = ref.watch(bleServiceProvider).connectedDevice;
 
     return CupertinoPageScaffold(
       backgroundColor: Colors.transparent,
-      child: CustomScrollView(
-        slivers: [
-          const CupertinoSliverNavigationBar(
-            largeTitle: Text('Devices'),
-            backgroundColor: Colors.transparent,
-            border: null,
-            stretch: true,
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: scannedDevicesAsync.when(
-              data: (devices) {
-                if (devices.isEmpty) {
-                  return const SliverToBoxAdapter(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 32.0),
-                        child: Text(
-                          'No devices found',
-                          style: TextStyle(color: CupertinoColors.systemGrey),
+      child: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 60,
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                ),
+                sliver: scannedDevicesAsync.when(
+                  data: (devices) {
+                    if (devices.isEmpty) {
+                      return const SliverToBoxAdapter(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 32.0),
+                            child: Text(
+                              'No devices found',
+                              style: TextStyle(
+                                color: CupertinoColors.systemGrey,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                }
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final tracker = devices[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _DeviceCard(
-                        id: tracker.id,
-                        name: tracker.name.isEmpty
-                            ? 'Unknown Device'
-                            : tracker.name,
-                        status: tracker.status, // Use status from DB
-                        battery: tracker.batteryLevel.toInt(),
-                        lastSeen: _formatLastSeen(tracker.lastSeen),
-                        isCritical:
-                            tracker.batteryLevel < 20 || tracker.shockValue > 0,
-                        type: 'Tracker', // Default for now
-                      ),
+                      );
+                    }
+                    return SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final tracker = devices[index];
+                        final isConnected =
+                            connectedDevice?.remoteId.str == tracker.id &&
+                            connectionState ==
+                                BluetoothConnectionState.connected;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: GestureDetector(
+                            onTap: () => Navigator.of(context).push(
+                              CupertinoPageRoute(
+                                builder: (context) => DeviceDetailPage(
+                                  deviceId: tracker.id,
+                                  initialName: tracker.name.isEmpty
+                                      ? 'Unknown Device'
+                                      : tracker.name,
+                                ),
+                              ),
+                            ),
+                            child: _DeviceCard(
+                              id: tracker.id,
+                              name: tracker.name.isEmpty
+                                  ? 'Unknown Device'
+                                  : tracker.name,
+                              status: isConnected
+                                  ? 'Connected'
+                                  : tracker.status,
+                              battery: (tracker.batteryLevel ?? 0).toInt(),
+                              lastSeen: _formatLastSeen(tracker.lastSeen),
+                              isCritical:
+                                  (tracker.batteryLevel ?? 0) < 20 ||
+                                  (tracker.shockValue ?? 0) > 0,
+                              type: 'Tracker', // Default for now
+                            ),
+                          ),
+                        );
+                      }, childCount: devices.length),
                     );
-                  }, childCount: devices.length),
-                );
-              },
-              loading: () => const SliverToBoxAdapter(
-                child: Center(child: CupertinoActivityIndicator()),
+                  },
+                  loading: () => const SliverToBoxAdapter(
+                    child: Center(child: CupertinoActivityIndicator()),
+                  ),
+                  error: (err, stack) => SliverToBoxAdapter(
+                    child: Center(child: Text('Error: $err')),
+                  ),
+                ),
               ),
-              error: (err, stack) =>
-                  SliverToBoxAdapter(child: Center(child: Text('Error: $err'))),
-            ),
+            ],
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          const FloatingHeader(title: 'Devices'),
         ],
       ),
     );
@@ -164,7 +198,6 @@ class _DeviceCard extends StatelessWidget {
                 color: battery > 20 ? AppTheme.success : AppTheme.critical,
               ),
               const SizedBox(height: 4),
-              Text('$battery%', style: AppTheme.caption),
             ],
           ),
         ],

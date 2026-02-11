@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Colors, HitTestBehavior;
 import '../../../widgets/glass_container.dart';
+import '../../../../core/theme/app_theme.dart';
 
 class MobileBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -24,7 +25,7 @@ class MobileBottomNav extends StatelessWidget {
         child: GlassContainer(
           padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 16),
           borderRadius: 32,
-          opacity: 0.15,
+          color: AppTheme.surfaceGlass,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: items.asMap().entries.map((entry) {
@@ -42,7 +43,7 @@ class MobileBottomNav extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? CupertinoColors.activeBlue.withValues(alpha: 0.1)
+                        ? AppTheme.primary.withValues(alpha: 0.1)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -52,21 +53,21 @@ class MobileBottomNav extends StatelessWidget {
                       Icon(
                         isSelected ? item.activeIcon : item.icon,
                         color: isSelected
-                            ? CupertinoColors.activeBlue
-                            : CupertinoColors.systemGrey,
+                            ? AppTheme.primary
+                            : AppTheme.textSecondary,
                         size: 24,
                       ),
                       const SizedBox(height: 2),
                       Text(
                         item.label,
-                        style: TextStyle(
+                        style: AppTheme.caption.copyWith(
                           color: isSelected
-                              ? CupertinoColors.activeBlue
-                              : CupertinoColors.systemGrey,
-                          fontSize: 10,
+                              ? AppTheme.primary
+                              : AppTheme.textSecondary,
                           fontWeight: isSelected
                               ? FontWeight.w600
                               : FontWeight.normal,
+                          fontSize: 10,
                         ),
                       ),
                     ],
