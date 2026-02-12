@@ -5,6 +5,7 @@ import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:flutter_map_marker_popup/flutter_map_marker_popup.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/location_providers.dart';
 import 'package:lmt_models/lmt_models.dart' as models;
@@ -349,17 +350,17 @@ class _MapControlButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
+    final theme = CupertinoTheme.of(context);
 
     return CupertinoButton(
       padding: EdgeInsets.zero,
+      minimumSize: const Size(44, 44), // Minimum touch target for accessibility
       onPressed: onPressed,
       child: Container(
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: active
-              ? CupertinoTheme.of(context).primaryColor
-              : CupertinoTheme.of(context).barBackgroundColor,
+          color: active ? theme.primaryColor : theme.barBackgroundColor,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -371,12 +372,10 @@ class _MapControlButton extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          size: 20,
+          size: AppTheme.iconSizeMedium,
           color: active
               ? CupertinoColors.white
-              : (isDark
-                    ? CupertinoColors.white
-                    : CupertinoTheme.of(context).primaryColor),
+              : (isDark ? CupertinoColors.white : theme.primaryColor),
         ),
       ),
     );

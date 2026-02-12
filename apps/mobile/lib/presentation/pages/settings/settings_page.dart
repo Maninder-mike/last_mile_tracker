@@ -9,6 +9,7 @@ import 'package:last_mile_tracker/core/config/support_config.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/providers/service_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/settings_mode_provider.dart';
+import 'package:last_mile_tracker/presentation/widgets/app_layout.dart';
 import '../../widgets/floating_header.dart';
 import 'settings_theme.dart';
 import 'widgets/settings_tile.dart';
@@ -37,7 +38,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ListView(
             padding: EdgeInsets.only(
               top: MediaQuery.of(context).padding.top + 60,
-              bottom: 100,
+              bottom: AppPadding.safeBottom.bottom,
             ),
             children: [
               const DeviceCard().animate().fadeIn().slideY(begin: -0.1, end: 0),

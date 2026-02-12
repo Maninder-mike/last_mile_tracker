@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
+import 'package:last_mile_tracker/presentation/widgets/app_layout.dart';
 
 class EmptyState extends StatelessWidget {
   final IconData icon;
@@ -17,29 +18,27 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
+    
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40.0),
+        padding: AppPadding.section,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(AppTheme.s24),
               decoration: BoxDecoration(
-                color: CupertinoTheme.of(
-                  context,
-                ).primaryColor.withValues(alpha: 0.1),
+                color: primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 64,
-                color: CupertinoTheme.of(
-                  context,
-                ).primaryColor.withValues(alpha: 0.5),
+                color: primaryColor.withValues(alpha: 0.5),
               ),
             ),
-            const SizedBox(height: 24),
+            AppGaps.xLarge,
             Text(
               title,
               style: AppTheme.heading2.copyWith(
@@ -48,13 +47,18 @@ class EmptyState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            AppGaps.standard,
             Text(
               subtitle,
-              style: AppTheme.body.copyWith(color: CupertinoColors.systemGrey),
+              style: AppTheme.body.copyWith(
+                color: CupertinoDynamicColor.resolve(
+                  AppTheme.textSecondary,
+                  context,
+                ),
+              ),
               textAlign: TextAlign.center,
             ),
-            if (action != null) ...[const SizedBox(height: 32), action!],
+            if (action != null) ...[AppGaps.xxLarge, action!],
           ],
         ),
       ),

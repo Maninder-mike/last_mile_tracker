@@ -14,7 +14,9 @@ Last Update: ${_formatDate(shipment.eta)}
 Tracked via Last Mile Tracker
 ''';
 
-    await Share.share(text, subject: 'Shipment Update: ${shipment.id}');
+    await SharePlus.instance.share(
+      ShareParams(text: text, subject: 'Shipment Update: ${shipment.id}'),
+    );
   }
 
   static String _formatDate(DateTime date) {

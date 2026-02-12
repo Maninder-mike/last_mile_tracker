@@ -1,11 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Colors;
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 import 'package:last_mile_tracker/presentation/widgets/filter_chip_bar.dart';
+import 'package:last_mile_tracker/presentation/widgets/app_layout.dart';
 import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -65,10 +65,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
               // Search Bar
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.s16,
-                    vertical: AppTheme.s8,
-                  ),
+                  padding: AppPadding.searchBar,
                   child: CupertinoSearchTextField(
                     controller: _searchController,
                     onChanged: (value) => setState(() => _searchQuery = value),
@@ -96,7 +93,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                       onSelected: (value) =>
                           setState(() => _selectedStatus = value),
                     ),
-                    const SizedBox(height: AppTheme.s12),
+                    AppGaps.standard,
                     FilterChipBar<String>(
                       items: [
                         FilterItem(label: 'All Battery', value: 'All'),
@@ -106,13 +103,13 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                       onSelected: (value) =>
                           setState(() => _selectedBattery = value),
                     ),
-                    const SizedBox(height: AppTheme.s16),
+                    AppGaps.large,
                   ],
                 ),
               ),
 
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: AppTheme.s16),
+                padding: AppPadding.horizontal,
                 sliver: scannedDevicesAsync.when(
                   data: (devices) {
                     // Apply filtering
@@ -157,11 +154,8 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                       );
                     }
                     return SliverPrototypeExtentList(
-                      prototypeItem: const Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppTheme.s16,
-                          vertical: AppTheme.s8,
-                        ),
+                      prototypeItem: Padding(
+                        padding: AppPadding.listItem,
                         child: _DeviceCard(
                           id: 'proto',
                           name: 'Prototype',
@@ -279,7 +273,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                   error: (err, stack) => SliverToBoxAdapter(
                     child: Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(AppTheme.s16),
+                        padding: AppPadding.all,
                         child: Text(
                           'Error: $err',
                           style: const TextStyle(color: AppTheme.critical),
@@ -344,7 +338,7 @@ class _DeviceCard extends StatelessWidget {
               color: CupertinoDynamicColor.resolve(AppTheme.primary, context),
             ),
           ),
-          const SizedBox(width: AppTheme.s16),
+          AppGaps.horizontalLarge,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,27 +346,41 @@ class _DeviceCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Text(name, style: AppTheme.heading2),
-                        if (isFavorite) ...[
-                          const SizedBox(width: 4),
-                          const Icon(
-                            CupertinoIcons.star_fill,
-                            size: 14,
-                            color: CupertinoColors.systemYellow,
+                    Flexible(
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              name,
+                              style: AppTheme.heading2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          if (isFavorite) ...[
+                            AppGaps.horizontalSmall,
+                            const Icon(
+                              CupertinoIcons.star_fill,
+                              size: 14,
+                              color: CupertinoColors.systemYellow,
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                     _StatusBadge(status: status, isCritical: isCritical),
                   ],
                 ),
-                const SizedBox(height: 4),
+                AppGaps.small,
                 Row(
                   children: [
-                    Text(id, style: AppTheme.caption),
-                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        id,
+                        style: AppTheme.caption,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    AppGaps.horizontalMedium,
                     Container(
                       width: 4,
                       height: 4,
@@ -381,26 +389,26 @@ class _DeviceCard extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    AppGaps.horizontalMedium,
                     Text(lastSeen, style: AppTheme.caption),
                   ],
                 ),
-                const SizedBox(height: AppTheme.s4),
+                AppGaps.small,
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          Column(
-            children: [
-              Icon(
-                battery > 20
-                    ? CupertinoIcons.battery_100
-                    : CupertinoIcons.battery_25,
-                size: 16,
-                color: battery > 20 ? AppTheme.success : AppTheme.critical,
-              ),
-              const SizedBox(height: 4),
-            ],
+          AppGaps.horizontalStandard,
+          Container(
+            width: AppTheme.iconSizeMedium,
+            height: AppTheme.iconSizeMedium,
+            alignment: Alignment.center,
+            child: Icon(
+              battery > 20
+                  ? CupertinoIcons.battery_100
+                  : CupertinoIcons.battery_25,
+              size: AppTheme.iconSizeSmall,
+              color: battery > 20 ? AppTheme.success : AppTheme.critical,
+            ),
           ),
         ],
       ),
@@ -417,27 +425,28 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isCritical ? AppTheme.critical : AppTheme.success;
+    final effectiveColor = CupertinoDynamicColor.resolve(color, context);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppTheme.s8,
+        vertical: AppTheme.s4,
+      ),
       decoration: BoxDecoration(
-        color: CupertinoDynamicColor.resolve(
-          color,
-          context,
-        ).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        color: effectiveColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
         border: Border.all(
-          color: CupertinoDynamicColor.resolve(
-            color,
-            context,
-          ).withValues(alpha: 0.2),
+          color: effectiveColor.withValues(alpha: 0.2),
+          width: 0.5,
         ),
       ),
       child: Text(
         status.toUpperCase(),
         style: TextStyle(
-          color: CupertinoDynamicColor.resolve(color, context),
-          fontSize: 10,
+          color: effectiveColor,
+          fontSize: AppTheme.label.fontSize,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         ),
       ),
     );

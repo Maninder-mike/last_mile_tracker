@@ -6,6 +6,7 @@ import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 import 'package:last_mile_tracker/domain/models/shipment.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
+import 'package:last_mile_tracker/presentation/widgets/app_layout.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
 import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
@@ -43,7 +44,7 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(AppTheme.s16),
+                  padding: AppPadding.all,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -62,7 +63,7 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: AppTheme.s12),
+                          AppGaps.horizontalStandard,
                           Expanded(
                             child: EntranceAnimation(
                               index: 1,
@@ -77,7 +78,7 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppTheme.s12),
+                      AppGaps.standard,
                       Row(
                         children: [
                           Expanded(
@@ -92,7 +93,7 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: AppTheme.s12),
+                          AppGaps.horizontalStandard,
                           Expanded(
                             child: EntranceAnimation(
                               index: 3,
@@ -108,9 +109,9 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
                         ],
                       ),
 
-                      const SizedBox(height: AppTheme.s32),
+                      AppGaps.xxLarge,
                       Text('Requires Attention', style: AppTheme.heading2),
-                      const SizedBox(height: AppTheme.s16),
+                      AppGaps.large,
 
                       // Mock "At Risk" List
                       ...Shipment.mockData
@@ -140,7 +141,7 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
           const FloatingHeader(title: 'Fleet Overview'),
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
-            right: 16,
+            right: AppTheme.s16,
             child: Row(
               children: [
                 _NotificationBadge(
@@ -151,11 +152,15 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                AppGaps.horizontalMedium,
                 CupertinoButton(
                   padding: EdgeInsets.zero,
+                  minimumSize: const Size(
+                    AppTheme.iconSizeMedium,
+                    AppTheme.iconSizeMedium,
+                  ),
                   child: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(AppTheme.s8),
                     decoration: BoxDecoration(
                       color: CupertinoTheme.of(
                         context,
@@ -165,7 +170,7 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
                     child: Icon(
                       CupertinoIcons.graph_square,
                       color: CupertinoTheme.of(context).primaryColor,
-                      size: 22,
+                      size: AppTheme.iconSizeMedium,
                     ),
                   ),
                   onPressed: () {
@@ -197,12 +202,13 @@ class _NotificationBadge extends ConsumerWidget {
 
     return CupertinoButton(
       padding: EdgeInsets.zero,
+      minimumSize: const Size(AppTheme.iconSizeMedium, AppTheme.iconSizeMedium),
       onPressed: onTap,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(AppTheme.s8),
             decoration: BoxDecoration(
               color: CupertinoTheme.of(
                 context,
@@ -212,7 +218,7 @@ class _NotificationBadge extends ConsumerWidget {
             child: Icon(
               CupertinoIcons.bell,
               color: CupertinoTheme.of(context).primaryColor,
-              size: 22,
+              size: AppTheme.iconSizeMedium,
             ),
           ),
           if (unreadCount > 0)
@@ -220,7 +226,7 @@ class _NotificationBadge extends ConsumerWidget {
               right: -2,
               top: -2,
               child: Container(
-                padding: const EdgeInsets.all(4),
+                padding: EdgeInsets.all(AppTheme.s4),
                 decoration: const BoxDecoration(
                   color: AppTheme.critical,
                   shape: BoxShape.circle,
@@ -229,9 +235,9 @@ class _NotificationBadge extends ConsumerWidget {
                 child: Text(
                   unreadCount > 9 ? '9+' : '$unreadCount',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: CupertinoColors.white,
-                    fontSize: 10,
+                    fontSize: AppTheme.caption.fontSize,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -261,18 +267,18 @@ class _KpiCard extends StatelessWidget {
     final effectiveColor = CupertinoDynamicColor.resolve(color, context);
 
     return GlassContainer(
-      padding: const EdgeInsets.all(16),
+      padding: AppPadding.card,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, color: effectiveColor, size: 24),
+              Icon(icon, color: effectiveColor, size: AppTheme.iconSizeMedium),
               // Trend indicator could go here
             ],
           ),
-          const SizedBox(height: AppTheme.s8),
+          AppGaps.medium,
           Text(
             value,
             style: AppTheme.heading1.copyWith(
@@ -280,7 +286,7 @@ class _KpiCard extends StatelessWidget {
               color: effectiveColor,
             ),
           ),
-          const SizedBox(height: 4),
+          AppGaps.small,
           Text(
             title,
             style: AppTheme.caption.copyWith(fontWeight: FontWeight.w600),
@@ -315,7 +321,7 @@ class _ShipmentCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(width: 16),
+          AppGaps.horizontalLarge,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,12 +338,12 @@ class _ShipmentCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                AppGaps.small,
                 Text(
                   '${shipment.origin} -> ${shipment.destination}',
                   style: AppTheme.body,
                 ),
-                const SizedBox(height: 4),
+                AppGaps.small,
                 Text(
                   shipment.status.name.toUpperCase(),
                   style: AppTheme.caption.copyWith(
@@ -348,7 +354,7 @@ class _ShipmentCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          AppGaps.horizontalMedium,
           const Icon(
             CupertinoIcons.chevron_right,
             color: CupertinoColors.systemGrey2,

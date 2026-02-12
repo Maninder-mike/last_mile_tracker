@@ -32,23 +32,31 @@ class FloatingHeader extends StatelessWidget {
           children: [
             // Left: Back Button + Title
             if (showBackButton) ...[
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => Navigator.maybePop(context),
-                child: GlassContainer(
-                  borderRadius: 30,
-                  opacity: 0.1,
-                  padding: const EdgeInsets.all(12),
-                  child: Icon(
-                    CupertinoIcons.chevron_left,
-                    size: 20,
-                    color: isDark
-                        ? CupertinoColors.white
-                        : CupertinoColors.black,
+              Semantics(
+                label: 'Back',
+                button: true,
+                child: CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(
+                    AppTheme.iconSizeMedium,
+                    AppTheme.iconSizeMedium,
+                  ),
+                  onPressed: () => Navigator.maybePop(context),
+                  child: GlassContainer(
+                    borderRadius: 30,
+                    opacity: 0.1,
+                    padding: EdgeInsets.all(AppTheme.s12),
+                    child: Icon(
+                      CupertinoIcons.chevron_left,
+                      size: AppTheme.iconSizeMedium,
+                      color: isDark
+                          ? CupertinoColors.white
+                          : CupertinoColors.black,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: AppTheme.s8),
             ],
             GlassContainer(
               borderRadius: 30,

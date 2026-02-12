@@ -33,6 +33,7 @@ class SwipeActionCell extends StatelessWidget {
 }
 
 /// Helper method to create a SlidableAction with app-consistent styling
+/// Ensures minimum touch target of 44x44px for accessibility
 SlidableAction createSwipeAction({
   required IconData icon,
   required String label,
@@ -48,5 +49,6 @@ SlidableAction createSwipeAction({
     icon: icon,
     label: label,
     padding: EdgeInsets.zero,
+    flex: 1,
   );
 }

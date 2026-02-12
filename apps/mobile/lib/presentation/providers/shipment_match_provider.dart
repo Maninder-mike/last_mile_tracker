@@ -16,10 +16,12 @@ AsyncValue<List<Shipment>> mergedShipments(Ref ref) {
   if (shipmentsAsync.isLoading || trackersAsync.isLoading) {
     return const AsyncValue.loading();
   }
-  if (shipmentsAsync.hasError)
+  if (shipmentsAsync.hasError) {
     return AsyncValue.error(shipmentsAsync.error!, shipmentsAsync.stackTrace!);
-  if (trackersAsync.hasError)
+  }
+  if (trackersAsync.hasError) {
     return AsyncValue.error(trackersAsync.error!, trackersAsync.stackTrace!);
+  }
 
   final shipments = shipmentsAsync.value ?? [];
   final trackers = trackersAsync.value ?? [];

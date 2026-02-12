@@ -11,6 +11,7 @@ import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
 import 'package:last_mile_tracker/presentation/widgets/filter_chip_bar.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
+import 'package:last_mile_tracker/presentation/widgets/app_layout.dart';
 import 'package:last_mile_tracker/presentation/widgets/skeleton_loader.dart';
 import 'package:last_mile_tracker/presentation/widgets/swipe_action_cell.dart';
 import 'package:last_mile_tracker/presentation/widgets/empty_state.dart';
@@ -69,10 +70,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
               // Search Bar
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.s16,
-                    vertical: AppTheme.s8,
-                  ),
+                  padding: AppPadding.searchBar,
                   child: CupertinoSearchTextField(
                     controller: _searchController,
                     onChanged: _onSearchChanged,
@@ -90,7 +88,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
               SliverToBoxAdapter(
                 child: Column(
                   children: [
-                    const SizedBox(height: AppTheme.s8),
+                    AppGaps.medium,
                     FilterChipBar<ShipmentStatus?>(
                       items: [
                         FilterItem(label: 'All Status', value: null),
@@ -108,7 +106,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                         setState(() => _selectedStatus = value);
                       },
                     ),
-                    const SizedBox(height: AppTheme.s12),
+                    AppGaps.standard,
                     FilterChipBar<String>(
                       items: [
                         FilterItem(label: 'All Time', value: 'All'),
@@ -122,7 +120,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                         setState(() => _selectedTimeRange = value);
                       },
                     ),
-                    const SizedBox(height: AppTheme.s8),
+                    AppGaps.medium,
                   ],
                 ),
               ),
@@ -176,10 +174,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                     }
                     return SliverPrototypeExtentList(
                       prototypeItem: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.s16,
-                          vertical: AppTheme.s8,
-                        ),
+                        padding: AppPadding.listItem,
                         child: _ShipmentListItem(
                           shipment: Shipment.mockData.first.copyWith(
                             id: 'prototype',
@@ -189,10 +184,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                       delegate: SliverChildBuilderDelegate((context, index) {
                         final shipment = filteredShipments[index];
                         return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.s16,
-                            vertical: AppTheme.s8,
-                          ),
+                          padding: AppPadding.listItem,
                           child: SwipeActionCell(
                             groupTag: shipment.id,
                             startActions: [
@@ -247,7 +239,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                   loading: () => SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        padding: AppPadding.horizontal,
                         child: SkeletonLoader.shipmentCard(),
                       ),
                       childCount: 5,
@@ -256,7 +248,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                   error: (err, stack) => SliverToBoxAdapter(
                     child: Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: AppPadding.all,
                         child: Text(
                           'Error: $err',
                           style: const TextStyle(color: AppTheme.critical),
@@ -270,20 +262,24 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
           ),
           FloatingHeader(
             title: 'Shipments',
-            trailing: CupertinoButton(
-              minimumSize: Size.zero,
-              padding: EdgeInsets.zero,
-              onPressed: () {
-                Navigator.of(context).push(
-                  CupertinoPageRoute(
-                    builder: (context) => const AddShipmentPage(),
-                  ),
-                );
-              },
-              child: Icon(
-                CupertinoIcons.add,
-                size: 20,
-                color: CupertinoTheme.of(context).primaryColor,
+            trailing: Semantics(
+              label: 'Add shipment',
+              button: true,
+              child: CupertinoButton(
+                minimumSize: Size(AppTheme.iconSizeMedium, AppTheme.iconSizeMedium),
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  Navigator.of(context).push(
+                    CupertinoPageRoute(
+                      builder: (context) => const AddShipmentPage(),
+                    ),
+                  );
+                },
+                child: Icon(
+                  CupertinoIcons.add,
+                  size: AppTheme.iconSizeMedium,
+                  color: CupertinoTheme.of(context).primaryColor,
+                ),
               ),
             ),
           ),
@@ -313,9 +309,10 @@ class _ShipmentListItem extends StatelessWidget {
       },
       child: Hero(
         tag: 'shipment_card_${shipment.id}',
+
         child: GlassContainer(
           opacity: 0.6,
-          padding: const EdgeInsets.all(AppTheme.s16),
+          padding: AppPadding.card,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -334,13 +331,13 @@ class _ShipmentListItem extends StatelessWidget {
                   _StatusBadge(status: shipment.status, color: statusColor),
                 ],
               ),
-              const SizedBox(height: AppTheme.s12),
+              AppGaps.standard,
               Row(
                 children: [
                   _RouteDot(
                     color: AppTheme.textSecondary.withValues(alpha: 0.5),
                   ),
-                  const SizedBox(width: 8),
+                  AppGaps.horizontalMedium,
                   Expanded(
                     child: Text(
                       '${shipment.origin} → ${shipment.destination}',
@@ -354,7 +351,7 @@ class _ShipmentListItem extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: AppTheme.s16),
+              AppGaps.large,
               Row(
                 children: [
                   _TelemetryPill(
@@ -364,7 +361,7 @@ class _ShipmentListItem extends StatelessWidget {
                         ? AppTheme.critical
                         : AppTheme.success,
                   ),
-                  const SizedBox(width: 8),
+                  AppGaps.horizontalMedium,
                   _TelemetryPill(
                     icon: CupertinoIcons.battery_25,
                     label: '${shipment.batteryLevel}%',

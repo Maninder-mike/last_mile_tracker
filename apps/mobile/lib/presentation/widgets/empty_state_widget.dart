@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
+import 'package:last_mile_tracker/presentation/widgets/app_layout.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 
 class EmptyStateWidget extends StatelessWidget {
@@ -24,17 +26,18 @@ class EmptyStateWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = CupertinoTheme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = theme.primaryColor;
 
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(AppTheme.s24),
           decoration: BoxDecoration(
-            color: theme.primaryColor.withValues(alpha: 0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 48, color: theme.primaryColor)
+          child: Icon(icon, size: 48, color: primaryColor)
               .animate(onPlay: (c) => c.repeat(reverse: true))
               .scale(
                 duration: 2000.ms,
@@ -43,32 +46,31 @@ class EmptyStateWidget extends StatelessWidget {
                 curve: Curves.easeInOut,
               ),
         ),
-        const SizedBox(height: 24),
+        AppGaps.xLarge,
         Text(
           title,
-          style: TextStyle(
+          style: AppTheme.heading2.copyWith(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: isDark ? CupertinoColors.white : CupertinoColors.black,
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 8),
+        AppGaps.medium,
         Text(
           message,
-          style: TextStyle(
-            fontSize: 16,
-            color: isDark
-                ? CupertinoColors.systemGrey
-                : CupertinoColors.secondaryLabel,
+          style: AppTheme.body.copyWith(
+            color: CupertinoDynamicColor.resolve(
+              AppTheme.textSecondary,
+              context,
+            ),
           ),
           textAlign: TextAlign.center,
         ),
         if (buttonText != null && onButtonPressed != null) ...[
-          const SizedBox(height: 24),
+          AppGaps.xLarge,
           CupertinoButton.filled(
             onPressed: onButtonPressed,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
             child: Text(buttonText!),
           ),
         ],
@@ -78,10 +80,10 @@ class EmptyStateWidget extends StatelessWidget {
     if (useGlass) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: AppPadding.section,
           child: GlassContainer(
-            padding: const EdgeInsets.all(32),
-            borderRadius: 24,
+            padding: EdgeInsets.all(AppTheme.s32),
+            borderRadius: AppTheme.radiusLarge,
             opacity: isDark ? 0.05 : 0.08,
             child: content,
           ),
@@ -90,7 +92,7 @@ class EmptyStateWidget extends StatelessWidget {
     }
 
     return Center(
-      child: Padding(padding: const EdgeInsets.all(24.0), child: content),
+      child: Padding(padding: AppPadding.section, child: content),
     );
   }
 }

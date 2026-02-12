@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import DeckGL from '@deck.gl/react';
 import { IconLayer } from '@deck.gl/layers';
-import Map from 'react-map-gl';
+import { Map } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { DeviceReading } from '@/utils/types';
@@ -106,7 +106,6 @@ export default function DeckMap({ devices, selectedDeviceId, onSelectDevice }: D
                 controller={true}
                 layers={layers}
                 getTooltip={getTooltip}
-                ContextProvider={Map.ContextProvider}
             >
                 <Map
                     mapLib={maplibregl}
