@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:last_mile_tracker/presentation/providers/theme_provider.dart';
 
 import 'package:last_mile_tracker/core/config/support_config.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
@@ -42,7 +43,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               const DeviceCard().animate().fadeIn().slideY(begin: -0.1, end: 0),
 
               if (role != SettingsRole.driver) _buildOperationsSection(),
-
+              _buildAppearanceSection(),
               _buildNotificationsSection(),
               _buildSupportSection(),
 
@@ -81,6 +82,137 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           onTap: _isSyncing ? null : _handleCloudSync,
         ),
       ],
+    );
+  }
+
+  Widget _buildAppearanceSection() {
+    final themeState = ref.watch(themeProvider);
+    final themeNotifier = ref.read(themeProvider.notifier);
+
+    return CupertinoListSection.insetGrouped(
+      header: const Text('APPEARANCE'),
+      margin: SettingsTheme.sectionMargin,
+      children: [
+        _buildThemeModeItem(themeState, themeNotifier),
+        CupertinoListTile(
+          title: const Text('Accent Color'),
+          subtitle: const Text('Personalize your workspace'),
+          leading: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: themeState.accentColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              CupertinoIcons.paintbrush,
+              color: themeState.accentColor,
+              size: 20,
+            ),
+          ),
+          additionalInfo: SizedBox(
+            height: 32,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              shrinkWrap: true,
+              children: [
+                _buildColorOption(
+                  CupertinoColors.activeBlue,
+                  themeState,
+                  themeNotifier,
+                ),
+                _buildColorOption(
+                  CupertinoColors.systemPurple,
+                  themeState,
+                  themeNotifier,
+                ),
+                _buildColorOption(
+                  CupertinoColors.systemOrange,
+                  themeState,
+                  themeNotifier,
+                ),
+                _buildColorOption(
+                  CupertinoColors.systemIndigo,
+                  themeState,
+                  themeNotifier,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildThemeModeItem(ThemeState state, ThemeNotifier notifier) {
+    return CupertinoListTile(
+      title: const Text('Theme Mode'),
+      leading: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemGrey.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(
+          CupertinoIcons.circle_lefthalf_fill,
+          color: CupertinoColors.systemGrey,
+          size: 20,
+        ),
+      ),
+      additionalInfo: CupertinoSlidingSegmentedControl<AppThemeMode>(
+        groupValue: state.mode,
+        children: {
+          AppThemeMode.system: const Text(
+            'Auto',
+            style: TextStyle(fontSize: 12),
+          ),
+          AppThemeMode.light: const Text(
+            'Light',
+            style: TextStyle(fontSize: 12),
+          ),
+          AppThemeMode.dark: const Text('Dark', style: TextStyle(fontSize: 12)),
+        },
+        onValueChanged: (value) {
+          if (value != null) {
+            HapticFeedback.selectionClick();
+            notifier.setTheme(value);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildColorOption(
+    Color color,
+    ThemeState state,
+    ThemeNotifier notifier,
+  ) {
+    final isSelected = state.accentColor.toARGB32() == color.toARGB32();
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        notifier.setAccentColor(color);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: isSelected
+              ? Border.all(color: CupertinoColors.white, width: 2)
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.4),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+      ),
     );
   }
 

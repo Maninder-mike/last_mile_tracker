@@ -80,10 +80,10 @@ class FirmwareUpdateTile extends ConsumerWidget {
       trailing: isChecking
           ? const CupertinoActivityIndicator(radius: 8)
           : (state.status == OtaStatus.error
-                ? const Icon(
+                ? Icon(
                     CupertinoIcons.refresh_bold,
                     size: 16,
-                    color: CupertinoColors.activeBlue,
+                    color: CupertinoTheme.of(context).primaryColor,
                   )
                 : const Icon(
                     CupertinoIcons.chevron_right,
@@ -106,23 +106,23 @@ class FirmwareUpdateTile extends ConsumerWidget {
     OtaState state,
   ) {
     return Container(
-      color: CupertinoColors.activeBlue.withValues(alpha: 0.1),
+      color: CupertinoTheme.of(context).primaryColor.withValues(alpha: 0.1),
       child: CupertinoListTile(
         backgroundColor: CupertinoColors.transparent,
-        title: const Text(
+        title: Text(
           'Update Available',
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: CupertinoColors.activeBlue,
+            color: CupertinoTheme.of(context).primaryColor,
           ),
         ),
         subtitle: Text(
           'Version ${state.release?.tagName ?? 'New'} ready to install',
-          style: const TextStyle(color: CupertinoColors.activeBlue),
+          style: TextStyle(color: CupertinoTheme.of(context).primaryColor),
         ),
-        leading: const Icon(
+        leading: Icon(
           CupertinoIcons.cloud_download_fill,
-          color: CupertinoColors.activeBlue,
+          color: CupertinoTheme.of(context).primaryColor,
           size: 28,
         ),
         trailing: CupertinoButton(
@@ -175,7 +175,7 @@ class FirmwareUpdateTile extends ConsumerWidget {
                   widthFactor: state.progress.clamp(0.0, 1.0),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppTheme.primary,
+                      color: CupertinoTheme.of(context).primaryColor,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),

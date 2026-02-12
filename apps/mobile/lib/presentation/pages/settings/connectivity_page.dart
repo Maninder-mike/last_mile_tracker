@@ -427,7 +427,11 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
                 padding: EdgeInsets.zero,
                 minimumSize: Size.zero,
                 onPressed: _showWifiScanModal,
-                child: const Icon(CupertinoIcons.search, size: 20),
+                child: Icon(
+                  CupertinoIcons.search,
+                  size: 20,
+                  color: CupertinoTheme.of(context).primaryColor,
+                ),
               ),
             ],
           ),
@@ -602,7 +606,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
             icon: CupertinoIcons.timer,
             value: _formatUptime(reading?.uptime ?? 0),
             label: 'Uptime',
-            color: CupertinoColors.systemBlue,
+            color: CupertinoTheme.of(context).primaryColor,
           ),
         ],
       ),
@@ -676,14 +680,13 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: (textColor ?? CupertinoColors.activeBlue).withValues(
-                  alpha: 0.1,
-                ),
+                color: (textColor ?? CupertinoTheme.of(context).primaryColor)
+                    .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 icon,
-                color: textColor ?? CupertinoColors.activeBlue,
+                color: textColor ?? CupertinoTheme.of(context).primaryColor,
                 size: 20,
               ),
             ),

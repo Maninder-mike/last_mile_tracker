@@ -20,12 +20,14 @@ class Shipment {
   final Map<String, double> additionalTemps;
   final int? batteryLevel;
   final double? batteryDrop;
+  final double? temperatureTrend; // positive = rising, negative = falling
   final bool hasAlerts;
 
   // New Hardware V2 Fields
   final double? latitude;
   final double? longitude;
   final int? shockValue;
+  final bool isFavorite;
 
   const Shipment({
     required this.id,
@@ -40,10 +42,12 @@ class Shipment {
     this.additionalTemps = const {},
     this.batteryLevel,
     this.batteryDrop,
+    this.temperatureTrend,
     this.hasAlerts = false,
     this.latitude,
     this.longitude,
     this.shockValue,
+    this.isFavorite = false,
   });
 
   Shipment copyWith({
@@ -59,10 +63,12 @@ class Shipment {
     Map<String, double>? additionalTemps,
     int? batteryLevel,
     double? batteryDrop,
+    double? temperatureTrend,
     bool? hasAlerts,
     double? latitude,
     double? longitude,
     int? shockValue,
+    bool? isFavorite,
   }) {
     return Shipment(
       id: id ?? this.id,
@@ -77,10 +83,12 @@ class Shipment {
       additionalTemps: additionalTemps ?? this.additionalTemps,
       batteryLevel: batteryLevel ?? this.batteryLevel,
       batteryDrop: batteryDrop ?? this.batteryDrop,
+      temperatureTrend: temperatureTrend ?? this.temperatureTrend,
       hasAlerts: hasAlerts ?? this.hasAlerts,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       shockValue: shockValue ?? this.shockValue,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 
@@ -102,6 +110,7 @@ class Shipment {
       additionalTemps: {'Probe 2': 7.8, 'Probe 3': 8.5},
       batteryLevel: 45,
       batteryDrop: 120, // mV
+      temperatureTrend: 0.2,
       hasAlerts: true,
       deviceIds: ['dev_001'],
       shockValue: 125, // Mock shock

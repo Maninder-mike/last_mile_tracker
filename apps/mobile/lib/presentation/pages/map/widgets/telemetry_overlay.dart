@@ -43,7 +43,7 @@ class TelemetryOverlay extends ConsumerWidget {
                       icon: CupertinoIcons.speedometer,
                       label: 'Speed',
                       value: '${reading.speed.toStringAsFixed(1)} km/h',
-                      color: CupertinoColors.activeBlue,
+                      color: CupertinoTheme.of(context).primaryColor,
                     ),
                     _StatItem(
                       icon: CupertinoIcons.battery_100,

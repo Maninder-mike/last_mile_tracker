@@ -8,8 +8,22 @@ import 'package:latlong2/latlong.dart';
 import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/location_providers.dart';
 import 'package:lmt_models/lmt_models.dart' as models;
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../widgets/floating_header.dart';
 import 'widgets/telemetry_overlay.dart';
+
+class LatLngTween extends Tween<LatLng> {
+  LatLngTween({super.begin, super.end});
+
+  @override
+  LatLng lerp(double t) {
+    if (begin == null || end == null) return end ?? const LatLng(0, 0);
+    return LatLng(
+      begin!.latitude + (end!.latitude - begin!.latitude) * t,
+      begin!.longitude + (end!.longitude - begin!.longitude) * t,
+    );
+  }
+}
 
 class MapPage extends ConsumerStatefulWidget {
   const MapPage({super.key});
@@ -24,10 +38,38 @@ class _MapPageState extends ConsumerState<MapPage>
   final _popupController = PopupController();
   bool _isFollowingMode = true;
 
+  // Animation for marker smoothing
+  late AnimationController _markerMoveController;
+  late Animation<LatLng> _markerMoveAnimation;
+  LatLng _markerPoint = const LatLng(37.7749, -122.4194);
+
+  @override
+  void initState() {
+    super.initState();
+    _markerMoveController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _markerMoveAnimation = LatLngTween(begin: _markerPoint, end: _markerPoint)
+        .animate(
+          CurvedAnimation(
+            parent: _markerMoveController,
+            curve: Curves.easeInOutCubic,
+          ),
+        );
+
+    _markerMoveController.addListener(() {
+      setState(() {
+        _markerPoint = _markerMoveAnimation.value;
+      });
+    });
+  }
+
   @override
   void dispose() {
     _mapController.dispose();
     _popupController.dispose();
+    _markerMoveController.dispose();
     super.dispose();
   }
 
@@ -71,15 +113,30 @@ class _MapPageState extends ConsumerState<MapPage>
         ? 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png'
         : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-    const defaultCenter = LatLng(37.7749, -122.4194);
     final readingData = readingAsync.asData?.value;
     final pathData = pathAsync.asData?.value;
 
-    final currentPoint = readingData != null
-        ? LatLng(readingData.lat, readingData.lon)
-        : defaultCenter;
+    // Detect coordinate changes and trigger smoothing animation
+    ref.listen<AsyncValue<models.SensorReading?>>(latestReadingProvider, (
+      prev,
+      next,
+    ) {
+      if (next.hasValue && next.value != null) {
+        final newTarget = LatLng(next.value!.lat, next.value!.lon);
+        _markerMoveAnimation = LatLngTween(begin: _markerPoint, end: newTarget)
+            .animate(
+              CurvedAnimation(
+                parent: _markerMoveController,
+                curve: Curves.easeOutCubic,
+              ),
+            );
+        _markerMoveController.forward(from: 0);
+      }
+    });
 
-    // Auto-center in following mode
+    final currentPoint = _markerPoint;
+
+    // Auto-center in following mode (smooth camera)
     if (_isFollowingMode && readingData != null) {
       _mapController.animateTo(dest: currentPoint);
     }
@@ -115,7 +172,9 @@ class _MapPageState extends ConsumerState<MapPage>
                       points: pathData
                           .map((e) => LatLng(e.lat, e.lon))
                           .toList(),
-                      color: CupertinoColors.activeBlue.withValues(alpha: 0.6),
+                      color: CupertinoTheme.of(
+                        context,
+                      ).primaryColor.withValues(alpha: 0.6),
                       strokeWidth: 5.0,
                     ),
                   ],
@@ -201,34 +260,48 @@ class _LiveMarker extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         if (isFollowing)
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: const Duration(seconds: 2),
-            onEnd: () {},
-            builder: (context, value, child) {
-              return Container(
-                width: 60 * value,
-                height: 60 * value,
+          Container(
+                width: 60,
+                height: 60,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: CupertinoColors.activeBlue.withValues(
-                    alpha: 0.3 * (1 - value),
+                  border: Border.all(
+                    color: CupertinoTheme.of(
+                      context,
+                    ).primaryColor.withValues(alpha: 0.5),
+                    width: 2,
                   ),
+                  color: CupertinoTheme.of(
+                    context,
+                  ).primaryColor.withValues(alpha: 0.2),
                 ),
-              );
-            },
-          ),
+              )
+              .animate(onPlay: (controller) => controller.repeat())
+              .scale(
+                begin: const Offset(0.3, 0.3),
+                end: const Offset(1.2, 1.2),
+                curve: Curves.easeOut,
+                duration: 2.seconds,
+              )
+              .fadeOut(begin: 0.6, curve: Curves.easeIn, duration: 2.seconds),
         Container(
           width: 24,
           height: 24,
           decoration: const BoxDecoration(
             color: CupertinoColors.white,
             shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           padding: const EdgeInsets.all(3),
           child: Container(
-            decoration: const BoxDecoration(
-              color: CupertinoColors.activeBlue,
+            decoration: BoxDecoration(
+              color: CupertinoTheme.of(context).primaryColor,
               shape: BoxShape.circle,
             ),
           ),
@@ -285,7 +358,7 @@ class _MapControlButton extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           color: active
-              ? CupertinoColors.activeBlue
+              ? CupertinoTheme.of(context).primaryColor
               : CupertinoTheme.of(context).barBackgroundColor,
           shape: BoxShape.circle,
           boxShadow: [
@@ -301,7 +374,9 @@ class _MapControlButton extends StatelessWidget {
           size: 20,
           color: active
               ? CupertinoColors.white
-              : (isDark ? CupertinoColors.white : CupertinoColors.activeBlue),
+              : (isDark
+                    ? CupertinoColors.white
+                    : CupertinoTheme.of(context).primaryColor),
         ),
       ),
     );

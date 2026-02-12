@@ -29,6 +29,7 @@ class Trackers extends Table {
     const Constant('Unknown'),
   )(); // Keep status with default
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};

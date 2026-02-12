@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:collection/collection.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:last_mile_tracker/core/constants/ble_constants.dart';
@@ -227,6 +228,23 @@ class BleService {
       _approvedDeviceIds.toList(),
     );
     FileLogger.log("BLE: Added ${device.remoteId.str} to approved devices.");
+  }
+
+  Future<void> disconnect() async {
+    await _connectionManager.disconnect();
+    FileLogger.log("BLE: Explicitly disconnected.");
+  }
+
+  Future<void> connectToTracker(String deviceId) async {
+    final devices = await discoveredDevices.first;
+    final tracker = devices.firstWhereOrNull(
+      (t) => t.device.remoteId.str == deviceId,
+    );
+    if (tracker != null) {
+      await connect(tracker.device);
+    } else {
+      FileLogger.log("BLE: Could not find device $deviceId in scan results.");
+    }
   }
 
   bool isApproved(String deviceId) => _approvedDeviceIds.contains(deviceId);

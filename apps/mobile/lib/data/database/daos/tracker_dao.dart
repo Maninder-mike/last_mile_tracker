@@ -40,4 +40,16 @@ class TrackerDao extends DatabaseAccessor<AppDatabase> with _$TrackerDaoMixin {
       trackers,
     )..where((t) => t.lastSeen.isBiggerThanValue(threshold))).get();
   }
+
+  // Update favorite status
+  Future<void> updateFavorite(String id, bool isFavorite) async {
+    await (update(trackers)..where((t) => t.id.equals(id))).write(
+      TrackersCompanion(isFavorite: Value(isFavorite)),
+    );
+  }
+
+  // Watch only favorites
+  Stream<List<Tracker>> watchFavorites() {
+    return (select(trackers)..where((t) => t.isFavorite.equals(true))).watch();
+  }
 }

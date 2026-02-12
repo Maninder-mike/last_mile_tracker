@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'glass_container.dart';
 import 'connection_status_icon.dart';
+import 'connectivity_indicator.dart';
 
 class FloatingHeader extends StatelessWidget {
   final String title;
@@ -21,7 +23,10 @@ class FloatingHeader extends StatelessWidget {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.s16,
+          vertical: AppTheme.s8,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -64,8 +69,17 @@ class FloatingHeader extends StatelessWidget {
             GlassContainer(
               borderRadius: 30,
               opacity: 0.1,
-              padding: const EdgeInsets.all(12),
-              child: trailing ?? const ConnectionStatusIcon(),
+              padding: const EdgeInsets.all(AppTheme.s12),
+              child:
+                  trailing ??
+                  const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ConnectivityIndicator(),
+                      SizedBox(width: AppTheme.s8),
+                      ConnectionStatusIcon(),
+                    ],
+                  ),
             ),
           ],
         ),

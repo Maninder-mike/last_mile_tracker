@@ -64,6 +64,8 @@ class TrackerRepository {
             )
           : const Value.absent(),
       batteryDrop: isV2 ? Value(reading.batteryDrop) : const Value.absent(),
+      isFavorite:
+          const Value.absent(), // Don't overwrite favorite status on sync
     );
 
     await _trackerDao.upsertTracker(companion);
@@ -88,6 +90,8 @@ class TrackerRepository {
       status: const Value('active'), // Default status
       lat: Value(scanned.telemetry?.lat),
       lon: Value(scanned.telemetry?.lon),
+      isFavorite:
+          const Value.absent(), // Don't overwrite favorite status on scan
     );
 
     await _trackerDao.upsertTracker(companion);
@@ -99,5 +103,13 @@ class TrackerRepository {
 
   Stream<Tracker?> watchTracker(String id) {
     return _trackerDao.watchTracker(id);
+  }
+
+  Future<void> updateFavorite(String id, bool isFavorite) async {
+    await _trackerDao.updateFavorite(id, isFavorite);
+  }
+
+  Stream<List<Tracker>> watchFavorites() {
+    return _trackerDao.watchFavorites();
   }
 }

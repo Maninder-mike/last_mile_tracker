@@ -37,7 +37,7 @@ Stream tracker(Ref ref, String id) {
 }
 
 @riverpod
-Stream latestReading(Ref ref) {
+Stream<models.SensorReading?> latestReading(Ref ref) {
   final dao = ref.watch(sensorDaoProvider);
   return dao.watchLatestReading().map((r) => r?.toModel());
 }

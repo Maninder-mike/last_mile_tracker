@@ -6,10 +6,21 @@ import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 import 'package:last_mile_tracker/domain/models/shipment.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
+import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
+import 'package:last_mile_tracker/presentation/pages/analytics/analytics_page.dart';
+import 'package:last_mile_tracker/presentation/pages/notifications/notification_center_page.dart';
+import 'package:last_mile_tracker/presentation/providers/notification_provider.dart';
 
-class FleetOverviewPage extends StatelessWidget {
+class FleetOverviewPage extends ConsumerStatefulWidget {
   const FleetOverviewPage({super.key});
 
+  @override
+  ConsumerState<FleetOverviewPage> createState() => _FleetOverviewPageState();
+}
+
+class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
@@ -18,6 +29,13 @@ class FleetOverviewPage extends StatelessWidget {
         children: [
           CustomScrollView(
             slivers: [
+              CupertinoSliverRefreshControl(
+                onRefresh: () async {
+                  ref.invalidate(allTrackersProvider);
+                  // Simulate some network delay for better UX
+                  await Future.delayed(const Duration(milliseconds: 800));
+                },
+              ),
               SliverToBoxAdapter(
                 child: SizedBox(
                   height: MediaQuery.of(context).padding.top + 60,
@@ -25,7 +43,7 @@ class FleetOverviewPage extends StatelessWidget {
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(AppTheme.s16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -33,58 +51,82 @@ class FleetOverviewPage extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: _KpiCard(
-                              title: 'Active Shipments',
-                              value: '12',
-                              color: AppTheme.primary,
-                              icon: CupertinoIcons.cube_box,
+                            child: EntranceAnimation(
+                              index: 0,
+                              delay: const Duration(milliseconds: 100),
+                              child: _KpiCard(
+                                title: 'Active Shipments',
+                                value: '12',
+                                color: AppTheme.primary,
+                                icon: CupertinoIcons.cube_box,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: AppTheme.s12),
                           Expanded(
-                            child: _KpiCard(
-                              title: 'At Risk',
-                              value: '3',
-                              color: AppTheme.critical,
-                              icon: CupertinoIcons.exclamationmark_triangle,
+                            child: EntranceAnimation(
+                              index: 1,
+                              delay: const Duration(milliseconds: 100),
+                              child: _KpiCard(
+                                title: 'At Risk',
+                                value: '3',
+                                color: AppTheme.critical,
+                                icon: CupertinoIcons.exclamationmark_triangle,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppTheme.s12),
                       Row(
                         children: [
                           Expanded(
-                            child: _KpiCard(
-                              title: 'Offline',
-                              value: '1',
-                              color: AppTheme.textSecondary,
-                              icon: CupertinoIcons.wifi_slash,
+                            child: EntranceAnimation(
+                              index: 2,
+                              delay: const Duration(milliseconds: 100),
+                              child: _KpiCard(
+                                title: 'Offline',
+                                value: '1',
+                                color: AppTheme.textSecondary,
+                                icon: CupertinoIcons.wifi_slash,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: AppTheme.s12),
                           Expanded(
-                            child: _KpiCard(
-                              title: 'Avg Temp',
-                              value: '-4°C',
-                              color: AppTheme.success,
-                              icon: CupertinoIcons.thermometer,
+                            child: EntranceAnimation(
+                              index: 3,
+                              delay: const Duration(milliseconds: 100),
+                              child: _KpiCard(
+                                title: 'Avg Temp',
+                                value: '-4°C',
+                                color: AppTheme.success,
+                                icon: CupertinoIcons.thermometer,
+                              ),
                             ),
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 32),
+                      const SizedBox(height: AppTheme.s32),
                       Text('Requires Attention', style: AppTheme.heading2),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppTheme.s16),
 
                       // Mock "At Risk" List
                       ...Shipment.mockData
                           .where((s) => s.status == ShipmentStatus.atRisk)
+                          .toList()
+                          .asMap()
+                          .entries
                           .map(
-                            (s) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12.0),
-                              child: _ShipmentCard(shipment: s),
+                            (entry) => Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: AppTheme.s12,
+                              ),
+                              child: EntranceAnimation(
+                                index: entry.key,
+                                child: _ShipmentCard(shipment: entry.value),
+                              ),
                             ),
                           ),
 
@@ -96,6 +138,105 @@ class FleetOverviewPage extends StatelessWidget {
             ],
           ),
           const FloatingHeader(title: 'Fleet Overview'),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            right: 16,
+            child: Row(
+              children: [
+                _NotificationBadge(
+                  onTap: () => Navigator.push(
+                    context,
+                    CupertinoPageRoute(
+                      builder: (context) => const NotificationCenterPage(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: CupertinoTheme.of(
+                        context,
+                      ).barBackgroundColor.withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      CupertinoIcons.graph_square,
+                      color: CupertinoTheme.of(context).primaryColor,
+                      size: 22,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(
+                        builder: (context) => const AnalyticsPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationBadge extends ConsumerWidget {
+  final VoidCallback onTap;
+
+  const _NotificationBadge({required this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
+
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: CupertinoTheme.of(
+                context,
+              ).barBackgroundColor.withValues(alpha: 0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              CupertinoIcons.bell,
+              color: CupertinoTheme.of(context).primaryColor,
+              size: 22,
+            ),
+          ),
+          if (unreadCount > 0)
+            Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: AppTheme.critical,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  unreadCount > 9 ? '9+' : '$unreadCount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: CupertinoColors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -131,7 +272,7 @@ class _KpiCard extends StatelessWidget {
               // Trend indicator could go here
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTheme.s8),
           Text(
             value,
             style: AppTheme.heading1.copyWith(
@@ -185,7 +326,9 @@ class _ShipmentCard extends StatelessWidget {
                     Text(shipment.trackingNumber, style: AppTheme.title),
                     Text(
                       '${DateTime.now().difference(shipment.lastUpdate ?? DateTime.now()).inMinutes}m ago',
-                      style: AppTheme.caption,
+                      style: AppTheme.caption.copyWith(
+                        color: CupertinoColors.systemGrey,
+                      ),
                     ),
                   ],
                 ),
@@ -208,8 +351,8 @@ class _ShipmentCard extends StatelessWidget {
           const SizedBox(width: 8),
           const Icon(
             CupertinoIcons.chevron_right,
-            color: CupertinoColors.systemGrey4,
-            size: 16,
+            color: CupertinoColors.systemGrey2,
+            size: 14,
           ),
         ],
       ),

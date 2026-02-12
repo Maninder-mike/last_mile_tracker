@@ -1,16 +1,22 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Colors;
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:last_mile_tracker/core/theme/app_theme.dart';
+import 'package:last_mile_tracker/domain/models/shipment.dart';
+import 'package:last_mile_tracker/presentation/providers/optimistic_favorites_provider.dart';
+import 'package:last_mile_tracker/presentation/providers/shipment_match_provider.dart';
+import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
+import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
+import 'package:last_mile_tracker/presentation/widgets/filter_chip_bar.dart';
+import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
+import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
+import 'package:last_mile_tracker/presentation/widgets/skeleton_loader.dart';
+import 'package:last_mile_tracker/presentation/widgets/swipe_action_cell.dart';
+import 'package:last_mile_tracker/presentation/widgets/empty_state.dart';
+import 'package:last_mile_tracker/logic/share_service.dart';
 import 'package:last_mile_tracker/presentation/pages/shipments/shipment_detail_page.dart';
 import 'package:last_mile_tracker/presentation/pages/shipments/add_shipment_page.dart';
-
-import 'package:flutter/material.dart' show Colors; // For transparent scaffold
-import 'package:last_mile_tracker/domain/models/shipment.dart'; // Import model
-import 'package:last_mile_tracker/core/theme/app_theme.dart';
-import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
-import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
-import 'package:collection/collection.dart';
 
 class ShipmentsPage extends ConsumerStatefulWidget {
   const ShipmentsPage({super.key});
@@ -21,8 +27,9 @@ class ShipmentsPage extends ConsumerStatefulWidget {
 
 class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
   final TextEditingController _searchController = TextEditingController();
-  // We no longer keep local state for filtered list, we derive it in build
   String _searchQuery = '';
+  ShipmentStatus? _selectedStatus;
+  String _selectedTimeRange = 'All';
 
   void _onSearchChanged(String query) {
     setState(() {
@@ -32,37 +39,11 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final trackersAsync = ref.watch(allTrackersProvider);
-    final trackers = trackersAsync.asData?.value ?? [];
-
-    // Merge Mock Data with Live Trackers
-    final mergedShipments = Shipment.mockData.map((s) {
-      final tracker = trackers.firstWhereOrNull(
-        (t) => s.deviceIds.contains(t.id),
-      );
-      if (tracker != null) {
-        return s.copyWith(
-          temperature: (tracker.temp ?? 0) != 0
-              ? (tracker.temp ?? 0)
-              : s.temperature,
-          // batteryLevel: tracker.batteryLevel != 0 ? tracker.batteryLevel.toInt() : s.batteryLevel, // Tracker DB has 0 default
-          batteryLevel: (tracker.batteryLevel ?? 0).toInt(),
-          shockValue: tracker.shockValue ?? 0,
-          latitude: (tracker.lat ?? 0) != 0 ? (tracker.lat ?? 0) : s.latitude,
-          longitude: (tracker.lon ?? 0) != 0 ? (tracker.lon ?? 0) : s.longitude,
-          lastUpdate: tracker.lastSeen,
-        );
-      }
-      return s;
-    }).toList();
+    final shipmentsAsync = ref.watch(mergedShipmentsProvider);
 
     // Filter
-    final filteredShipments = mergedShipments.where((s) {
-      final q = _searchQuery.toLowerCase();
-      return s.trackingNumber.toLowerCase().contains(q) ||
-          s.origin.toLowerCase().contains(q) ||
-          s.destination.toLowerCase().contains(q);
-    }).toList();
+    // This filtering logic will now be applied inside the `shipmentsAsync.when` block
+    // to ensure it operates on the data once it's available.
 
     return CupertinoPageScaffold(
       backgroundColor: Colors.transparent, // Let MainLayout background show
@@ -70,6 +51,15 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
         children: [
           CustomScrollView(
             slivers: [
+              CupertinoSliverRefreshControl(
+                onRefresh: () async {
+                  ref.invalidate(allTrackersProvider);
+                  ref.invalidate(
+                    mergedShipmentsProvider,
+                  ); // Invalidate merged shipments too
+                  await Future.delayed(const Duration(milliseconds: 800));
+                },
+              ),
               SliverToBoxAdapter(
                 child: SizedBox(
                   height: MediaQuery.of(context).padding.top + 68,
@@ -80,8 +70,8 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
+                    horizontal: AppTheme.s16,
+                    vertical: AppTheme.s8,
                   ),
                   child: CupertinoSearchTextField(
                     controller: _searchController,
@@ -96,22 +86,184 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                 ),
               ),
 
+              // Filters
+              SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    const SizedBox(height: AppTheme.s8),
+                    FilterChipBar<ShipmentStatus?>(
+                      items: [
+                        FilterItem(label: 'All Status', value: null),
+                        ...ShipmentStatus.values.map(
+                          (s) => FilterItem(
+                            label:
+                                s.name[0].toUpperCase() + s.name.substring(1),
+                            value: s,
+                          ),
+                        ),
+                      ],
+                      selectedValue: _selectedStatus,
+                      onSelected: (value) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _selectedStatus = value);
+                      },
+                    ),
+                    const SizedBox(height: AppTheme.s12),
+                    FilterChipBar<String>(
+                      items: [
+                        FilterItem(label: 'All Time', value: 'All'),
+                        FilterItem(label: 'Today', value: 'Today'),
+                        FilterItem(label: 'This Week', value: 'This Week'),
+                        FilterItem(label: 'This Month', value: 'This Month'),
+                      ],
+                      selectedValue: _selectedTimeRange,
+                      onSelected: (value) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _selectedTimeRange = value);
+                      },
+                    ),
+                    const SizedBox(height: AppTheme.s8),
+                  ],
+                ),
+              ),
+
               // Shipment List
               SliverPadding(
-                padding: const EdgeInsets.only(
-                  bottom: 100,
-                ), // Space for fab/navbar
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final shipment = filteredShipments[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 8.0,
+                padding: const EdgeInsets.only(bottom: 100),
+                sliver: shipmentsAsync.when(
+                  data: (shipments) {
+                    final filteredShipments = shipments.where((s) {
+                      final q = _searchQuery.toLowerCase();
+                      final matchesSearch =
+                          s.trackingNumber.toLowerCase().contains(q) ||
+                          s.origin.toLowerCase().contains(q) ||
+                          s.destination.toLowerCase().contains(q);
+
+                      final matchesStatus =
+                          _selectedStatus == null ||
+                          s.status == _selectedStatus;
+
+                      bool matchesTime = true;
+                      final now = DateTime.now();
+                      if (_selectedTimeRange == 'Today') {
+                        matchesTime =
+                            s.eta.year == now.year &&
+                            s.eta.month == now.month &&
+                            s.eta.day == now.day;
+                      } else if (_selectedTimeRange == 'This Week') {
+                        matchesTime = s.eta.isAfter(
+                          now.subtract(const Duration(days: 7)),
+                        );
+                      } else if (_selectedTimeRange == 'This Month') {
+                        matchesTime = s.eta.isAfter(
+                          now.subtract(const Duration(days: 30)),
+                        );
+                      }
+
+                      return matchesSearch && matchesStatus && matchesTime;
+                    }).toList();
+
+                    if (filteredShipments.isEmpty) {
+                      return const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: EmptyState(
+                          icon: CupertinoIcons.cube_box,
+                          title: 'No Shipments Found',
+                          subtitle:
+                              'Try adjusting your filters or search query to find what you\'re looking for.',
+                        ),
+                      );
+                    }
+                    return SliverPrototypeExtentList(
+                      prototypeItem: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.s16,
+                          vertical: AppTheme.s8,
+                        ),
+                        child: _ShipmentListItem(
+                          shipment: Shipment.mockData.first.copyWith(
+                            id: 'prototype',
+                          ),
+                        ),
                       ),
-                      child: _ShipmentListItem(shipment: shipment),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final shipment = filteredShipments[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.s16,
+                            vertical: AppTheme.s8,
+                          ),
+                          child: SwipeActionCell(
+                            groupTag: shipment.id,
+                            startActions: [
+                              createSwipeAction(
+                                icon: shipment.isFavorite
+                                    ? CupertinoIcons.star_fill
+                                    : CupertinoIcons.star,
+                                label: 'Favorite',
+                                color: CupertinoTheme.of(context).primaryColor,
+                                onPressed: () {
+                                  if (shipment.deviceIds.isNotEmpty) {
+                                    ref
+                                        .read(
+                                          optimisticFavoritesProvider.notifier,
+                                        )
+                                        .toggleFavorite(
+                                          shipment.deviceIds.first,
+                                          shipment.isFavorite,
+                                        );
+                                    HapticFeedback.mediumImpact();
+                                  }
+                                },
+                              ),
+                            ],
+                            endActions: [
+                              createSwipeAction(
+                                icon: CupertinoIcons.share,
+                                label: 'Share',
+                                color: CupertinoColors.systemGrey,
+                                onPressed: () {
+                                  ShareService.shareShipment(shipment);
+                                },
+                              ),
+                              createSwipeAction(
+                                icon: CupertinoIcons.trash,
+                                label: 'Delete',
+                                color: AppTheme.critical,
+                                onPressed: () {
+                                  debugPrint('Delete: ${shipment.id}');
+                                },
+                              ),
+                            ],
+                            child: EntranceAnimation(
+                              index: index,
+                              child: _ShipmentListItem(shipment: shipment),
+                            ),
+                          ),
+                        );
+                      }, childCount: filteredShipments.length),
                     );
-                  }, childCount: filteredShipments.length),
+                  },
+                  loading: () => SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: SkeletonLoader.shipmentCard(),
+                      ),
+                      childCount: 5,
+                    ),
+                  ),
+                  error: (err, stack) => SliverToBoxAdapter(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'Error: $err',
+                          style: const TextStyle(color: AppTheme.critical),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -128,10 +280,10 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                   ),
                 );
               },
-              child: const Icon(
+              child: Icon(
                 CupertinoIcons.add,
                 size: 20,
-                color: CupertinoColors.activeBlue,
+                color: CupertinoTheme.of(context).primaryColor,
               ),
             ),
           ),
@@ -148,152 +300,98 @@ class _ShipmentListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = _getStatusColor(shipment.status);
+    final statusColor = _getStatusColor(context, shipment.status);
 
     return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
         Navigator.of(context).push(
           CupertinoPageRoute(
             builder: (context) => ShipmentDetailPage(shipment: shipment),
           ),
         );
       },
-      child: GlassContainer(
-        opacity: 0.6,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  shipment.trackingNumber,
-                  style: AppTheme.body.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: CupertinoDynamicColor.resolve(
-                      statusColor,
-                      context,
-                    ).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: CupertinoDynamicColor.resolve(
-                        statusColor,
-                        context,
-                      ).withValues(alpha: 0.5),
-                      width: 1,
+      child: Hero(
+        tag: 'shipment_card_${shipment.id}',
+        child: GlassContainer(
+          opacity: 0.6,
+          padding: const EdgeInsets.all(AppTheme.s16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      shipment.trackingNumber,
+                      style: AppTheme.heading2.copyWith(
+                        letterSpacing: -0.5,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
                   ),
-                  child: Text(
-                    shipment.status.name.toUpperCase(),
-                    style: TextStyle(
-                      color: CupertinoDynamicColor.resolve(
-                        statusColor,
-                        context,
+                  _StatusBadge(status: shipment.status, color: statusColor),
+                ],
+              ),
+              const SizedBox(height: AppTheme.s12),
+              Row(
+                children: [
+                  _RouteDot(
+                    color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${shipment.origin} → ${shipment.destination}',
+                      style: AppTheme.body.copyWith(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
                       ),
-                      fontSize: 10,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppTheme.s16),
+              Row(
+                children: [
+                  _TelemetryPill(
+                    icon: CupertinoIcons.thermometer,
+                    label: '${shipment.temperature}°C',
+                    color: (shipment.temperature ?? 0) > 8
+                        ? AppTheme.critical
+                        : AppTheme.success,
+                  ),
+                  const SizedBox(width: 8),
+                  _TelemetryPill(
+                    icon: CupertinoIcons.battery_25,
+                    label: '${shipment.batteryLevel}%',
+                    color: (shipment.batteryLevel ?? 0) < 20
+                        ? AppTheme.warning
+                        : AppTheme.success,
+                  ),
+                  const Spacer(),
+                  Text(
+                    'ETA: ${_formatDate(shipment.eta)}',
+                    style: AppTheme.caption.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  CupertinoIcons.circle,
-                  size: 12,
-                  color: CupertinoDynamicColor.resolve(
-                    AppTheme.textSecondary,
-                    context,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  shipment.origin,
-                  style: TextStyle(
-                    color: CupertinoDynamicColor.resolve(
-                      AppTheme.textSecondary,
-                      context,
-                    ),
-                    fontSize: 13,
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Icon(CupertinoIcons.arrow_right, size: 12),
-                ),
-                Icon(
-                  CupertinoIcons.location_solid,
-                  size: 12,
-                  color: CupertinoDynamicColor.resolve(
-                    AppTheme.textSecondary,
-                    context,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  shipment.destination,
-                  style: TextStyle(
-                    color: CupertinoDynamicColor.resolve(
-                      AppTheme.textSecondary,
-                      context,
-                    ),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _TelemetryBadge(
-                  icon: CupertinoIcons.thermometer,
-                  label: '${shipment.temperature}°C',
-                  color: (shipment.temperature ?? 0) > 8
-                      ? AppTheme.critical
-                      : AppTheme.success,
-                ),
-                _TelemetryBadge(
-                  icon: CupertinoIcons.battery_25,
-                  label: '${shipment.batteryLevel}%',
-                  color: (shipment.batteryLevel ?? 0) < 20
-                      ? AppTheme.warning
-                      : AppTheme.success,
-                ),
-                Text(
-                  'ETA: ${_formatDate(shipment.eta)}',
-                  style: TextStyle(
-                    color: CupertinoDynamicColor.resolve(
-                      AppTheme.textSecondary,
-                      context,
-                    ),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Color _getStatusColor(ShipmentStatus status) {
+  Color _getStatusColor(BuildContext context, ShipmentStatus status) {
     switch (status) {
       case ShipmentStatus.inTransit:
-        return AppTheme.primary;
+        return CupertinoTheme.of(context).primaryColor;
       case ShipmentStatus.delivered:
         return AppTheme.success;
       case ShipmentStatus.delayed:
@@ -308,12 +406,62 @@ class _ShipmentListItem extends StatelessWidget {
   }
 }
 
-class _TelemetryBadge extends StatelessWidget {
+class _StatusBadge extends StatelessWidget {
+  final ShipmentStatus status;
+  final Color color;
+
+  const _StatusBadge({required this.status, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: CupertinoDynamicColor.resolve(
+          color,
+          context,
+        ).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: CupertinoDynamicColor.resolve(
+            color,
+            context,
+          ).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Text(
+        status.name.toUpperCase(),
+        style: TextStyle(
+          color: CupertinoDynamicColor.resolve(color, context),
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _RouteDot extends StatelessWidget {
+  final Color color;
+  const _RouteDot({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 6,
+      height: 6,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+}
+
+class _TelemetryPill extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
 
-  const _TelemetryBadge({
+  const _TelemetryPill({
     required this.icon,
     required this.label,
     required this.color,
@@ -321,23 +469,28 @@ class _TelemetryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 14,
-          color: CupertinoDynamicColor.resolve(color, context),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: CupertinoDynamicColor.resolve(color, context),
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+    final effectiveColor = CupertinoDynamicColor.resolve(color, context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: effectiveColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: effectiveColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: effectiveColor,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

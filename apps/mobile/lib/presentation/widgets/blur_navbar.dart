@@ -16,10 +16,15 @@ class BlurNavbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
+    final theme = CupertinoTheme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = theme.primaryColor;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppTheme.s20,
+        vertical: AppTheme.s24,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
@@ -58,10 +63,7 @@ class BlurNavbar extends StatelessWidget {
                     ),
                     decoration: isSelected
                         ? BoxDecoration(
-                            color: CupertinoDynamicColor.resolve(
-                              AppTheme.primary,
-                              context,
-                            ).withValues(alpha: 0.1),
+                            color: primaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           )
                         : null,
@@ -72,10 +74,7 @@ class BlurNavbar extends StatelessWidget {
                         Icon(
                           isSelected ? item.activeIcon : item.icon,
                           color: isSelected
-                              ? CupertinoDynamicColor.resolve(
-                                  AppTheme.primary,
-                                  context,
-                                )
+                              ? primaryColor
                               : CupertinoDynamicColor.resolve(
                                   AppTheme.textSecondary,
                                   context,
@@ -89,10 +88,7 @@ class BlurNavbar extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: CupertinoDynamicColor.resolve(
-                                AppTheme.primary,
-                                context,
-                              ),
+                                color: primaryColor,
                             ),
                           ),
                         ],
