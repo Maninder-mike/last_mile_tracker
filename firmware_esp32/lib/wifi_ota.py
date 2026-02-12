@@ -106,8 +106,10 @@ class WiFiOta:
             if expected_hash and actual_hash_hex != expected_hash.lower():
                 Logger.log(f"WiFi OTA: Hash mismatch! Got {actual_hash_hex}, expected {expected_hash}")
                 import os
-                try: os.remove(temp_file)
-                except: pass
+                try:
+                    os.remove(temp_file)
+                except Exception:
+                    pass
                 return
             
             Logger.log("WiFi OTA: Download verified. Applying update...")
@@ -116,5 +118,7 @@ class WiFiOta:
         except Exception as e:
             Logger.log(f"WiFi OTA: Update failed: {e}")
             import os
-            try: os.remove(temp_file)
-            except: pass
+            try:
+                os.remove(temp_file)
+            except Exception:
+                pass

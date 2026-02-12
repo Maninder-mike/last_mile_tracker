@@ -16,11 +16,11 @@ def compare_semver(remote, local):
         l_parts = [int(p) for p in local.split('.')]
         
         for i in range(max(len(r_parts), len(l_parts))):
-            r = r_parts[i] if i < len(r_parts) else 0
-            l = l_parts[i] if i < len(l_parts) else 0
-            if r > l:
+            remote_val = r_parts[i] if i < len(r_parts) else 0
+            local_val = l_parts[i] if i < len(l_parts) else 0
+            if remote_val > local_val:
                 return 1
-            if r < l:
+            if remote_val < local_val:
                 return -1
         return 0
     except Exception as e:

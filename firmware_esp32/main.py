@@ -355,7 +355,7 @@ class LastMileTracker:
                             try:
                                 interval = int(parts[3])
                                 self.config.set("ota_check_interval", interval)
-                            except:
+                            except (ValueError, Exception):
                                 pass
                         Logger.log(f"BLE: Updated OTA Config: {owner}/{repo}")
                         self.ble.notify(b"OTA:CONFIG:OK", self.ble.wifi_config_handle)

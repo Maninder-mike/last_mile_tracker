@@ -1,5 +1,4 @@
 import os
-import machine
 import hashlib
 from lib.logger import Logger
 

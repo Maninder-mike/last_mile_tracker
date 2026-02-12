@@ -13,7 +13,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:last_mile_tracker/core/constants/ble_constants.dart';
 import 'package:last_mile_tracker/data/services/ble_service.dart';
-import 'package:lmt_models/lmt_models.dart' as models;
 
 class DeviceDetailPage extends ConsumerWidget {
   final String deviceId;
