@@ -235,8 +235,18 @@ class BleService {
     _isAutoConnectEnabled = enabled;
   }
 
-  Future<void> writeWifiConfig(String ssid, String password) =>
-      _connectionManager.writeWifiConfig(ssid, password);
+  Future<void> writeWifiConfig(String ssid, String password) async {
+    await _connectionManager.writeWifiConfig(ssid, password);
+  }
+
+  Future<void> configureWiFiOta({
+    required String owner,
+    required String repo,
+    int interval = 86400,
+  }) async {
+    final command = '${BleConstants.otaPrefix}$owner:$repo:$interval';
+    await _connectionManager.writeRawConfig(command);
+  }
 
   Stream<List<WifiScanResult>> get wifiScanResults =>
       _wifiScanResultsController.stream;

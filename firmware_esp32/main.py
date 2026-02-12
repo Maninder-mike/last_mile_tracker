@@ -343,6 +343,24 @@ class LastMileTracker:
                     asyncio.create_task(reset_wifi())
                     return
 
+                # Format: "OTA:OWNER:REPO:INTERVAL"
+                if command.startswith("OTA:"):
+                    parts = command.split(":")
+                    if len(parts) >= 3:
+                        owner = parts[1]
+                        repo = parts[2]
+                        self.config.set("ota_github_owner", owner)
+                        self.config.set("ota_github_repo", repo)
+                        if len(parts) >= 4:
+                            try:
+                                interval = int(parts[3])
+                                self.config.set("ota_check_interval", interval)
+                            except:
+                                pass
+                        Logger.log(f"BLE: Updated OTA Config: {owner}/{repo}")
+                        self.ble.notify(b"OTA:CONFIG:OK", self.ble.wifi_config_handle)
+                        return
+
                 # Format: "SSID:PASSWORD"
                 if ":" in command:
                     parts = command.split(":", 1)
@@ -440,13 +458,18 @@ class LastMileTracker:
                 except Exception as e:
                     Logger.log(f"WiFi: Remote config check failed: {e}")
 
-            # 2. WiFi OTA (Simplified check)
-            ota_url = self.config.get("ota_url")
-            if ota_url and self.wifi.is_connected():
-                # Future implementation: compare version from metadata
-                pass
+            # 2. WiFi OTA
+            if self.wifi.is_connected():
+                try:
+                    from lib.wifi_ota import WiFiOta
+                    ota = WiFiOta(self.config)
+                    ota.check_and_update()
+                except Exception as e:
+                    Logger.log(f"WiFi OTA Error: {e}")
 
-            await asyncio.sleep(3600 * 24)  # Check daily
+            # Sleep until next check (default 24h)
+            interval = self.config.get("ota_check_interval") or 86400
+            await asyncio.sleep(interval)
 
     async def main_loop(self):
         # Initialize NTP

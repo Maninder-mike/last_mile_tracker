@@ -79,4 +79,6 @@ class BleConstants {
   static const String wifiPrefix = "WIFI:";
   static const String wifiConnectedPrefix = "WIFI:CONNECTED:";
   static const String wifiFailedPrefix = "WIFI:FAILED:";
+  static const String otaPrefix = "OTA:";
+  static const String otaConfigOk = "OTA:CONFIG:OK";
 }

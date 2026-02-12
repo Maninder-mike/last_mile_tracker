@@ -229,14 +229,17 @@ class BleConnectionManager {
   }
 
   Future<void> writeWifiConfig(String ssid, String password) async {
+    await writeRawConfig("$ssid:$password");
+  }
+
+  Future<void> writeRawConfig(String command) async {
     if (_wifiChar == null) {
       throw Exception("WiFi Config characteristic not found");
     }
 
-    final config = "$ssid:$password";
-    final data = List<int>.from(config.codeUnits);
+    final data = List<int>.from(command.codeUnits);
     await _wifiChar!.write(data);
-    FileLogger.log("ConnectionManager: Wrote WiFi config for $ssid");
+    FileLogger.log("ConnectionManager: Wrote config command: $command");
   }
 
   Future<void> identifyDevice() async {

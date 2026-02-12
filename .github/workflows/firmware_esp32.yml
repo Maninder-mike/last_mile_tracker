@@ -99,6 +99,7 @@ jobs:
           cd ..
           
           cp firmware_esp32/main.py dist/main.py
+          sha256sum dist/main.py | awk '{print $1}' > dist/main.py.sha256
           
           echo "Artifacts created in dist/:"
           ls -l dist/
@@ -131,6 +132,7 @@ jobs:
           tag_name: ${{ env.VERSION_TAG }}
           files: |
             release_artifacts/main.py
+            release_artifacts/main.py.sha256
             release_artifacts/*.zip
           generate_release_notes: true
           fail_on_unmatched_files: true

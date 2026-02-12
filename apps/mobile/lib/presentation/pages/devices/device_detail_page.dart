@@ -11,6 +11,9 @@ import 'package:intl/intl.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:last_mile_tracker/core/constants/ble_constants.dart';
+import 'package:last_mile_tracker/data/services/ble_service.dart';
+import 'package:lmt_models/lmt_models.dart' as models;
 
 class DeviceDetailPage extends ConsumerWidget {
   final String deviceId;
@@ -213,6 +216,15 @@ class DeviceDetailPage extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       _ActionButton(
+                        title: 'WiFi OTA Settings',
+                        subtitle: 'Configure GitHub auto-updates',
+                        icon: CupertinoIcons.cloud_download,
+                        onTap: isThisDeviceConnected
+                            ? () => _showWiFiOtaDialog(context, ref, bleService)
+                            : null,
+                      ),
+                      const SizedBox(height: 12),
+                      _ActionButton(
                         title: 'Reset WiFi Config',
                         subtitle: 'Clear saved credentials',
                         icon: CupertinoIcons.wifi_exclamationmark,
@@ -236,6 +248,96 @@ class DeviceDetailPage extends ConsumerWidget {
             trailing: isThisDeviceConnected
                 ? const _ActivePulse()
                 : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showWiFiOtaDialog(
+    BuildContext context,
+    WidgetRef ref,
+    BleService bleService,
+  ) {
+    final ownerController = TextEditingController(
+      text: BleConstants.githubOwner,
+    );
+    final repoController = TextEditingController(text: BleConstants.githubRepo);
+    final intervalController = TextEditingController(text: '86400');
+
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('WiFi OTA Config'),
+        content: Column(
+          children: [
+            const SizedBox(height: 16),
+            CupertinoTextField(
+              controller: ownerController,
+              placeholder: 'GitHub Owner',
+              prefix: const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(CupertinoIcons.person, size: 18),
+              ),
+            ),
+            const SizedBox(height: 12),
+            CupertinoTextField(
+              controller: repoController,
+              placeholder: 'Repository',
+              prefix: const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(CupertinoIcons.folder, size: 18),
+              ),
+            ),
+            const SizedBox(height: 12),
+            CupertinoTextField(
+              controller: intervalController,
+              placeholder: 'Interval (seconds)',
+              keyboardType: TextInputType.number,
+              prefix: const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(CupertinoIcons.timer, size: 18),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            onPressed: () {
+              final owner = ownerController.text;
+              final repo = repoController.text;
+              final interval = int.tryParse(intervalController.text) ?? 86400;
+
+              if (owner.isNotEmpty && repo.isNotEmpty) {
+                bleService.configureWiFiOta(
+                  owner: owner,
+                  repo: repo,
+                  interval: interval,
+                );
+                Navigator.pop(context);
+                showCupertinoDialog(
+                  context: context,
+                  builder: (ctx) => CupertinoAlertDialog(
+                    title: const Text('Command Sent'),
+                    content: Text(
+                      'WiFi OTA update check configured for $owner/$repo every $interval seconds.',
+                    ),
+                    actions: [
+                      CupertinoDialogAction(
+                        child: const Text('OK'),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+            child: const Text('Apply'),
           ),
         ],
       ),

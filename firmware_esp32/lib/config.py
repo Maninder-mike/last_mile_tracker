@@ -23,10 +23,13 @@ class Config:
         "ingest_token": "",
         "ingest_interval_sec": 60,
         # Firmware Version (semver)
-        "firmware_version": "0.0.1",
+        "firmware_version": "0.0.2",
         # Remote Management
         "config_url": "",
         "ota_url": "",
+        "ota_check_interval": 86400,  # 24h
+        "ota_github_owner": "Maninder-mike",
+        "ota_github_repo": "last_mile_tracker",
         # Time
         "ntp_server": "pool.ntp.org",
         "timezone_offset": 0,  # Hours (0=UTC)

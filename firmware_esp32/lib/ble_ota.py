@@ -106,39 +106,13 @@ class BleOta:
     def _apply_update(self):
         """Rename .tmp to actual file and reset"""
         try:
+            from lib.ota_utils import apply_firmware_update
+            
             target = self._update_filename.replace(".tmp", "")
-
-            # Backup
-            try:
-                os.remove(f"{target}.bak")
-            except OSError:
-                pass
-
-            try:
-                os.rename(target, f"{target}.bak")
-            except OSError:
-                pass
-
-            # Rename
-            os.rename(self._update_filename, target)
-
-            # Bump firmware version in config
-            if self._config:
-                try:
-                    current = self._config.get("firmware_version") or "0.0.0"
-                    parts = current.split(".")
-                    parts[-1] = str(int(parts[-1]) + 1)
-                    new_version = ".".join(parts)
-                    self._config.set("firmware_version", new_version)
-                    Logger.log(f"OTA: Version bumped to {new_version}")
-                except Exception as e:
-                    Logger.log(f"OTA: Version bump failed: {e}")
-
-            Logger.log(f"OTA: Applied {target}. Resetting...")
-            import time
-
-            time.sleep(1)
-            machine.reset()
-
+            apply_firmware_update(
+                config=self._config,
+                temp_filename=self._update_filename,
+                target_filename=target
+            )
         except Exception as e:
             Logger.log(f"OTA Apply Error: {e}")
