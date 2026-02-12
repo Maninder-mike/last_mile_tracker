@@ -13,6 +13,18 @@ class BleOtaManager {
   ) {
     _controlChar = control;
     _dataChar = data;
+    FileLogger.log(
+      'OTA: Control char properties — '
+      'read: ${control.properties.read}, '
+      'write: ${control.properties.write}, '
+      'writeNoResp: ${control.properties.writeWithoutResponse}, '
+      'notify: ${control.properties.notify}',
+    );
+    FileLogger.log(
+      'OTA: Data char properties — '
+      'write: ${data.properties.write}, '
+      'writeNoResp: ${data.properties.writeWithoutResponse}',
+    );
   }
 
   /// Read the firmware version from the OTA Control characteristic.
@@ -59,16 +71,31 @@ class BleOtaManager {
     if (!char.properties.write && !char.properties.writeWithoutResponse) {
       throw Exception('OTA Control characteristic does not support writing.');
     }
-    await char.write(data, withoutResponse: useWithoutResponse);
+    try {
+      await char.write(data, withoutResponse: useWithoutResponse);
+    } catch (e) {
+      FileLogger.log(
+        'OTA: writeControl failed (withoutResponse=$useWithoutResponse, '
+        'write=${char.properties.write}, '
+        'writeNoResp=${char.properties.writeWithoutResponse}): $e',
+      );
+      rethrow;
+    }
   }
 
-  /// Write to OTA Data characteristic (CMD_DATA chunks, without response for speed)
+  /// Write to OTA Data characteristic (CMD_DATA chunks)
+  /// Uses write-with-response for reliability — fire-and-forget
+  /// (writeWithoutResponse) can silently drop packets, corrupting transfers.
   Future<void> writeData(Uint8List data) async {
     final char = _dataChar;
     if (char == null) {
       throw Exception('OTA Data characteristic not found. Reconnect device.');
     }
-    await char.write(data, withoutResponse: true);
+    // Prefer write-with-response for guaranteed delivery.
+    // Fall back to writeWithoutResponse if the characteristic doesn't support write.
+    final useWithoutResponse =
+        !char.properties.write && char.properties.writeWithoutResponse;
+    await char.write(data, withoutResponse: useWithoutResponse);
   }
 
   void clear() {

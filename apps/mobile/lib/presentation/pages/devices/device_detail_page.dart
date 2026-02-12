@@ -17,7 +17,7 @@ import 'package:last_mile_tracker/presentation/providers/ota_providers.dart';
 import 'package:last_mile_tracker/data/services/ota_service.dart';
 import 'package:last_mile_tracker/presentation/providers/service_providers.dart';
 
-class DeviceDetailPage extends ConsumerWidget {
+class DeviceDetailPage extends ConsumerStatefulWidget {
   final String deviceId;
   final String initialName;
 
@@ -28,7 +28,17 @@ class DeviceDetailPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeviceDetailPage> createState() => _DeviceDetailPageState();
+}
+
+class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
+  bool _checkedForUpdateOnEntry = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final deviceId = widget.deviceId;
+    final initialName = widget.initialName;
+
     final trackerAsync = ref.watch(trackerProvider(deviceId));
     final connectionState =
         ref.watch(bleConnectionStateProvider).value ??
@@ -42,15 +52,30 @@ class DeviceDetailPage extends ConsumerWidget {
       if (state != null &&
           state.status == OtaStatus.available &&
           state.release != null) {
-        _showUpdateAvailableDialog(context, ref, state.release!);
+        // We now show a banner, but also keeping the dialog for immediate action if desired
+        // or we could rely solely on the banner. Let's keep the banner as the primary UI.
       }
     });
 
-    // Check if this device is the one currently connected
+    final otaState = ref.watch(otaStateProvider).value;
+
+    // Trigger update check on enter if connected
     final connectedDevice = bleService.connectedDevice;
     final isThisDeviceConnected =
         connectedDevice?.remoteId.str == deviceId &&
         connectionState == BluetoothConnectionState.connected;
+
+    if (isThisDeviceConnected && !_checkedForUpdateOnEntry) {
+      _checkedForUpdateOnEntry = true;
+      Future.delayed(Duration.zero, () {
+        ref
+            .read(otaServiceProvider)
+            .checkForUpdate(
+              deviceFirmwareVersion: fwVersion,
+              isAutoCheck: false,
+            );
+      });
+    }
 
     return CupertinoPageScaffold(
       backgroundColor: AppTheme.background,
@@ -104,6 +129,22 @@ class DeviceDetailPage extends ConsumerWidget {
                 ),
               ),
 
+              if (otaState?.status == OtaStatus.available &&
+                  otaState?.release != null)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _UpdateBanner(
+                      release: otaState!.release!,
+                      onUpdate: () {
+                        ref
+                            .read(otaServiceProvider)
+                            .performUpdate(ref.read(bleServiceProvider));
+                      },
+                    ),
+                  ),
+                ),
+
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
               // Telemetry Grid
@@ -116,15 +157,30 @@ class DeviceDetailPage extends ConsumerWidget {
                     crossAxisSpacing: 16,
                     childAspectRatio: 1.2,
                     children: [
-                      _TelemetryModule(
-                        title: 'Battery',
-                        value:
-                            '${tracker?.batteryLevel?.toStringAsFixed(0) ?? "--"}%',
-                        icon: CupertinoIcons.battery_100,
-                        color: (tracker?.batteryLevel ?? 0) < 20
-                            ? AppTheme.warning
-                            : AppTheme.success,
-                        subtitle: 'Charge Level',
+                      Builder(
+                        builder: (_) {
+                          final bat = tracker?.batteryLevel;
+                          // ADC reads near-zero when no battery is connected
+                          // (USB-powered only). A LiPo never drops below ~3.0V.
+                          final isUsbPowered = bat != null && bat < 1.0;
+                          return _TelemetryModule(
+                            title: 'Battery',
+                            value: isUsbPowered
+                                ? 'USB'
+                                : '${bat?.toStringAsFixed(0) ?? "--"}%',
+                            icon: isUsbPowered
+                                ? CupertinoIcons.bolt_fill
+                                : CupertinoIcons.battery_100,
+                            color: isUsbPowered
+                                ? AppTheme.primary
+                                : (bat ?? 0) < 20
+                                ? AppTheme.warning
+                                : AppTheme.success,
+                            subtitle: isUsbPowered
+                                ? 'Wired Power'
+                                : 'Charge Level',
+                          );
+                        },
                       ),
                       _TelemetryModule(
                         title: 'Temperature',
@@ -261,40 +317,6 @@ class DeviceDetailPage extends ConsumerWidget {
             trailing: isThisDeviceConnected
                 ? const _ActivePulse()
                 : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showUpdateAvailableDialog(
-    BuildContext context,
-    WidgetRef ref,
-    FirmwareRelease release,
-  ) {
-    showCupertinoDialog(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('Firmware Update Available'),
-        content: Text(
-          'A new firmware version (${release.tagName}) is available. '
-          'Would you like to update now?\n\n'
-          'Notes: ${release.releaseNotes}',
-        ),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('Later'),
-            onPressed: () => Navigator.pop(context),
-          ),
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () {
-              Navigator.pop(context);
-              ref
-                  .read(otaServiceProvider)
-                  .performUpdate(ref.read(bleServiceProvider));
-            },
-            child: const Text('Update Now'),
           ),
         ],
       ),
@@ -638,7 +660,7 @@ class _DeviceHeader extends StatelessWidget {
         Row(
           children: [
             Text(lastSeenStr, style: AppTheme.caption),
-            if (firmwareVersion != null) ...[
+            if (isConnected || firmwareVersion != null) ...[
               const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -650,7 +672,9 @@ class _DeviceHeader extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  'v$firmwareVersion',
+                  firmwareVersion != null
+                      ? 'v$firmwareVersion'
+                      : 'Reading version...',
                   style: AppTheme.caption.copyWith(
                     color: AppTheme.primary,
                     fontFamily: 'monospace',
@@ -663,6 +687,83 @@ class _DeviceHeader extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _UpdateBanner extends StatelessWidget {
+  final FirmwareRelease release;
+  final VoidCallback onUpdate;
+
+  const _UpdateBanner({required this.release, required this.onUpdate});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassContainer(
+      color: AppTheme.primary.withValues(alpha: 0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.cloud_download_fill,
+                    color: AppTheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Update Available',
+                        style: AppTheme.body.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                      Text(
+                        'Version ${release.tagName} is ready',
+                        style: AppTheme.caption,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: onUpdate,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Update Now',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTheme.surface,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

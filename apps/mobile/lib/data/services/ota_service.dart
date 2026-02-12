@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -80,7 +81,11 @@ class OtaState {
 }
 
 class OtaService {
-  static const int _chunkSize = 512;
+  // MicroPython BLE default GATTS receive buffer is 20 bytes.
+  // Each OTA data packet has a 1-byte command prefix, so the maximum
+  // payload chunk is 19 bytes. This is slow but reliable until the
+  // ESP32 firmware is updated to expand the buffer via gatts_set_buffer().
+  static const int _chunkSize = 19;
   static const int _cmdStart = 0x01;
   static const int _cmdData = 0x02;
   static const int _cmdEnd = 0x03;
@@ -123,6 +128,17 @@ class OtaService {
   }) async {
     if (isAutoCheck && !_state.isAutoCheckEnabled) {
       FileLogger.log('OTA: Auto-check disabled by user.');
+      return null;
+    }
+
+    // Skip auto-check if we don't know the device version yet —
+    // without it we'd default to 0.0.0 and falsely report every
+    // release as "newer".
+    if (isAutoCheck &&
+        (deviceFirmwareVersion == null || deviceFirmwareVersion.isEmpty)) {
+      FileLogger.log(
+        'OTA: Skipping auto-check — device firmware version unknown.',
+      );
       return null;
     }
 
@@ -337,7 +353,15 @@ class OtaService {
     await Future.delayed(const Duration(milliseconds: 200));
 
     // CMD_DATA: chunked transfer
+    // Use smaller chunks + per-chunk delay because the OTA Data characteristic
+    // uses FLAG_WRITE_NO_RESPONSE (fire-and-forget). Without delays, the ESP32's
+    // GATTS buffer overflows and silently drops packets.
     final totalChunks = (firmware.length / _chunkSize).ceil();
+    FileLogger.log(
+      'OTA: Starting upload — ${firmware.length} bytes, '
+      '$totalChunks chunks of $_chunkSize bytes',
+    );
+
     for (int i = 0; i < totalChunks; i++) {
       final start = i * _chunkSize;
       final end = (start + _chunkSize).clamp(0, firmware.length);
@@ -359,15 +383,25 @@ class OtaService {
         ),
       );
 
-      // Small delay for BLE stability
-      if (i % 4 == 0) {
-        await Future.delayed(const Duration(milliseconds: 20));
+      // Delay after every chunk to prevent GATTS buffer overflow
+      await Future.delayed(const Duration(milliseconds: 30));
+
+      // Extra pause every 8 chunks for ESP32 to flush to flash
+      if (i % 8 == 7) {
+        await Future.delayed(const Duration(milliseconds: 50));
       }
     }
 
-    // CMD_END: [cmd(1), checksum(32)] — simplified, no checksum for now
-    final endPacket = Uint8List(1);
+    FileLogger.log('OTA: All $totalChunks chunks sent.');
+
+    // CMD_END: [cmd(1), sha256(32)]
+    final digest = sha256.convert(firmware).bytes;
+    final endPacket = Uint8List(1 + digest.length);
     endPacket[0] = _cmdEnd;
+    endPacket.setRange(1, endPacket.length, digest);
+    FileLogger.log(
+      'OTA: Sending CMD_END with SHA-256 (${digest.length} bytes)',
+    );
     await bleService.writeOtaControl(endPacket);
 
     _emit(

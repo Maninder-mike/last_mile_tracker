@@ -34,6 +34,14 @@ class BleConnectionManager {
       FileLogger.log("ConnectionManager: Connected to ${device.platformName}");
       _reconnectDelaySeconds = BleConstants.initialReconnectDelay.inSeconds;
 
+      // Request a larger MTU for OTA data transfers
+      try {
+        final mtu = await device.requestMtu(512);
+        FileLogger.log("ConnectionManager: Negotiated MTU: $mtu");
+      } catch (e) {
+        FileLogger.log("ConnectionManager: MTU negotiation failed: $e");
+      }
+
       await _connectionStateSubscription?.cancel();
       _connectionStateSubscription = device.connectionState.listen((state) {
         onStateChanged(state);

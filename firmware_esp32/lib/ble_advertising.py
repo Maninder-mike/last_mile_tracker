@@ -84,6 +84,12 @@ class BLEAdvertiser:
             ),
         ) = self._ble.gatts_register_services((ENV_SERVICE,))
 
+        # Expand GATTS receive buffers for OTA characteristics.
+        # MicroPython default is 20 bytes — far too small for OTA data chunks.
+        # 512 bytes allows efficient chunked transfers.
+        self._ble.gatts_set_buffer(self._ota_ctrl_handle, 512)
+        self._ble.gatts_set_buffer(self._ota_data_handle, 512)
+
     @property
     def ext_sensor_handle(self):
         return self._ext_sensor_handle

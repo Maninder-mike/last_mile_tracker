@@ -36,7 +36,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_checkedForUpdate) {
         _checkedForUpdate = true;
-        ref.read(otaServiceProvider).checkForUpdate(isAutoCheck: true);
+        final deviceVersion = ref
+            .read(bleServiceProvider)
+            .deviceFirmwareVersion;
+        ref
+            .read(otaServiceProvider)
+            .checkForUpdate(
+              isAutoCheck: true,
+              deviceFirmwareVersion: deviceVersion,
+            );
       }
     });
 
