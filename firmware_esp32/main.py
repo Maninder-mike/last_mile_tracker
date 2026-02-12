@@ -462,6 +462,7 @@ class LastMileTracker:
             if self.wifi.is_connected():
                 try:
                     from lib.wifi_ota import WiFiOta
+
                     ota = WiFiOta(self.config)
                     ota.check_and_update()
                 except Exception as e:

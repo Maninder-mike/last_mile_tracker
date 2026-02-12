@@ -3,6 +3,7 @@ import machine
 import time
 from lib.logger import Logger
 
+
 def compare_semver(remote, local):
     """
     Compare two semver strings.
@@ -12,9 +13,9 @@ def compare_semver(remote, local):
         0 if remote == local
     """
     try:
-        r_parts = [int(p) for p in remote.split('.')]
-        l_parts = [int(p) for p in local.split('.')]
-        
+        r_parts = [int(p) for p in remote.split(".")]
+        l_parts = [int(p) for p in local.split(".")]
+
         for i in range(max(len(r_parts), len(l_parts))):
             remote_val = r_parts[i] if i < len(r_parts) else 0
             local_val = l_parts[i] if i < len(l_parts) else 0
@@ -26,6 +27,7 @@ def compare_semver(remote, local):
     except Exception as e:
         Logger.log(f"OTA Utils: Semver parse error: {e}")
         return 0
+
 
 def apply_firmware_update(config, temp_filename, target_filename, new_version=None):
     """

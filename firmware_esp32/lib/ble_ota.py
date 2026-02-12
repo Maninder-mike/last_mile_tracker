@@ -106,12 +106,10 @@ class BleOta:
         """Rename .tmp to actual file and reset"""
         try:
             from lib.ota_utils import apply_firmware_update
-            
+
             target = self._update_filename.replace(".tmp", "")
             apply_firmware_update(
-                config=self._config,
-                temp_filename=self._update_filename,
-                target_filename=target
+                config=self._config, temp_filename=self._update_filename, target_filename=target
             )
         except Exception as e:
             Logger.log(f"OTA Apply Error: {e}")
