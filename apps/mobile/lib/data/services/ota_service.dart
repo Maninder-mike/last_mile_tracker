@@ -144,7 +144,11 @@ class OtaService {
 
       final response = await http.get(
         url,
-        headers: {'Accept': 'application/vnd.github.v3+json'},
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent':
+              'last-mile-tracker-app', // Required by some GitHub API endpoints
+        },
       );
 
       if (response.statusCode == 404) {
@@ -226,8 +230,8 @@ class OtaService {
       );
 
       return release;
-    } catch (e) {
-      FileLogger.log('OTA: Check failed: $e');
+    } catch (e, stack) {
+      FileLogger.log('OTA: Check failed: $e\n$stack');
       _emit(
         _state.copyWith(
           status: OtaStatus.error,
@@ -242,8 +246,11 @@ class OtaService {
   /// Compare two semver strings. Returns true if remote > local.
   static bool _isNewerVersion(String remote, String local) {
     try {
-      final rParts = remote.split('.').map(int.parse).toList();
-      final lParts = local.split('.').map(int.parse).toList();
+      final rParts = remote
+          .split('.')
+          .map((e) => int.tryParse(e) ?? 0)
+          .toList();
+      final lParts = local.split('.').map((e) => int.tryParse(e) ?? 0).toList();
       for (int i = 0; i < 3; i++) {
         final r = i < rParts.length ? rParts[i] : 0;
         final l = i < lParts.length ? lParts[i] : 0;

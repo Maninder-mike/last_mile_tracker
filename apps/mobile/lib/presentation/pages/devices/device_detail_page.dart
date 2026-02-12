@@ -13,6 +13,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:last_mile_tracker/core/constants/ble_constants.dart';
 import 'package:last_mile_tracker/data/services/ble_service.dart';
+import 'package:last_mile_tracker/presentation/providers/ota_providers.dart';
+import 'package:last_mile_tracker/data/services/ota_service.dart';
+import 'package:last_mile_tracker/presentation/providers/service_providers.dart';
 
 class DeviceDetailPage extends ConsumerWidget {
   final String deviceId;
@@ -31,6 +34,17 @@ class DeviceDetailPage extends ConsumerWidget {
         ref.watch(bleConnectionStateProvider).value ??
         BluetoothConnectionState.disconnected;
     final bleService = ref.watch(bleServiceProvider);
+    final fwVersion = ref.watch(deviceFirmwareVersionProvider).value;
+
+    // Listen for OTA updates
+    ref.listen<AsyncValue<OtaState>>(otaStateProvider, (previous, next) {
+      final state = next.value;
+      if (state != null &&
+          state.status == OtaStatus.available &&
+          state.release != null) {
+        _showUpdateAvailableDialog(context, ref, state.release!);
+      }
+    });
 
     // Check if this device is the one currently connected
     final connectedDevice = bleService.connectedDevice;
@@ -74,7 +88,7 @@ class DeviceDetailPage extends ConsumerWidget {
                       id: deviceId,
                       lastSeen: tracker?.lastSeen,
                       isConnected: isThisDeviceConnected,
-                      firmwareVersion: bleService.deviceFirmwareVersion,
+                      firmwareVersion: fwVersion,
                     ),
                     loading: () => _DeviceHeader(
                       name: initialName,
@@ -247,6 +261,40 @@ class DeviceDetailPage extends ConsumerWidget {
             trailing: isThisDeviceConnected
                 ? const _ActivePulse()
                 : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUpdateAvailableDialog(
+    BuildContext context,
+    WidgetRef ref,
+    FirmwareRelease release,
+  ) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Firmware Update Available'),
+        content: Text(
+          'A new firmware version (${release.tagName}) is available. '
+          'Would you like to update now?\n\n'
+          'Notes: ${release.releaseNotes}',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Later'),
+            onPressed: () => Navigator.pop(context),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              ref
+                  .read(otaServiceProvider)
+                  .performUpdate(ref.read(bleServiceProvider));
+            },
+            child: const Text('Update Now'),
           ),
         ],
       ),

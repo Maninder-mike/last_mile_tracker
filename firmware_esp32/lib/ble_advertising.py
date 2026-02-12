@@ -44,10 +44,10 @@ class BLEAdvertiser:
             bluetooth.FLAG_READ | bluetooth.FLAG_NOTIFY,
         )
 
-        # OTA Control: Write + Notify
+        # OTA Control: Read + Write + Notify
         OTA_CONTROL_CHAR = (
             bluetooth.UUID("00000001-0000-1000-8000-00805F9B34FB"),
-            bluetooth.FLAG_WRITE | bluetooth.FLAG_NOTIFY,
+            bluetooth.FLAG_READ | bluetooth.FLAG_WRITE | bluetooth.FLAG_NOTIFY,
         )
 
         # OTA Data: Write (No Response for speed)

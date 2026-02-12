@@ -42,6 +42,10 @@ class FirmwareUpdateTile extends ConsumerWidget {
     WidgetRef ref,
     OtaState state,
   ) {
+    final deviceVersion = ref
+        .watch(deviceFirmwareVersionProvider)
+        .asData
+        ?.value;
     final isChecking = state.status == OtaStatus.checking;
 
     return CupertinoListTile(
@@ -51,11 +55,11 @@ class FirmwareUpdateTile extends ConsumerWidget {
       ),
       subtitle: Text(
         state.status == OtaStatus.upToDate
-            ? state.message.isNotEmpty
-                  ? state.message
-                  : 'Up to date'
+            ? (state.message.isNotEmpty ? state.message : 'Up to date')
             : state.status == OtaStatus.error
-            ? 'Check failed'
+            ? (state.message.contains('check')
+                  ? 'Check failed: ${state.errorMessage}'
+                  : 'Update failed: ${state.errorMessage}')
             : 'Tap to check for updates',
         style: state.status == OtaStatus.error
             ? AppTheme.caption.copyWith(color: AppTheme.critical)
@@ -89,7 +93,9 @@ class FirmwareUpdateTile extends ConsumerWidget {
       onTap: isChecking
           ? null
           : () {
-              ref.read(otaServiceProvider).checkForUpdate();
+              ref
+                  .read(otaServiceProvider)
+                  .checkForUpdate(deviceFirmwareVersion: deviceVersion);
             },
     );
   }
