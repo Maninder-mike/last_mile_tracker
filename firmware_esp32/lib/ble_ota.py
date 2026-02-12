@@ -10,7 +10,8 @@ class BleOta:
     CMD_DATA = 0x02
     CMD_END = 0x03
 
-    def __init__(self):
+    def __init__(self, config=None):
+        self._config = config
         self._update_filename = None
         self._file_handle = None
         self._received_size = 0
@@ -120,6 +121,18 @@ class BleOta:
 
             # Rename
             os.rename(self._update_filename, target)
+
+            # Bump firmware version in config
+            if self._config:
+                try:
+                    current = self._config.get("firmware_version") or "0.0.0"
+                    parts = current.split(".")
+                    parts[-1] = str(int(parts[-1]) + 1)
+                    new_version = ".".join(parts)
+                    self._config.set("firmware_version", new_version)
+                    Logger.log(f"OTA: Version bumped to {new_version}")
+                except Exception as e:
+                    Logger.log(f"OTA: Version bump failed: {e}")
 
             Logger.log(f"OTA: Applied {target}. Resetting...")
             import time

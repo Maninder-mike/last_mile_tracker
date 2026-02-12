@@ -89,8 +89,21 @@ class BLEAdvertiser:
         return self._ext_sensor_handle
 
     @property
+    def ota_ctrl_handle(self):
+        return self._ota_ctrl_handle
+
+    @property
+    def ota_data_handle(self):
+        return self._ota_data_handle
+
+    @property
     def wifi_config_handle(self):
         return self._wifi_config_handle
+
+    def set_firmware_version(self, version):
+        """Write firmware version to OTA Control char so centrals can read it"""
+        payload = f"FW:{version}".encode()
+        self._ble.gatts_write(self._ota_ctrl_handle, payload)
 
     def _irq(self, event, data):
         if event == _IRQ_CENTRAL_CONNECT:

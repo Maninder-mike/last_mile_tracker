@@ -23,7 +23,7 @@ enum OtaStatus {
 
 /// Firmware release info from GitHub
 class FirmwareRelease {
-  final int version;
+  final String version; // Semver e.g. "0.0.2"
   final String tagName;
   final String downloadUrl;
   final String fileName;
@@ -114,13 +114,19 @@ class OtaService {
     _stateController.add(state);
   }
 
-  /// Check GitHub Releases for a newer firmware version
-  /// [isAutoCheck] - if true, respects the user's preference
-  Future<FirmwareRelease?> checkForUpdate({bool isAutoCheck = false}) async {
+  /// Check GitHub Releases for a newer firmware version.
+  /// [isAutoCheck] - if true, respects the user's preference.
+  /// [deviceFirmwareVersion] - the version reported by the connected device.
+  Future<FirmwareRelease?> checkForUpdate({
+    bool isAutoCheck = false,
+    String? deviceFirmwareVersion,
+  }) async {
     if (isAutoCheck && !_state.isAutoCheckEnabled) {
       FileLogger.log('OTA: Auto-check disabled by user.');
       return null;
     }
+
+    final localVersion = deviceFirmwareVersion ?? '0.0.0';
 
     _emit(
       _state.copyWith(
@@ -162,9 +168,10 @@ class OtaService {
         json['published_at'] as String? ?? DateTime.now().toIso8601String(),
       );
 
-      // Parse version from tag (e.g. "fw-v2" -> 2, "v3" -> 3)
-      final versionMatch = RegExp(r'(\d+)').firstMatch(tagName);
-      final remoteVersion = int.tryParse(versionMatch?.group(1) ?? '0') ?? 0;
+      // Parse semver from tag (e.g. "fw-v0.0.2" -> "0.0.2")
+      final remoteVersion = tagName.startsWith('fw-v')
+          ? tagName.substring(4)
+          : tagName.replaceAll(RegExp(r'^v'), '');
 
       // Find firmware asset (.py or .bin file)
       final assets = json['assets'] as List<dynamic>? ?? [];
@@ -200,12 +207,11 @@ class OtaService {
         publishedAt: publishedAt,
       );
 
-      if (remoteVersion <= BleConstants.currentFirmwareVersion) {
+      if (!_isNewerVersion(remoteVersion, localVersion)) {
         _emit(
           _state.copyWith(
             status: OtaStatus.upToDate,
-            message:
-                'Firmware is up to date (v${BleConstants.currentFirmwareVersion}).',
+            message: 'Firmware is up to date (v$localVersion).',
           ),
         );
         return null;
@@ -230,6 +236,24 @@ class OtaService {
         ),
       );
       return null;
+    }
+  }
+
+  /// Compare two semver strings. Returns true if remote > local.
+  static bool _isNewerVersion(String remote, String local) {
+    try {
+      final rParts = remote.split('.').map(int.parse).toList();
+      final lParts = local.split('.').map(int.parse).toList();
+      for (int i = 0; i < 3; i++) {
+        final r = i < rParts.length ? rParts[i] : 0;
+        final l = i < lParts.length ? lParts[i] : 0;
+        if (r > l) return true;
+        if (r < l) return false;
+      }
+      return false;
+    } catch (e) {
+      FileLogger.log('OTA: Version compare error: $e');
+      return false;
     }
   }
 

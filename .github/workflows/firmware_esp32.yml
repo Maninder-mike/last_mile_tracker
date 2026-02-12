@@ -52,32 +52,52 @@ jobs:
     name: Build & Package
     needs: quality
     runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            # Auto-increment: find latest fw-v* tag, bump patch
+            LATEST=$(git tag -l 'fw-v*' --sort=-v:refname | head -n 1)
+            if [ -z "$LATEST" ]; then
+              NEW_TAG="fw-v0.0.1"
+            else
+              # Parse semver from fw-vX.Y.Z
+              VERSION=${LATEST#fw-v}
+              IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+              PATCH=$((PATCH + 1))
+              NEW_TAG="fw-v${MAJOR}.${MINOR}.${PATCH}"
+            fi
+            echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          fi
+          echo "Resolved version: $(cat $GITHUB_OUTPUT | grep tag)"
 
       - name: Prepare Artifacts
         run: |
           mkdir -p dist
-          
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            VERSION_TAG="${{ inputs.tag_name }}"
-          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            VERSION_TAG="${GITHUB_REF#refs/tags/}"
-          else
-            VERSION_TAG="dry-run-${{ github.sha }}"
-          fi
+          VERSION_TAG="${{ steps.version.outputs.tag }}"
           echo "Packing version: $VERSION_TAG"
           
-          # Naming convention: firmware_<version>.zip
+          # Write VERSION file for mobile app consumption
+          echo "$VERSION_TAG" > dist/VERSION
+          
           ARCHIVE_NAME="firmware_${VERSION_TAG}.zip"
           
           cd firmware_esp32
-          # Zip source code excluding unnecessary files
           zip -r "../dist/$ARCHIVE_NAME" . -x "*.git*" "*.DS_Store" "venv/*" "__pycache__/*"
           cd ..
           
-          # Also copy main.py for raw OTA usage
           cp firmware_esp32/main.py dist/main.py
           
           echo "Artifacts created in dist/:"
@@ -93,11 +113,11 @@ jobs:
   release:
     name: Publish Release
     needs: build
-    # Run only on tag pushes or manual dispatch with tag
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    # Run on tag pushes, manual dispatch, OR pushes to main with firmware changes
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     env:
-      VERSION_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+      VERSION_TAG: ${{ needs.build.outputs.version_tag }}
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -129,14 +149,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Cleaning up old releases, keeping the last 2..."
+          echo "Cleaning up old firmware releases, keeping the last 3..."
           
-          # Get list of releases sorted by date descending, skipping the first 2
-          # We use json output to get reliable tag names
-          RELEASES_TO_DELETE=$(gh release list --limit 50 --json tagName --order desc --template '{{range .}}{{printf "%s\n" .tagName}}{{end}}' | tail -n +3)
+          # Only target fw-v* releases
+          RELEASES_TO_DELETE=$(gh release list --limit 50 --json tagName --order desc --template '{{range .}}{{printf "%s\n" .tagName}}{{end}}' | grep '^fw-v' | tail -n +4)
           
           if [ -z "$RELEASES_TO_DELETE" ]; then
-            echo "No old releases to delete."
+            echo "No old firmware releases to delete."
           else
             echo "Deleting the following releases:"
             echo "$RELEASES_TO_DELETE"

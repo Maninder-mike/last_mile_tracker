@@ -84,8 +84,13 @@ class LastMileTracker:
         self.buzzer.beep(100)  # Boot beep
 
         self.ble = BLEAdvertiser(name=self.device_id, service_uuid=SERVICE_UUID)
-        self.ota = BleOta()
+        self.ota = BleOta(config=self.config)
         self.ble.set_write_callback(self.handle_ble_write)
+
+        # Report firmware version via BLE
+        fw_version = self.config.get("firmware_version") or "0.0.1"
+        self.ble.set_firmware_version(fw_version)
+        Logger.log(f"Firmware Version: {fw_version}")
 
         self._last_activity = time.time()
         self.data_store = {
@@ -358,8 +363,8 @@ class LastMileTracker:
                             asyncio.create_task(self.wifi.connect(on_status_change=on_wifi_status))
             except Exception as e:
                 Logger.log(f"BLE: WiFi Config Error: {e}")
-        else:
-            # Pass to OTA handler (expects data with CMD prefix)
+        elif value_handle in (self.ble.ota_ctrl_handle, self.ble.ota_data_handle):
+            # Route OTA writes explicitly
             self.ota.handle_command(value)
 
     async def cloud_upload_task(self):

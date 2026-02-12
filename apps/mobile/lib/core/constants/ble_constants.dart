@@ -18,8 +18,13 @@ class BleConstants {
   static const String wifiServiceUuid = "0000FF00-0000-1000-8000-00805F9B34FB";
   static const String wifiConfigUuid = "0000FF01-0000-1000-8000-00805F9B34FB";
 
-  // Current firmware version (should match ESP32 firmware)
-  static const int currentFirmwareVersion = 1;
+  // Firmware Version (FW:x.y.z format prefix from ESP32)
+  static const String firmwareVersionPrefix = 'FW:';
+
+  // OTA Configuration
+  static const int otaChunkSize = 512; // bytes per BLE data chunk
+  static const int otaMinBatteryPercent = 50; // skip update below this
+  static const Duration otaUpdateCooldown = Duration(hours: 1);
 
   // GitHub Releases API
   static const String githubOwner = "Maninder-mike";

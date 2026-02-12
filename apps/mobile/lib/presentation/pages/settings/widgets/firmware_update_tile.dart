@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../../core/constants/ble_constants.dart';
 import '../../../../data/services/ota_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../providers/service_providers.dart';
@@ -52,10 +51,12 @@ class FirmwareUpdateTile extends ConsumerWidget {
       ),
       subtitle: Text(
         state.status == OtaStatus.upToDate
-            ? 'Up to date (v${BleConstants.currentFirmwareVersion})'
+            ? state.message.isNotEmpty
+                  ? state.message
+                  : 'Up to date'
             : state.status == OtaStatus.error
             ? 'Check failed'
-            : 'Current v${BleConstants.currentFirmwareVersion}',
+            : 'Tap to check for updates',
         style: state.status == OtaStatus.error
             ? AppTheme.caption.copyWith(color: AppTheme.critical)
             : AppTheme.caption,

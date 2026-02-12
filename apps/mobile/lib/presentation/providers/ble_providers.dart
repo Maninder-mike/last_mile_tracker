@@ -54,3 +54,9 @@ Stream<bool> simulationState(Ref ref) async* {
   yield service.simulationActive;
   yield* service.simulationState;
 }
+
+@riverpod
+Stream<String?> deviceFirmwareVersion(Ref ref) {
+  final service = ref.watch(bleServiceProvider);
+  return service.firmwareVersionStream;
+}

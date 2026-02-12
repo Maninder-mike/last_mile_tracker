@@ -22,6 +22,8 @@ class Config:
         "ingest_url": "",
         "ingest_token": "",
         "ingest_interval_sec": 60,
+        # Firmware Version (semver)
+        "firmware_version": "0.0.1",
         # Remote Management
         "config_url": "",
         "ota_url": "",

@@ -50,6 +50,13 @@ class BleService {
       _scanner.discoveredDevices;
   bool get simulationActive => _simulationService.isSimulating;
 
+  // Firmware version from connected device
+  final _firmwareVersionController = StreamController<String?>.broadcast();
+  Stream<String?> get firmwareVersionStream =>
+      _firmwareVersionController.stream;
+  String? _deviceFirmwareVersion;
+  String? get deviceFirmwareVersion => _deviceFirmwareVersion;
+
   // Data buffering for high-frequency sensor readings
   final List<db.SensorReadingsCompanion> _readingsBuffer = [];
   Timer? _bufferTimer;
@@ -63,8 +70,11 @@ class BleService {
         _connectionStateController.add(state);
       },
       onDataReceived: (bytes) => _handleRawData(bytes),
-      onOtaCharsFound: (control, data) =>
-          _otaManager.setCharacteristics(control, data),
+      onOtaCharsFound: (control, data) {
+        _otaManager.setCharacteristics(control, data);
+        // Read firmware version after chars are discovered
+        _readDeviceFirmwareVersion();
+      },
       onDisconnected: () => _scanner.start(),
     );
 
@@ -77,6 +87,17 @@ class BleService {
     _setupWifiStreams();
     _initAutoConnect();
     _setupAutoConnectListener();
+  }
+
+  Future<void> _readDeviceFirmwareVersion() async {
+    try {
+      final version = await _otaManager.readFirmwareVersion();
+      _deviceFirmwareVersion = version;
+      _firmwareVersionController.add(version);
+      FileLogger.log('BLE: Device firmware version: $version');
+    } catch (e) {
+      FileLogger.log('BLE: Failed to read firmware version: $e');
+    }
   }
 
   Future<void> _initAutoConnect() async {
@@ -263,5 +284,6 @@ class BleService {
     _isWifiScanningController.close();
     _simulationStateController.close();
     _connectionStateController.close();
+    _firmwareVersionController.close();
   }
 }

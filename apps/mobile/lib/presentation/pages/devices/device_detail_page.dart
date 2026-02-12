@@ -72,6 +72,7 @@ class DeviceDetailPage extends ConsumerWidget {
                       id: deviceId,
                       lastSeen: tracker?.lastSeen,
                       isConnected: isThisDeviceConnected,
+                      firmwareVersion: bleService.deviceFirmwareVersion,
                     ),
                     loading: () => _DeviceHeader(
                       name: initialName,
@@ -173,7 +174,7 @@ class DeviceDetailPage extends ConsumerWidget {
                     data: (tracker) =>
                         _LocationModule(lat: tracker?.lat, lng: tracker?.lon),
                     loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                   ),
                 ),
               ),
@@ -410,12 +411,14 @@ class _DeviceHeader extends StatelessWidget {
   final String id;
   final DateTime? lastSeen;
   final bool isConnected;
+  final String? firmwareVersion;
 
   const _DeviceHeader({
     required this.name,
     required this.id,
     this.lastSeen,
     this.isConnected = false,
+    this.firmwareVersion,
   });
 
   @override
@@ -483,7 +486,33 @@ class _DeviceHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Text(lastSeenStr, style: AppTheme.caption),
+        Row(
+          children: [
+            Text(lastSeenStr, style: AppTheme.caption),
+            if (firmwareVersion != null) ...[
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppTheme.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Text(
+                  'v$firmwareVersion',
+                  style: AppTheme.caption.copyWith(
+                    color: AppTheme.primary,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ],
     );
   }

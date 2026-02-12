@@ -25,7 +25,7 @@ class SensorDataParser {
       // Packet version determines format
       if (bytes.length == BleConstants.packetLength) {
         return _parseV1(data);
-      } else if (bytes.length > 0 && bytes[0] == 2) {
+      } else if (bytes.isNotEmpty && bytes[0] == 2) {
         return _parseV2(bytes, data);
       }
 

@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import '../../../core/constants/ble_constants.dart';
+import '../../../core/utils/file_logger.dart';
 
 class BleOtaManager {
   BluetoothCharacteristic? _controlChar;
@@ -11,6 +13,32 @@ class BleOtaManager {
   ) {
     _controlChar = control;
     _dataChar = data;
+  }
+
+  /// Read the firmware version from the OTA Control characteristic.
+  /// The ESP32 writes "FW:x.y.z" to this characteristic on boot.
+  Future<String?> readFirmwareVersion() async {
+    final char = _controlChar;
+    if (char == null) {
+      FileLogger.log(
+        'OTA: Control characteristic not available for version read.',
+      );
+      return null;
+    }
+
+    try {
+      final value = await char.read();
+      final raw = String.fromCharCodes(value).trim();
+      FileLogger.log('OTA: Read version raw: $raw');
+
+      if (raw.startsWith(BleConstants.firmwareVersionPrefix)) {
+        return raw.substring(BleConstants.firmwareVersionPrefix.length);
+      }
+      return null;
+    } catch (e) {
+      FileLogger.log('OTA: Failed to read firmware version: $e');
+      return null;
+    }
   }
 
   /// Write to OTA Control characteristic (CMD_START, CMD_END)
