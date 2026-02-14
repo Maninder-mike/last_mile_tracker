@@ -2,7 +2,7 @@ name: last_mile_tracker
 description: "Last Mile Tracker"
 publish_to: 'none'
 
-version: 0.1.0+2
+version: 0.1.0+3
 
 environment:
   sdk: ^3.10.8
@@ -70,6 +70,15 @@ dev_dependencies:
   drift_dev: ^2.31.0
   riverpod_generator: any
   json_serializable: ^6.11.2
+  flutter_launcher_icons: ^0.13.1
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assests/last_mile_tracker_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assests/last_mile_tracker_icon.png"
 
 
 flutter:
