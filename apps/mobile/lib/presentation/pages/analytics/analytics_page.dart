@@ -186,7 +186,7 @@ class AnalyticsPage extends ConsumerWidget {
                   '${(sStats.delivered / sStats.total * 100).toInt()}%',
                   style: AppTheme.heading1,
                 ),
-                const Text('Delivery Rate', style: AppTheme.caption),
+                Text('Delivery Rate', style: AppTheme.caption),
               ],
             ),
           ),
@@ -198,7 +198,7 @@ class AnalyticsPage extends ConsumerWidget {
             child: Column(
               children: [
                 Text('${hStats.totalDevices}', style: AppTheme.heading1),
-                const Text('Active Units', style: AppTheme.caption),
+                Text('Active Units', style: AppTheme.caption),
               ],
             ),
           ),

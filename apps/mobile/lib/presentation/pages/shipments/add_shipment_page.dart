@@ -8,6 +8,8 @@ import 'package:last_mile_tracker/domain/models/shipment.dart';
 import 'package:last_mile_tracker/presentation/providers/supabase_providers.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:last_mile_tracker/presentation/widgets/animated_button.dart';
+import 'dart:ui';
 import 'package:flutter/services.dart';
 
 class AddShipmentPage extends ConsumerStatefulWidget {
@@ -136,99 +138,153 @@ class _AddShipmentPageState extends ConsumerState<AddShipmentPage> {
             child: Padding(
               padding: EdgeInsets.only(
                 top: MediaQuery.of(context).padding.top + 88,
-                left: 24,
-                right: 24,
-                bottom: 24,
+                left: AppTheme.s24,
+                right: AppTheme.s24,
+                bottom: AppTheme.s24,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('SHIPMENT DETAILS', style: AppTheme.caption),
-                  const SizedBox(height: 16),
-                  GlassContainer(
-                    child: Column(
-                      children: [
-                        _InputField(
-                          controller: _trackingController,
-                          placeholder: 'Tracking Number',
-                          icon: CupertinoIcons.barcode,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SHIPMENT DETAILS',
+                        style: AppTheme.caption.copyWith(
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w600,
                         ),
-                        const _Divider(),
-                        _InputField(
-                          controller: _originController,
-                          placeholder: 'Origin City',
-                          icon: CupertinoIcons.house,
-                        ),
-                        const _Divider(),
-                        _InputField(
-                          controller: _destinationController,
-                          placeholder: 'Destination City',
-                          icon: CupertinoIcons.location_solid,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Text('EXPECTED ARRIVAL', style: AppTheme.caption),
-                  const SizedBox(height: 16),
-                  GestureDetector(
-                    onTap: _showDatePicker,
-                    child: GlassContainer(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
+                      const SizedBox(height: AppTheme.s16),
+                      GlassContainer(
+                        padding: EdgeInsets.zero,
+                        child: Column(
+                          children: [
+                            _InputField(
+                              controller: _trackingController,
+                              placeholder: 'Tracking Number',
+                              icon: CupertinoIcons.barcode,
+                            ),
+                            const _Divider(),
+                            _InputField(
+                              controller: _originController,
+                              placeholder: 'Origin City',
+                              icon: CupertinoIcons.house,
+                            ),
+                            const _Divider(),
+                            _InputField(
+                              controller: _destinationController,
+                              placeholder: 'Destination City',
+                              icon: CupertinoIcons.location_solid,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppTheme.s32),
+                      Text(
+                        'EXPECTED ARRIVAL',
+                        style: AppTheme.caption.copyWith(
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppTheme.s16),
+                      GestureDetector(
+                        onTap: _showDatePicker,
+                        child: GlassContainer(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.s20,
+                            vertical: AppTheme.s16,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(
-                                CupertinoIcons.calendar,
-                                color: CupertinoDynamicColor.resolve(
-                                  AppTheme.primary,
-                                  context,
-                                ),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(AppTheme.s8),
+                                    decoration: BoxDecoration(
+                                      color: CupertinoDynamicColor.resolve(
+                                        AppTheme.primary,
+                                        context,
+                                      ).withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      CupertinoIcons.calendar,
+                                      size: AppTheme.iconSizeMedium,
+                                      color: CupertinoDynamicColor.resolve(
+                                        AppTheme.primary,
+                                        context,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppTheme.s16),
+                                  Text(
+                                    'Date & Time',
+                                    style: AppTheme.body.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'ETA',
-                                style: AppTheme.body.copyWith(
-                                  fontWeight: FontWeight.w500,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppTheme.s12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: CupertinoDynamicColor.resolve(
+                                    AppTheme.surface,
+                                    context,
+                                  ).withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.radiusSmall,
+                                  ),
+                                  border: Border.all(
+                                    color: CupertinoColors.systemGrey
+                                        .withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: Text(
+                                  '${_eta.month}/${_eta.day} ${_eta.hour}:${_eta.minute.toString().padLeft(2, '0')}',
+                                  style: AppTheme.body.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    fontFeatures: [
+                                      const FontFeature.tabularFigures(),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          Text(
-                            '${_eta.month}/${_eta.day} ${_eta.hour}:${_eta.minute.toString().padLeft(2, '0')}',
-                            style: AppTheme.body,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 64),
+                      AnimatedButton.primary(
+                        onTap: _isSaving ? () {} : _saveShipment,
+                        label: _isSaving ? 'Creating...' : 'Create Shipment',
+                        icon: _isSaving
+                            ? const CupertinoActivityIndicator(
+                                color: CupertinoColors.white,
+                              )
+                            : const Icon(
+                                CupertinoIcons.cube_box_fill,
+                                color: CupertinoColors.white,
+                              ),
+                      ),
+                      const SizedBox(height: AppTheme.s16),
+                    ],
                   ),
-                  const SizedBox(height: 64),
-                  SizedBox(
-                    width: double.infinity,
-                    child: CupertinoButton.filled(
-                      borderRadius: BorderRadius.circular(16),
-                      onPressed: _isSaving ? null : _saveShipment,
-                      child: _isSaving
-                          ? const CupertinoActivityIndicator(
-                              color: CupertinoColors.white,
-                            )
-                          : const Text(
-                              'Create Shipment',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                ),
               ),
             ),
           ),
-          const FloatingHeader(title: 'Add Shipment', showBackButton: true),
+          const FloatingHeader(
+            title: 'Add Shipment',
+            showBackButton: true,
+            trailing: SizedBox.shrink(),
+          ),
         ],
       ),
     );
@@ -249,18 +305,21 @@ class _InputField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.s20,
+        vertical: AppTheme.s8,
+      ),
       child: Row(
         children: [
           Icon(
             icon,
-            size: 20,
+            size: AppTheme.iconSizeMedium,
             color: CupertinoDynamicColor.resolve(
               AppTheme.primary,
               context,
             ).withValues(alpha: 0.7),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppTheme.s16),
           Expanded(
             child: CupertinoTextField(
               controller: controller,
@@ -268,7 +327,7 @@ class _InputField extends StatelessWidget {
               placeholderStyle: AppTheme.caption,
               style: AppTheme.body,
               decoration: null,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: AppTheme.s12),
             ),
           ),
         ],
@@ -283,7 +342,7 @@ class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.s20),
       height: 1,
       color: CupertinoColors.systemGrey.withValues(alpha: 0.1),
     );

@@ -43,6 +43,7 @@ class NotificationCenterPage extends ConsumerWidget {
           FloatingHeader(
             title: 'Alert History',
             showBackButton: true,
+            wrapTrailing: false,
             trailing: notifications.isNotEmpty
                 ? CupertinoButton(
                     padding: EdgeInsets.zero,

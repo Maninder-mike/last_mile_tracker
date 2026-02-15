@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
+import 'package:last_mile_tracker/presentation/widgets/animated_button.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
@@ -534,7 +535,7 @@ class _LocationModule extends ConsumerWidget {
                   else
                     Container(
                       color: AppTheme.shimmerBase.withValues(alpha: 0.1),
-                      child: const Center(
+                      child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -556,34 +557,19 @@ class _LocationModule extends ConsumerWidget {
                     Positioned(
                       bottom: 12,
                       right: 12,
-                      child: CupertinoButton(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(20),
-                        onPressed: () async {
+                      child: AnimatedButton.primary(
+                        onTap: () async {
                           final url =
                               'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
                           if (await canLaunchUrl(Uri.parse(url))) {
                             await launchUrl(Uri.parse(url));
                           }
                         },
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(CupertinoIcons.map, size: 16),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Open Maps',
-                              style: AppTheme.body.copyWith(
-                                color: CupertinoColors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        label: 'Open Maps',
+                        icon: const Icon(
+                          CupertinoIcons.map,
+                          size: 16,
+                          color: CupertinoColors.white,
                         ),
                       ),
                     ),
@@ -943,9 +929,11 @@ class _ActionButton extends StatelessWidget {
     final isDisabled = onTap == null;
     final color = isDestructive ? AppTheme.critical : AppTheme.primary;
 
-    return CupertinoButton(
+    return AnimatedButton(
       padding: EdgeInsets.zero,
-      onPressed: onTap,
+      onTap: onTap,
+      color: null,
+      gradient: null,
       child: GlassContainer(
         opacity: isDisabled ? 0.05 : 0.1,
         child: Padding(

@@ -334,15 +334,11 @@ class _DeviceCard extends StatelessWidget {
     return GlassContainer(
       child: Row(
         children: [
-          Container(
+          GlassContainer(
             padding: const EdgeInsets.all(AppTheme.s8),
-            decoration: BoxDecoration(
-              color: CupertinoDynamicColor.resolve(
-                AppTheme.primary,
-                context,
-              ).withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
+            shape: BoxShape.circle,
+            color: CupertinoDynamicColor.resolve(AppTheme.primary, context),
+            opacity: 0.1,
             child: Icon(
               type == 'Gateway' ? CupertinoIcons.wifi : CupertinoIcons.location,
               color: CupertinoDynamicColor.resolve(AppTheme.primary, context),

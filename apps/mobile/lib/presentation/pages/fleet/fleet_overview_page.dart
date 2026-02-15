@@ -138,7 +138,10 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
               ),
             ],
           ),
-          const FloatingHeader(title: 'Fleet Overview'),
+          const FloatingHeader(
+            title: 'Fleet Overview',
+            trailing: SizedBox.shrink(),
+          ),
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             right: AppTheme.s16,

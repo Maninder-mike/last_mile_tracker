@@ -1,25 +1,45 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
+import 'package:last_mile_tracker/presentation/providers/network_provider.dart';
 import 'glass_container.dart';
 import 'connection_status_icon.dart';
 import 'connectivity_indicator.dart';
 
-class FloatingHeader extends StatelessWidget {
+class FloatingHeader extends ConsumerWidget {
   final String title;
   final bool showBackButton;
   final Widget? trailing;
+  final bool wrapTrailing;
 
   const FloatingHeader({
     super.key,
     required this.title,
     this.showBackButton = false,
     this.trailing,
+    this.wrapTrailing = true,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = CupertinoTheme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    final isOnline = ref.watch(isOnlineProvider);
+
+    Widget defaultTrailing() {
+      if (isOnline) {
+        return const ConnectionStatusIcon();
+      }
+      return const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConnectivityIndicator(),
+          SizedBox(width: AppTheme.s8),
+          ConnectionStatusIcon(),
+        ],
+      );
+    }
 
     return SafeArea(
       child: Padding(
@@ -45,7 +65,7 @@ class FloatingHeader extends StatelessWidget {
                   child: GlassContainer(
                     borderRadius: 30,
                     opacity: 0.1,
-                    padding: EdgeInsets.all(AppTheme.s12),
+                    padding: const EdgeInsets.all(AppTheme.s12),
                     child: Icon(
                       CupertinoIcons.chevron_left,
                       size: AppTheme.iconSizeMedium,
@@ -56,7 +76,7 @@ class FloatingHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(width: AppTheme.s8),
+              const SizedBox(width: AppTheme.s8),
             ],
             GlassContainer(
               borderRadius: 30,
@@ -74,21 +94,15 @@ class FloatingHeader extends StatelessWidget {
             ),
             const Spacer(),
             // Right: Trailing widget or default connection icon
-            GlassContainer(
-              borderRadius: 30,
-              opacity: 0.1,
-              padding: const EdgeInsets.all(AppTheme.s12),
-              child:
-                  trailing ??
-                  const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ConnectivityIndicator(),
-                      SizedBox(width: AppTheme.s8),
-                      ConnectionStatusIcon(),
-                    ],
-                  ),
-            ),
+            if (wrapTrailing)
+              GlassContainer(
+                borderRadius: 30,
+                opacity: 0.1,
+                padding: const EdgeInsets.all(AppTheme.s12),
+                child: trailing ?? defaultTrailing(),
+              )
+            else
+              trailing ?? defaultTrailing(),
           ],
         ),
       ),

@@ -9,6 +9,7 @@ import '../../widgets/speedometer.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/floating_header.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/connectivity_indicator.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -106,7 +107,10 @@ class DashboardPage extends ConsumerWidget {
               ],
             ),
           ),
-          const FloatingHeader(title: 'Dashboard'),
+          const FloatingHeader(
+            title: 'Dashboard',
+            trailing: ConnectivityIndicator(),
+          ),
         ],
       ),
     );

@@ -11,24 +11,32 @@ class GlassContainer extends StatefulWidget {
   final EdgeInsetsGeometry? margin;
   final double borderRadius;
   final Color? color;
+  final Gradient? gradient;
   final Border? border;
+  final BoxShape shape;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final VoidCallback? onDoubleTap;
+  final double? width;
+  final double? height;
 
   const GlassContainer({
     super.key,
     required this.child,
-    this.blur = 15.0,
+    this.blur = 20.0,
     this.opacity = 0.7,
     this.padding = const EdgeInsets.all(AppTheme.s16),
     this.margin,
-    this.borderRadius = 16.0,
+    this.borderRadius = AppTheme.radiusMedium,
     this.color,
+    this.gradient,
     this.border,
     this.onTap,
     this.onLongPress,
     this.onDoubleTap,
+    this.width,
+    this.height,
+    this.shape = BoxShape.rectangle,
   });
 
   @override
@@ -40,17 +48,23 @@ class _GlassContainerState extends State<GlassContainer> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine background color/alpha
     final baseColor = widget.color ?? AppTheme.surfaceGlass;
     final resolvedColor = CupertinoDynamicColor.resolve(baseColor, context);
 
-    final finalColor = resolvedColor.withValues(
-      alpha: widget.color != null ? widget.opacity : resolvedColor.a,
-    );
+    // Calculate final background color if no gradient is present
+    final finalColor = widget.gradient == null
+        ? resolvedColor.withValues(
+            alpha: widget.color != null ? widget.opacity : resolvedColor.a,
+          )
+        : null;
+
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     return GestureDetector(
       onTapDown: widget.onTap != null
           ? (_) {
-              HapticFeedback.lightImpact();
+              if (widget.onTap != null) HapticFeedback.selectionClick();
               setState(() => _isPressed = true);
             }
           : null,
@@ -64,46 +78,74 @@ class _GlassContainerState extends State<GlassContainer> {
       onLongPress: widget.onLongPress,
       onDoubleTap: widget.onDoubleTap,
       child: AnimatedScale(
-        scale: _isPressed ? 0.98 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeInOut,
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
         child: Container(
+          width: widget.width,
+          height: widget.height,
           margin: widget.margin,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.borderRadius),
+            shape: widget.shape,
+            borderRadius: widget.shape == BoxShape.circle
+                ? null
+                : BorderRadius.circular(widget.borderRadius),
             border:
                 widget.border ??
                 Border.all(
-                  color: CupertinoDynamicColor.resolve(
-                    AppTheme.textSecondary,
-                    context,
-                  ).withValues(alpha: 0.1),
-                  width: 0.5,
+                  color: isDark
+                      ? CupertinoColors.white.withValues(alpha: 0.15)
+                      : CupertinoColors.white.withValues(alpha: 0.6),
+                  width: 1.0,
                 ),
             boxShadow: [
-              BoxShadow(
-                color: CupertinoColors.black.withValues(
-                  alpha: _isPressed ? 0.02 : 0.05,
+              if (!_isPressed)
+                BoxShadow(
+                  color: CupertinoColors.black.withValues(alpha: 0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                  spreadRadius: -5,
                 ),
-                blurRadius: _isPressed ? 4 : 10,
-                offset: Offset(0, _isPressed ? 2 : 4),
-              ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: widget.blur,
-                sigmaY: widget.blur,
-              ),
-              child: Container(
-                padding: widget.padding,
-                color: finalColor,
-                child: widget.child,
-              ),
-            ),
-          ),
+          child: widget.shape == BoxShape.circle
+              ? ClipOval(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(
+                      sigmaX: widget.blur,
+                      sigmaY: widget.blur,
+                    ),
+                    child: Container(
+                      padding: widget.padding,
+                      decoration: BoxDecoration(
+                        color: finalColor,
+                        gradient: widget.gradient,
+                        shape: BoxShape.circle,
+                      ),
+                      child: widget.child,
+                    ),
+                  ),
+                )
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(
+                      sigmaX: widget.blur,
+                      sigmaY: widget.blur,
+                    ),
+                    child: Container(
+                      padding: widget.padding,
+                      decoration: BoxDecoration(
+                        color: finalColor,
+                        gradient: widget.gradient,
+                        borderRadius: BorderRadius.circular(
+                          widget.borderRadius,
+                        ),
+                      ),
+                      child: widget.child,
+                    ),
+                  ),
+                ),
         ),
       ),
     );
