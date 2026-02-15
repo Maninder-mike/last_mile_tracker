@@ -8,6 +8,7 @@ import 'package:last_mile_tracker/data/database/app_database.dart';
 import 'package:last_mile_tracker/data/services/ble_service.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+@pragma('vm:entry-point')
 class BackgroundServiceInstance {
   static const String channelId = 'ble_foreground_service';
   static const int notificationId = 888;

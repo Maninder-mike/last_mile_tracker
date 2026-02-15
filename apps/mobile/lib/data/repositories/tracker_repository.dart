@@ -35,9 +35,9 @@ class TrackerRepository {
     models.SensorReading reading,
   ) async {
     // Distinguish between V1 (Primary) and V2 (Auxiliary) payloads
-    // V1 always contains battery level (non-zero) and primary sensors
-    // V2 is focused on multi-temp and health metrics
-    final bool isV1 = reading.batteryLevel != 0;
+    // V1 contains primary sensors. We allow updates if battery is > 0 OR if GPS has a lock.
+    final bool isV1 =
+        reading.batteryLevel != 0 || (reading.lat != 0 || reading.lon != 0);
     final bool isV2 =
         reading.additionalTemps.isNotEmpty ||
         (reading.batteryDrop != null && reading.batteryDrop != 0);
@@ -50,7 +50,9 @@ class TrackerRepository {
 
       // V1 Primary Fields
       batteryLevel: isV1 ? Value(reading.batteryLevel) : const Value.absent(),
-      temp: isV1 ? Value(reading.temp) : const Value.absent(),
+      temp: (isV1 || reading.temp != 0)
+          ? Value(reading.temp)
+          : const Value.absent(),
       shockValue: isV1 ? Value(reading.shockValue) : const Value.absent(),
       lat: isV1 ? Value(reading.lat) : const Value.absent(),
       lon: isV1 ? Value(reading.lon) : const Value.absent(),

@@ -18,11 +18,10 @@ import 'core/config/supabase_config.dart';
 import 'core/services/background_service.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await BackgroundServiceInstance.initialize();
-
   runZonedGuarded(
     () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      await BackgroundServiceInstance.initialize();
       debugPrint('Init: WidgetsFlutterBinding initialized');
 
       await Firebase.initializeApp();

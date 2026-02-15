@@ -75,12 +75,15 @@ class SensorDataParser {
 
     int numTemps = bytes[1];
     Map<String, double> extraTemps = {};
+    double primaryTemp = 0;
 
     int offset = 2;
     for (int i = 0; i < numTemps; i++) {
       if (offset + 2 > bytes.length) break;
       int valRaw = data.getInt16(offset, Endian.little);
-      extraTemps['T${i + 2}'] = valRaw / 100.0;
+      double tempVal = valRaw / 100.0;
+      extraTemps['T${i + 2}'] = tempVal;
+      if (i == 0) primaryTemp = tempVal;
       offset += 2;
     }
 
@@ -95,7 +98,7 @@ class SensorDataParser {
       lat: 0,
       lon: 0,
       speed: 0,
-      temp: 0,
+      temp: primaryTemp,
       additionalTemps: extraTemps,
       batteryLevel: 0,
       shockValue: 0,

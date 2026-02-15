@@ -450,7 +450,7 @@ class _DeviceHeader extends ConsumerWidget {
                     Text(
                       firmwareVersion != null
                           ? 'v$firmwareVersion'
-                          : 'Reading version...',
+                          : 'ESP32 Firmware',
                       style: AppTheme.caption.copyWith(
                         color: AppTheme.primary,
                         fontFamily: 'monospace',
