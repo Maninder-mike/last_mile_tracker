@@ -63,15 +63,27 @@ jobs:
       - name: Install dependencies
         run: |
           echo "📦 Installing Flutter dependencies..."
-          flutter pub get
           cd apps/mobile
+          flutter clean
           flutter pub get
+
+      - name: Generate Code (build_runner)
+        run: |
+          echo "🛠️ Generating code..."
+          cd apps/mobile
+          dart run build_runner build --delete-conflicting-outputs
 
       - name: Analyze code
         run: |
           echo "🔍 Analyzing code..."
           cd apps/mobile
           flutter analyze || echo "::warning::Analysis found issues but continuing build"
+
+      - name: Dependency Vulnerability Audit
+        run: |
+          echo "🛡️ Checking for dependencies vulnerabilities..."
+          cd apps/mobile
+          flutter pub outdated --no-dev-dependencies --transitive || echo "::warning::Found outdated dependencies"
 
       - name: Run Tests
         run: |
@@ -116,8 +128,8 @@ jobs:
           TAG="v$CURRENT_VERSION"
           UPDATED=false
 
-          # Loop to find a unique version (optional auto-increment)
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
+          # Loop to find a unique version
+          while git rev-parse "$TAG" >/dev/null 2>&1; do
             echo "⚠️ Version $TAG already exists. Auto-incrementing build number..."
             UPDATED=true
 
@@ -127,7 +139,7 @@ jobs:
             NEW_BUILD_NUMBER=$((BUILD_NUMBER + 1))
             CURRENT_VERSION="$BASE_VERSION+$NEW_BUILD_NUMBER"
             TAG="v$CURRENT_VERSION"
-          fi
+          done
 
           if [ "$UPDATED" = true ]; then
              echo "🆙 Bumping version to: $CURRENT_VERSION"
@@ -178,7 +190,10 @@ jobs:
       - name: Build Artifacts
         run: |
           cd apps/mobile
+          flutter clean
           flutter pub get
+          echo "🛠️ Generating code..."
+          dart run build_runner build --delete-conflicting-outputs
           echo "🏗️ Building release..."
           flutter build apk --release --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
           flutter build appbundle --release --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
