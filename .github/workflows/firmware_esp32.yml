@@ -47,10 +47,64 @@ jobs:
       - name: Check Format (Ruff)
         run: |
           ruff format firmware_esp32/ --check
-          
+
+  security_scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit
+        run: bandit -r firmware_esp32/ -c firmware_esp32/pyproject.toml
+
+  static_typing:
+    name: Static Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Mypy
+        run: pip install mypy
+
+      - name: Run Mypy
+        run: mypy firmware_esp32/ --config-file firmware_esp32/pyproject.toml
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Pytest
+        run: pip install pytest
+
+      - name: Run Tests
+        run: pytest firmware_esp32/tests/
+
   build:
     name: Build & Package
-    needs: quality
+    needs: [quality, security_scan, static_typing, test]
     runs-on: ubuntu-latest
     outputs:
       version_tag: ${{ steps.version.outputs.tag }}
@@ -62,18 +116,17 @@ jobs:
 
       - name: Determine Version
         id: version
+        # ... (lines 65-85 unchanged internally)
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "tag=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
           elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           else
-            # Auto-increment: find latest fw-v* tag, bump patch
             LATEST=$(git tag -l 'fw-v*' --sort=-v:refname | head -n 1)
             if [ -z "$LATEST" ]; then
               NEW_TAG="fw-v0.0.1"
             else
-              # Parse semver from fw-vX.Y.Z
               VERSION=${LATEST#fw-v}
               IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
               PATCH=$((PATCH + 1))
@@ -81,28 +134,29 @@ jobs:
             fi
             echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
           fi
-          echo "Resolved version: $(cat $GITHUB_OUTPUT | grep tag)"
+
+      - name: Size Guard
+        run: |
+          SIZE=$(du -sb firmware_esp32/ | cut -f1)
+          THRESHOLD=512000 # 500KB
+          echo "Firmware size: $SIZE bytes (Threshold: $THRESHOLD)"
+          if [ "$SIZE" -gt "$THRESHOLD" ]; then
+            echo "::error::Firmware size $SIZE exceeds threshold $THRESHOLD!"
+            exit 1
+          fi
 
       - name: Prepare Artifacts
         run: |
           mkdir -p dist
           VERSION_TAG="${{ steps.version.outputs.tag }}"
           echo "Packing version: $VERSION_TAG"
-          
-          # Write VERSION file for mobile app consumption
           echo "$VERSION_TAG" > dist/VERSION
-          
           ARCHIVE_NAME="firmware_${VERSION_TAG}.zip"
-          
           cd firmware_esp32
           zip -r "../dist/$ARCHIVE_NAME" . -x "*.git*" "*.DS_Store" "venv/*" "__pycache__/*"
           cd ..
-          
           cp firmware_esp32/main.py dist/main.py
           sha256sum dist/main.py | awk '{print $1}' > dist/main.py.sha256
-          
-          echo "Artifacts created in dist/:"
-          ls -l dist/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4

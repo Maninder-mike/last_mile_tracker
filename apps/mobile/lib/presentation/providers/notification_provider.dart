@@ -25,6 +25,10 @@ class NotificationNotifier extends Notifier<List<AppNotification>> {
     state = [];
   }
 
+  void remove(String id) {
+    state = state.where((n) => n.id != id).toList();
+  }
+
   int get unreadCount => state.where((n) => !n.isRead).length;
 }
 

@@ -77,248 +77,253 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
       });
     }
 
-    return CupertinoPageScaffold(
-      backgroundColor: AppTheme.background,
-      child: Stack(
-        children: [
-          // Background Glow / decoration
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.primary.withValues(alpha: 0.05),
-              ),
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 50, sigmaY: 50),
-                child: const SizedBox.shrink(),
+    return Hero(
+      tag: 'device_card_$deviceId',
+      child: CupertinoPageScaffold(
+        backgroundColor: AppTheme.background,
+        child: Stack(
+          children: [
+            // Background Glow / decoration
+            Positioned(
+              top: -100,
+              right: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.primary.withValues(alpha: 0.05),
+                ),
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+                  child: const SizedBox.shrink(),
+                ),
               ),
             ),
-          ),
 
-          CustomScrollView(
-            slivers: [
-              const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            CustomScrollView(
+              slivers: [
+                const SliverToBoxAdapter(child: SizedBox(height: 120)),
 
-              // Device Info Header
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                sliver: SliverToBoxAdapter(
-                  child: trackerAsync.when(
-                    data: (tracker) => _DeviceHeader(
-                      name: tracker?.name ?? initialName,
-                      id: deviceId,
-                      lastSeen: tracker?.lastSeen,
-                      isConnected: isThisDeviceConnected,
-                      firmwareVersion: fwVersion,
-                    ),
-                    loading: () => _DeviceHeader(
-                      name: initialName,
-                      id: deviceId,
-                      isConnected: isThisDeviceConnected,
-                    ),
-                    error: (_, _) => _DeviceHeader(
-                      name: initialName,
-                      id: deviceId,
-                      isConnected: isThisDeviceConnected,
-                    ),
-                  ),
-                ),
-              ),
-
-              if (otaState?.status == OtaStatus.available &&
-                  otaState?.release != null)
+                // Device Info Header
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
                   sliver: SliverToBoxAdapter(
-                    child: _UpdateBanner(
-                      release: otaState!.release!,
-                      onUpdate: () {
-                        ref
-                            .read(otaServiceProvider)
-                            .performUpdate(ref.read(bleServiceProvider));
-                      },
+                    child: trackerAsync.when(
+                      data: (tracker) => _DeviceHeader(
+                        name: tracker?.name ?? initialName,
+                        id: deviceId,
+                        lastSeen: tracker?.lastSeen,
+                        isConnected: isThisDeviceConnected,
+                        firmwareVersion: fwVersion,
+                      ),
+                      loading: () => _DeviceHeader(
+                        name: initialName,
+                        id: deviceId,
+                        isConnected: isThisDeviceConnected,
+                      ),
+                      error: (_, _) => _DeviceHeader(
+                        name: initialName,
+                        id: deviceId,
+                        isConnected: isThisDeviceConnected,
+                      ),
                     ),
                   ),
                 ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
-
-              // Telemetry Grid
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                sliver: trackerAsync.when(
-                  data: (tracker) => SliverGrid.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 1.2,
-                    children: [
-                      Builder(
-                        builder: (_) {
-                          final bat = tracker?.batteryLevel;
-                          // ADC reads near-zero when no battery is connected
-                          // (USB-powered only). A LiPo never drops below ~3.0V.
-                          final isUsbPowered = bat != null && bat < 1.0;
-                          return _TelemetryModule(
-                            title: 'Battery',
-                            value: isUsbPowered
-                                ? 'USB'
-                                : '${bat?.toStringAsFixed(0) ?? "--"}%',
-                            icon: isUsbPowered
-                                ? CupertinoIcons.bolt_fill
-                                : CupertinoIcons.battery_100,
-                            color: isUsbPowered
-                                ? AppTheme.primary
-                                : (bat ?? 0) < 20
-                                ? AppTheme.warning
-                                : AppTheme.success,
-                            subtitle: isUsbPowered
-                                ? 'Wired Power'
-                                : 'Charge Level',
-                          );
+                if (otaState?.status == OtaStatus.available &&
+                    otaState?.release != null)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: _UpdateBanner(
+                        release: otaState!.release!,
+                        onUpdate: () {
+                          ref
+                              .read(otaServiceProvider)
+                              .performUpdate(ref.read(bleServiceProvider));
                         },
                       ),
-                      _TelemetryModule(
-                        title: 'Temperature',
-                        value: '${tracker?.temp?.toStringAsFixed(1) ?? "--"}°C',
-                        icon: CupertinoIcons.thermometer,
-                        color: (tracker?.temp ?? 0) > 30
-                            ? AppTheme.warning
-                            : AppTheme.primary,
-                        subtitle:
-                            tracker?.additionalTemps != null &&
-                                tracker!.additionalTemps!.isNotEmpty
-                            ? 'Core (Aux: ${tracker.additionalTemps})'
-                            : 'Core Temp',
-                      ),
-                      _TelemetryModule(
-                        title: 'Shock',
-                        value: tracker?.shockValue != null
-                            ? '${tracker!.shockValue}G'
-                            : '--',
-                        icon: CupertinoIcons.wind,
-                        color: (tracker?.shockValue ?? 0) > 2
-                            ? AppTheme.warning
-                            : AppTheme.primary,
-                        subtitle: 'Impact Force',
-                      ),
-                      _TelemetryModule(
-                        title: 'Signal',
-                        value:
-                            '-- dBm', // We don't have live RSSI in Tracker table yet
-                        icon: CupertinoIcons.antenna_radiowaves_left_right,
-                        color: AppTheme.textSecondary,
-                        subtitle: 'RSSI',
-                      ),
-                      _TelemetryModule(
-                        title: 'Health',
-                        value: tracker?.batteryDrop != null
-                            ? '${tracker!.batteryDrop!.toStringAsFixed(0)}mV'
-                            : '--',
-                        icon: CupertinoIcons.heart_fill,
-                        color: (tracker?.batteryDrop ?? 0) > 150
-                            ? AppTheme.critical
-                            : AppTheme.success,
-                        subtitle: 'Battery Drop',
-                      ),
-                    ],
+                    ),
                   ),
-                  loading: () => const SliverToBoxAdapter(
-                    child: Center(child: CupertinoActivityIndicator()),
-                  ),
-                  error: (e, _) => SliverToBoxAdapter(
-                    child: Center(child: Text('Error loading telemetry: $e')),
-                  ),
-                ),
-              ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
-              // Location Module
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                sliver: SliverToBoxAdapter(
-                  child: trackerAsync.when(
-                    data: (tracker) =>
-                        _LocationModule(lat: tracker?.lat, lng: tracker?.lon),
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, _) => const SizedBox.shrink(),
-                  ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
-
-              // Actions Section
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Remote Actions',
-                        style: AppTheme.heading2.copyWith(fontSize: 18),
-                      ),
-                      const SizedBox(height: 16),
-                      _ActionButton(
-                        title: 'Identify Device',
-                        subtitle: 'Flash LEDs and beep buzzer',
-                        icon: CupertinoIcons.lightbulb_fill,
-                        onTap: isThisDeviceConnected
-                            ? () => bleService.identifyDevice()
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      _ActionButton(
-                        title: 'Reboot Device',
-                        subtitle: 'Perform a soft system reset',
-                        icon: CupertinoIcons.restart,
-                        onTap: isThisDeviceConnected
-                            ? () => bleService.rebootDevice()
-                            : null,
-                        isDestructive: true,
-                      ),
-                      const SizedBox(height: 12),
-                      _ActionButton(
-                        title: 'WiFi OTA Settings',
-                        subtitle: 'Configure GitHub auto-updates',
-                        icon: CupertinoIcons.cloud_download,
-                        onTap: isThisDeviceConnected
-                            ? () => _showWiFiOtaDialog(context, ref, bleService)
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      _ActionButton(
-                        title: 'Reset WiFi Config',
-                        subtitle: 'Clear saved credentials',
-                        icon: CupertinoIcons.wifi_exclamationmark,
-                        onTap: isThisDeviceConnected
-                            ? () => bleService.resetWifiConfig()
-                            : null,
-                        isDestructive: true,
-                      ),
-                    ],
+                // Telemetry Grid
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  sliver: trackerAsync.when(
+                    data: (tracker) => SliverGrid.count(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 1.2,
+                      children: [
+                        Builder(
+                          builder: (_) {
+                            final bat = tracker?.batteryLevel;
+                            // ADC reads near-zero when no battery is connected
+                            // (USB-powered only). A LiPo never drops below ~3.0V.
+                            final isUsbPowered = bat != null && bat < 1.0;
+                            return _TelemetryModule(
+                              title: 'Battery',
+                              value: isUsbPowered
+                                  ? 'USB'
+                                  : '${bat?.toStringAsFixed(0) ?? "--"}%',
+                              icon: isUsbPowered
+                                  ? CupertinoIcons.bolt_fill
+                                  : CupertinoIcons.battery_100,
+                              color: isUsbPowered
+                                  ? AppTheme.primary
+                                  : (bat ?? 0) < 20
+                                  ? AppTheme.warning
+                                  : AppTheme.success,
+                              subtitle: isUsbPowered
+                                  ? 'Wired Power'
+                                  : 'Charge Level',
+                            );
+                          },
+                        ),
+                        _TelemetryModule(
+                          title: 'Temperature',
+                          value:
+                              '${tracker?.temp?.toStringAsFixed(1) ?? "--"}°C',
+                          icon: CupertinoIcons.thermometer,
+                          color: (tracker?.temp ?? 0) > 30
+                              ? AppTheme.warning
+                              : AppTheme.primary,
+                          subtitle:
+                              tracker?.additionalTemps != null &&
+                                  tracker!.additionalTemps!.isNotEmpty
+                              ? 'Core (Aux: ${tracker.additionalTemps})'
+                              : 'Core Temp',
+                        ),
+                        _TelemetryModule(
+                          title: 'Shock',
+                          value: tracker?.shockValue != null
+                              ? '${tracker!.shockValue}G'
+                              : '--',
+                          icon: CupertinoIcons.wind,
+                          color: (tracker?.shockValue ?? 0) > 2
+                              ? AppTheme.warning
+                              : AppTheme.primary,
+                          subtitle: 'Impact Force',
+                        ),
+                        _TelemetryModule(
+                          title: 'Signal',
+                          value:
+                              '-- dBm', // We don't have live RSSI in Tracker table yet
+                          icon: CupertinoIcons.antenna_radiowaves_left_right,
+                          color: AppTheme.textSecondary,
+                          subtitle: 'RSSI',
+                        ),
+                        _TelemetryModule(
+                          title: 'Health',
+                          value: tracker?.batteryDrop != null
+                              ? '${tracker!.batteryDrop!.toStringAsFixed(0)}mV'
+                              : '--',
+                          icon: CupertinoIcons.heart_fill,
+                          color: (tracker?.batteryDrop ?? 0) > 150
+                              ? AppTheme.critical
+                              : AppTheme.success,
+                          subtitle: 'Battery Drop',
+                        ),
+                      ],
+                    ),
+                    loading: () => const SliverToBoxAdapter(
+                      child: Center(child: CupertinoActivityIndicator()),
+                    ),
+                    error: (e, _) => SliverToBoxAdapter(
+                      child: Center(child: Text('Error loading telemetry: $e')),
+                    ),
                   ),
                 ),
-              ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
-          ),
+                const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-          FloatingHeader(
-            title: 'Device Details',
-            showBackButton: true,
-            trailing: isThisDeviceConnected
-                ? const _ActivePulse()
-                : const SizedBox.shrink(),
-          ),
-        ],
+                // Location Module
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  sliver: SliverToBoxAdapter(
+                    child: trackerAsync.when(
+                      data: (tracker) =>
+                          _LocationModule(lat: tracker?.lat, lng: tracker?.lon),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+
+                const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+                // Actions Section
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Remote Actions',
+                          style: AppTheme.heading2.copyWith(fontSize: 18),
+                        ),
+                        const SizedBox(height: 16),
+                        _ActionButton(
+                          title: 'Identify Device',
+                          subtitle: 'Flash LEDs and beep buzzer',
+                          icon: CupertinoIcons.lightbulb_fill,
+                          onTap: isThisDeviceConnected
+                              ? () => bleService.identifyDevice()
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        _ActionButton(
+                          title: 'Reboot Device',
+                          subtitle: 'Perform a soft system reset',
+                          icon: CupertinoIcons.restart,
+                          onTap: isThisDeviceConnected
+                              ? () => bleService.rebootDevice()
+                              : null,
+                          isDestructive: true,
+                        ),
+                        const SizedBox(height: 12),
+                        _ActionButton(
+                          title: 'WiFi OTA Settings',
+                          subtitle: 'Configure GitHub auto-updates',
+                          icon: CupertinoIcons.cloud_download,
+                          onTap: isThisDeviceConnected
+                              ? () =>
+                                    _showWiFiOtaDialog(context, ref, bleService)
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        _ActionButton(
+                          title: 'Reset WiFi Config',
+                          subtitle: 'Clear saved credentials',
+                          icon: CupertinoIcons.wifi_exclamationmark,
+                          onTap: isThisDeviceConnected
+                              ? () => bleService.resetWifiConfig()
+                              : null,
+                          isDestructive: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
+            ),
+
+            FloatingHeader(
+              title: 'Device Details',
+              showBackButton: true,
+              trailing: isThisDeviceConnected
+                  ? const _ActivePulse()
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -5,6 +5,8 @@ import 'package:last_mile_tracker/domain/models/notification.dart';
 import 'package:last_mile_tracker/presentation/providers/notification_provider.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
+import 'package:flutter/services.dart';
+import 'package:last_mile_tracker/presentation/widgets/swipe_action_cell.dart';
 import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -91,58 +93,93 @@ class _NotificationTile extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: GestureDetector(
-        onTap: () =>
-            ref.read(notificationProvider.notifier).markAsRead(notification.id),
-        child: GlassContainer(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+      child: SwipeActionCell(
+        groupTag: notification.id,
+        startActions: [
+          createSwipeAction(
+            icon: notification.isRead
+                ? CupertinoIcons.check_mark_circled
+                : CupertinoIcons.check_mark_circled_solid,
+            label: notification.isRead ? 'Unread' : 'Read',
+            color: CupertinoTheme.of(context).primaryColor,
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              if (notification.isRead) {
+                // Potential feature: Mark as unread
+              } else {
+                ref
+                    .read(notificationProvider.notifier)
+                    .markAsRead(notification.id);
+              }
+            },
+          ),
+        ],
+        endActions: [
+          createSwipeAction(
+            icon: CupertinoIcons.trash,
+            label: 'Delete',
+            color: AppTheme.critical,
+            onPressed: () {
+              HapticFeedback.heavyImpact();
+              ref.read(notificationProvider.notifier).remove(notification.id);
+            },
+          ),
+        ],
+        child: GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            ref.read(notificationProvider.notifier).markAsRead(notification.id);
+          },
+          child: GlassContainer(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 20),
                 ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(notification.title, style: AppTheme.heading2),
-                        if (!notification.isRead)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: CupertinoTheme.of(context).primaryColor,
-                              shape: BoxShape.circle,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(notification.title, style: AppTheme.heading2),
+                          if (!notification.isRead)
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: CupertinoTheme.of(context).primaryColor,
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      notification.message,
-                      style: AppTheme.body.copyWith(
-                        color: CupertinoColors.systemGrey,
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      timeago.format(notification.timestamp),
-                      style: AppTheme.caption.copyWith(fontSize: 10),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        notification.message,
+                        style: AppTheme.body.copyWith(
+                          color: CupertinoColors.systemGrey,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        timeago.format(notification.timestamp),
+                        style: AppTheme.caption.copyWith(fontSize: 10),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

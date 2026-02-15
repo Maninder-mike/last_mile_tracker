@@ -6,6 +6,7 @@ import 'package:last_mile_tracker/core/constants/app_constants.dart';
 import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
 import 'package:lmt_models/lmt_models.dart' as models;
 import '../../widgets/glass_container.dart';
+import '../../widgets/skeleton_loader.dart';
 import '../../widgets/floating_header.dart';
 import '../../widgets/empty_state_widget.dart';
 
@@ -72,8 +73,11 @@ class LogsPage extends ConsumerWidget {
                     }, childCount: readings.length),
                   );
                 },
-                loading: () => const SliverFillRemaining(
-                  child: Center(child: CupertinoActivityIndicator()),
+                loading: () => SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => SkeletonLoader.logItem(),
+                    childCount: 10,
+                  ),
                 ),
                 error: (err, stack) => SliverFillRemaining(
                   child: Center(child: Text('Error: $err')),

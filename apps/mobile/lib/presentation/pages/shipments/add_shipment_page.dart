@@ -8,6 +8,8 @@ import 'package:last_mile_tracker/domain/models/shipment.dart';
 import 'package:last_mile_tracker/presentation/providers/supabase_providers.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:flutter/services.dart';
+
 class AddShipmentPage extends ConsumerStatefulWidget {
   const AddShipmentPage({super.key});
 
@@ -42,7 +44,10 @@ class _AddShipmentPageState extends ConsumerState<AddShipmentPage> {
           actions: [
             CupertinoDialogAction(
               child: const Text('OK'),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                Navigator.pop(context);
+              },
             ),
           ],
         ),
@@ -64,6 +69,8 @@ class _AddShipmentPageState extends ConsumerState<AddShipmentPage> {
       );
 
       await ref.read(supabaseServiceProvider).createShipment(shipment);
+
+      HapticFeedback.vibrate();
 
       if (mounted) {
         Navigator.of(context).pop();

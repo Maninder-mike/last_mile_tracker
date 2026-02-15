@@ -1,0 +1,287 @@
+name: Play Store Build, Sign, Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+    paths:
+      - "apps/mobile/pubspec.yaml"
+      - "apps/mobile/lib/**"
+      - "apps/mobile/android/**"
+      - ".github/workflows/play_store_release.yml"
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Update track (internal, alpha, beta, production)'
+        required: true
+        default: 'alpha'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      status:
+        description: 'Release status (completed, draft, inProgress, halted)'
+        required: true
+        default: 'completed'
+        type: choice
+        options:
+          - completed
+          - draft
+          - inProgress
+          - halted
+
+jobs:
+  # -----------------------------------------------------------------------------
+  # Job 1: Quality Check (Tests, Lint)
+  # -----------------------------------------------------------------------------
+  quality_check:
+    name: 🛡️ Quality Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            apps/mobile/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        run: |
+          echo "📦 Installing Flutter dependencies..."
+          flutter pub get
+          cd apps/mobile
+          flutter pub get
+
+      - name: Analyze code
+        run: |
+          echo "🔍 Analyzing code..."
+          cd apps/mobile
+          flutter analyze || echo "::warning::Analysis found issues but continuing build"
+
+      - name: Run Tests
+        run: |
+          echo "🧪 Running tests..."
+          cd apps/mobile
+          flutter test --reporter=github
+
+  # -----------------------------------------------------------------------------
+  # Job 2: Build (APK & AAB)
+  # -----------------------------------------------------------------------------
+  build:
+    name: 🏗️ Build Android Apps
+    needs: quality_check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      version_code: ${{ steps.version.outputs.version_code }}
+      version_number: ${{ steps.version.outputs.version_number }}
+      apk_size: ${{ steps.size_check.outputs.apk_size_mb }}
+    env:
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check and Increment Version
+        id: version
+        run: |
+          # Get full version line, e.g. "0.1.0+3"
+          FULL_VERSION=$(grep '^version:' apps/mobile/pubspec.yaml | sed 's/version: //')
+
+          # Initialize loop variables
+          CURRENT_VERSION="$FULL_VERSION"
+          TAG="v$CURRENT_VERSION"
+          UPDATED=false
+
+          # Loop to find a unique version (optional auto-increment)
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "⚠️ Version $TAG already exists. Auto-incrementing build number..."
+            UPDATED=true
+
+            BASE_VERSION=$(echo $CURRENT_VERSION | sed 's/+.*//')
+            BUILD_NUMBER=$(echo $CURRENT_VERSION | sed 's/.*+//')
+
+            NEW_BUILD_NUMBER=$((BUILD_NUMBER + 1))
+            CURRENT_VERSION="$BASE_VERSION+$NEW_BUILD_NUMBER"
+            TAG="v$CURRENT_VERSION"
+          fi
+
+          if [ "$UPDATED" = true ]; then
+             echo "🆙 Bumping version to: $CURRENT_VERSION"
+             sed -i "s/version: $FULL_VERSION/version: $CURRENT_VERSION/" apps/mobile/pubspec.yaml
+
+             git config user.name "GitHub Actions"
+             git config user.email "actions@github.com"
+             git add apps/mobile/pubspec.yaml
+             git commit -m "chore: bump version to $CURRENT_VERSION [skip ci]"
+             git push
+          fi
+
+          echo "version=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          FINAL_BUILD_NUMBER=$(echo $CURRENT_VERSION | sed 's/.*+//')
+          echo "version_code=$FINAL_BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "version_number=$(echo $CURRENT_VERSION | sed 's/+.*//')" >> $GITHUB_OUTPUT
+
+          echo "📦 Building version: v$CURRENT_VERSION (Code: $FINAL_BUILD_NUMBER)"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Decode Keystore & Secrets
+        env:
+            GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          echo "🔐 Preparing Secrets..."
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release.jks
+
+          # Key Properties
+          echo "storePassword=$KEYSTORE_PASSWORD" > apps/mobile/android/key.properties
+          echo "keyPassword=$KEY_PASSWORD" >> apps/mobile/android/key.properties
+          echo "keyAlias=$(echo $KEY_ALIAS | xargs)" >> apps/mobile/android/key.properties
+          echo "storeFile=$GITHUB_WORKSPACE/release.jks" >> apps/mobile/android/key.properties
+
+          # Google Services
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > apps/mobile/android/app/google-services.json
+
+      - name: Build Artifacts
+        run: |
+          cd apps/mobile
+          flutter pub get
+          echo "🏗️ Building release..."
+          flutter build apk --release --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
+          flutter build appbundle --release --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
+
+      - name: Verify APK Signature
+        run: |
+            APK_PATH="apps/mobile/build/app/outputs/flutter-apk/app-release.apk"
+            APKSIGNER=$(find $ANDROID_HOME -name "apksigner" -type f | head -1)
+            $APKSIGNER verify --verbose --print-certs "$APK_PATH"
+
+      - name: Bundle Size Check
+        id: size_check
+        run: |
+          APK_PATH="apps/mobile/build/app/outputs/flutter-apk/app-release.apk"
+          AAB_PATH="apps/mobile/build/app/outputs/bundle/release/app-release.aab"
+
+          APK_SIZE=$(stat -c%s "$APK_PATH" 2>/dev/null || stat -f%z "$APK_PATH")
+          AAB_SIZE=$(stat -c%s "$AAB_PATH" 2>/dev/null || stat -f%z "$AAB_PATH")
+
+          APK_SIZE_MB=$(echo "scale=2; $APK_SIZE / 1048576" | bc)
+          AAB_SIZE_MB=$(echo "scale=2; $AAB_SIZE / 1048576" | bc)
+
+          echo "apk_size_mb=$APK_SIZE_MB" >> $GITHUB_OUTPUT
+
+          echo "## 📊 Bundle Size" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifact | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| APK | ${APK_SIZE_MB} MB |" >> $GITHUB_STEP_SUMMARY
+          echo "| AAB | ${AAB_SIZE_MB} MB |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Stage Artifacts
+        run: |
+          mkdir -p staging
+          cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk staging/
+          cp apps/mobile/build/app/outputs/bundle/release/app-release.aab staging/
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+            name: mobile-build-artifacts
+            path: staging/*
+            retention-days: 1
+
+  # -----------------------------------------------------------------------------
+  # Job 3: Release (Play Store & GitHub)
+  # -----------------------------------------------------------------------------
+  release:
+    name: 🚀 Release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+            name: mobile-build-artifacts
+            path: artifacts
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+             VERSION_NUMBER=${{ needs.build.outputs.version_number }}
+             PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+             if [ -z "$PREV_TAG" ]; then
+                COMMITS=$(git log --pretty=format:"• %s" -10)
+             else
+                COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"• %s" --no-merges | head -15)
+             fi
+
+             cat > RELEASE_NOTES.md << EOF
+             # Last Mile Tracker v${VERSION_NUMBER} 🚀
+
+             ## 📝 What's Changed
+             $COMMITS
+
+             ## 📥 Download
+             - **APK Size**: ${{ needs.build.outputs.apk_size }} MB
+             EOF
+
+      - name: Upload to Play Store
+        uses: r0adkll/upload-google-play@v1
+        with:
+            serviceAccountJsonPlainText: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
+            packageName: maninder.co.in.last_mile_tracker
+            releaseFiles: artifacts/app-release.aab
+            track: ${{ github.event.inputs.track || 'alpha' }}
+            status: ${{ github.event.inputs.status || 'completed' }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+            tag_name: ${{ needs.build.outputs.version }}
+            name: Release ${{ needs.build.outputs.version }}
+            body_path: RELEASE_NOTES.md
+            files: artifacts/app-release.apk
+            fail_on_unmatched_files: true
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

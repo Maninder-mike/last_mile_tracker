@@ -223,6 +223,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                                 label: 'Delete',
                                 color: AppTheme.critical,
                                 onPressed: () {
+                                  HapticFeedback.heavyImpact();
                                   debugPrint('Delete: ${shipment.id}');
                                 },
                               ),
@@ -266,7 +267,10 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
               label: 'Add shipment',
               button: true,
               child: CupertinoButton(
-                minimumSize: Size(AppTheme.iconSizeMedium, AppTheme.iconSizeMedium),
+                minimumSize: Size(
+                  AppTheme.iconSizeMedium,
+                  AppTheme.iconSizeMedium,
+                ),
                 padding: EdgeInsets.zero,
                 onPressed: () {
                   Navigator.of(context).push(

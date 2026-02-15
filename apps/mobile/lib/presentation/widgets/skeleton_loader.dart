@@ -51,11 +51,7 @@ class SkeletonLoader extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const SkeletonLoader(width: 120, height: 20),
-                const SkeletonLoader(
-                  width: 60,
-                  height: 20,
-                  borderRadius: 12,
-                ),
+                const SkeletonLoader(width: 60, height: 20, borderRadius: 12),
               ],
             ),
             AppGaps.large,
@@ -80,11 +76,7 @@ class SkeletonLoader extends StatelessWidget {
         padding: AppPadding.card,
         child: Row(
           children: [
-            const SkeletonLoader(
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-            ),
+            const SkeletonLoader(width: 48, height: 48, borderRadius: 24),
             AppGaps.horizontalLarge,
             Expanded(
               child: Column(
@@ -97,6 +89,37 @@ class SkeletonLoader extends StatelessWidget {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget logItem() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceGlass,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SkeletonLoader(width: 60, height: 16),
+                AppGaps.small,
+                const SkeletonLoader(width: 40, height: 12),
+              ],
+            ),
+            const Spacer(),
+            const SkeletonLoader(width: 80, height: 14),
+            AppGaps.horizontalLarge,
+            const SkeletonLoader(width: 60, height: 14),
           ],
         ),
       ),

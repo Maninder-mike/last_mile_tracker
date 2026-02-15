@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart' show Colors;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
@@ -204,6 +205,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                                 label: 'Ping',
                                 color: AppTheme.primary,
                                 onPressed: () {
+                                  HapticFeedback.mediumImpact();
                                   debugPrint('Ping: ${tracker.id}');
                                 },
                               ),
@@ -216,6 +218,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                                     ? AppTheme.critical
                                     : AppTheme.success,
                                 onPressed: () {
+                                  HapticFeedback.selectionClick();
                                   if (isConnected) {
                                     ref.read(bleServiceProvider).disconnect();
                                   } else {
@@ -227,35 +230,42 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                               ),
                             ],
                             child: GestureDetector(
-                              onTap: () => Navigator.of(context).push(
-                                CupertinoPageRoute(
-                                  builder: (context) => DeviceDetailPage(
-                                    deviceId: tracker.id,
-                                    initialName: tracker.name.isEmpty
-                                        ? 'Unknown Device'
-                                        : tracker.name,
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                Navigator.of(context).push(
+                                  CupertinoPageRoute(
+                                    builder: (context) => DeviceDetailPage(
+                                      deviceId: tracker.id,
+                                      initialName: tracker.name.isEmpty
+                                          ? 'Unknown Device'
+                                          : tracker.name,
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                               child: EntranceAnimation(
                                 index: index,
-                                child: _DeviceCard(
-                                  id: tracker.id,
-                                  name: tracker.name.isEmpty
-                                      ? 'Unknown Device'
-                                      : tracker.name,
-                                  status: isConnected
-                                      ? 'Connected'
-                                      : tracker.status,
-                                  battery: (tracker.batteryLevel ?? 0).toInt(),
-                                  lastSeen: _formatLastSeen(tracker.lastSeen),
-                                  isCritical:
-                                      (tracker.batteryLevel ?? 0) < 20 ||
-                                      (tracker.shockValue ?? 0) > 0,
-                                  isFavorite: ref.watch(
-                                    isFavoriteProvider(tracker.id),
+                                child: Hero(
+                                  tag: 'device_card_${tracker.id}',
+                                  child: _DeviceCard(
+                                    id: tracker.id,
+                                    name: tracker.name.isEmpty
+                                        ? 'Unknown Device'
+                                        : tracker.name,
+                                    status: isConnected
+                                        ? 'Connected'
+                                        : tracker.status,
+                                    battery: (tracker.batteryLevel ?? 0)
+                                        .toInt(),
+                                    lastSeen: _formatLastSeen(tracker.lastSeen),
+                                    isCritical:
+                                        (tracker.batteryLevel ?? 0) < 20 ||
+                                        (tracker.shockValue ?? 0) > 0,
+                                    isFavorite: ref.watch(
+                                      isFavoriteProvider(tracker.id),
+                                    ),
+                                    type: 'Tracker',
                                   ),
-                                  type: 'Tracker',
                                 ),
                               ),
                             ),
