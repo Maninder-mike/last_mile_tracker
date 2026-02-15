@@ -11,12 +11,16 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:last_mile_tracker/core/utils/file_logger.dart';
 import 'presentation/app.dart';
-import 'core/utils/file_logger.dart';
 import 'core/services/config_service.dart';
 import 'core/config/supabase_config.dart';
+import 'core/services/background_service.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await BackgroundServiceInstance.initialize();
+
   runZonedGuarded(
     () async {
       debugPrint('Init: WidgetsFlutterBinding initialized');
@@ -27,8 +31,8 @@ void main() async {
       // Initialize App Check
       debugPrint('Init: Activating App Check...');
       await FirebaseAppCheck.instance.activate(
-        appleProvider: AppleProvider.debug,
-        androidProvider: AndroidProvider.debug,
+        providerApple: const AppleDebugProvider(),
+        providerAndroid: const AndroidDebugProvider(),
       );
       debugPrint('Init: App Check activated');
 

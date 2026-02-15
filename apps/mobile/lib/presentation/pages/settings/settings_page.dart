@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:last_mile_tracker/presentation/providers/theme_provider.dart';
 
 import 'package:last_mile_tracker/core/config/support_config.dart';
@@ -45,6 +46,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
               if (role != SettingsRole.driver) _buildOperationsSection(),
               _buildAppearanceSection(),
+              _buildBackgroundSection(),
               _buildNotificationsSection(),
               _buildSupportSection(),
 
@@ -214,6 +216,57 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               : null,
         ),
       ),
+    );
+  }
+
+  Widget _buildBackgroundSection() {
+    return FutureBuilder<bool>(
+      future: FlutterBackgroundService().isRunning(),
+      builder: (context, snapshot) {
+        final isRunning = snapshot.data ?? false;
+
+        return CupertinoListSection.insetGrouped(
+          header: const Text('BACKGROUND MODE'),
+          footer: const Text(
+            'Keep BLE active even when the app is closed or backgrounded. This ensures data is always logged.',
+          ),
+          margin: SettingsTheme.sectionMargin,
+          children: [
+            CupertinoListTile(
+              title: const Text('Persistent Connection'),
+              leading: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: isRunning
+                      ? CupertinoColors.activeGreen.withValues(alpha: 0.1)
+                      : CupertinoColors.systemGrey.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  CupertinoIcons.bolt_horizontal_circle,
+                  color: isRunning
+                      ? CupertinoColors.activeGreen
+                      : CupertinoColors.systemGrey,
+                  size: 20,
+                ),
+              ),
+              trailing: CupertinoSwitch(
+                value: isRunning,
+                onChanged: (value) async {
+                  HapticFeedback.selectionClick();
+                  final service = FlutterBackgroundService();
+                  if (value) {
+                    await service.startService();
+                  } else {
+                    service.invoke('stopService');
+                  }
+                  setState(() {}); // Refresh UI
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
