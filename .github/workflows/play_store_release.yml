@@ -69,8 +69,14 @@ jobs:
 
       - name: Generate Code (build_runner)
         run: |
-          echo "🛠️ Generating code..."
-          cd apps/mobile
+          echo "🛠️ Generating code for lmt_models..."
+          cd packages/lmt_models
+          dart pub get
+          dart run build_runner build --delete-conflicting-outputs
+          
+          echo "🛠️ Generating code for mobile app..."
+          cd ../../apps/mobile
+          flutter pub get
           dart run build_runner build --delete-conflicting-outputs
 
       - name: Analyze code
@@ -192,7 +198,14 @@ jobs:
           cd apps/mobile
           flutter clean
           flutter pub get
-          echo "🛠️ Generating code..."
+          echo "🛠️ Generating code for lmt_models..."
+          cd ../../packages/lmt_models
+          dart pub get
+          dart run build_runner build --delete-conflicting-outputs
+
+          echo "🛠️ Generating code for mobile app..."
+          cd ../../apps/mobile
+          flutter pub get
           dart run build_runner build --delete-conflicting-outputs
           echo "🏗️ Building release..."
           flutter build apk --release --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
