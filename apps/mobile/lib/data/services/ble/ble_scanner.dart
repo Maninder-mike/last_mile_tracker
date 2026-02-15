@@ -133,6 +133,80 @@ class BleScanner {
     }
   }
 
+  /// Checks OS-level connected and bonded devices.
+  /// Useful for quick reconnection without full scan.
+  Future<void> checkKnownDevices() async {
+    _ensureController();
+    FileLogger.log("Scanner: Checking known/connected devices...");
+
+    try {
+      // 1. Check devices currently connected to the system
+      final connected = FlutterBluePlus.connectedDevices;
+      for (var device in connected) {
+        if (_isTargetDeviceFromDevice(device)) {
+          _addDeviceToDiscovered(device, rssi: -50); // Dummy RSSI
+        }
+      }
+
+      // 2. Check bonded devices (Android only)
+      if (Platform.isAndroid) {
+        final bonded = await FlutterBluePlus.bondedDevices;
+        for (var device in bonded) {
+          if (_isTargetDeviceFromDevice(device)) {
+            _addDeviceToDiscovered(device, rssi: -60); // Dummy RSSI
+          }
+        }
+      }
+
+      _discoveredController.add(List.unmodifiable(_discoveredDevices));
+    } catch (e) {
+      FileLogger.log("Scanner: checkKnownDevices error: $e");
+    }
+  }
+
+  bool _isTargetDeviceFromDevice(BluetoothDevice device) {
+    final name = device.platformName;
+    return name == BleConstants.deviceName ||
+        name.startsWith(BleConstants.deviceName);
+  }
+
+  void _addDeviceToDiscovered(BluetoothDevice device, {required int rssi}) {
+    final index = _discoveredDevices.indexWhere(
+      (t) => t.device.remoteId == device.remoteId,
+    );
+    if (index == -1) {
+      _discoveredDevices.add(
+        ScannedTracker(
+          device: device,
+          rssi: rssi,
+          lastSeen: DateTime.now(),
+          advertisementData:
+              null, // No advertisement data available for connected devices
+          telemetry: null,
+        ),
+      );
+      FileLogger.log("Scanner: Picked up known device: ${device.platformName}");
+    }
+  }
+
+  /// Updates the telemetry for a specific device.
+  /// Used for connected devices receiving data via notifications.
+  void updateDeviceTelemetry(
+    DeviceIdentifier remoteId,
+    SensorReading telemetry,
+  ) {
+    final index = _discoveredDevices.indexWhere(
+      (t) => t.device.remoteId == remoteId,
+    );
+    if (index != -1) {
+      _discoveredDevices[index] = _discoveredDevices[index].copyWith(
+        telemetry: telemetry,
+        lastSeen: DateTime.now(),
+      );
+      _discoveredController.add(List.unmodifiable(_discoveredDevices));
+    }
+  }
+
   SensorReading? _extractTelemetry(ScanResult result) {
     // 1. Try Service Data (UUID 181A)
     final serviceData = result.advertisementData.serviceData;

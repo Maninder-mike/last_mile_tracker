@@ -236,7 +236,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                                   CupertinoPageRoute(
                                     builder: (context) => DeviceDetailPage(
                                       deviceId: tracker.id,
-                                      initialName: tracker.name.isEmpty
+                                      name: tracker.name.isEmpty
                                           ? 'Unknown Device'
                                           : tracker.name,
                                     ),

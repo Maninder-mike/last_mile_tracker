@@ -259,21 +259,24 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
           children: [
             _buildDetailRow('Remote ID', device.remoteId.toString()),
             _buildDetailRow('RSSI', '${tracker.rssi} dBm'),
-            _buildDetailRow('Connectable', adv.connectable.toString()),
-            if (adv.txPowerLevel != null)
-              _buildDetailRow('TX Power', '${adv.txPowerLevel} dBm'),
-            if (adv.serviceUuids.isNotEmpty)
-              _buildDetailRow('Service UUIDs', adv.serviceUuids.join(', ')),
-            if (adv.manufacturerData.isNotEmpty)
-              _buildDetailRow(
-                'Manuf. Data',
-                _formatBytes(adv.manufacturerData.values.first),
-              ),
-            if (adv.serviceData.isNotEmpty)
-              _buildDetailRow(
-                'Service Data',
-                _formatBytes(adv.serviceData.values.first),
-              ),
+            if (adv != null) ...[
+              _buildDetailRow('Connectable', adv.connectable.toString()),
+              if (adv.txPowerLevel != null)
+                _buildDetailRow('TX Power', '${adv.txPowerLevel} dBm'),
+              if (adv.serviceUuids.isNotEmpty)
+                _buildDetailRow('Service UUIDs', adv.serviceUuids.join(', ')),
+              if (adv.manufacturerData.isNotEmpty)
+                _buildDetailRow(
+                  'Manuf. Data',
+                  _formatBytes(adv.manufacturerData.values.first),
+                ),
+              if (adv.serviceData.isNotEmpty)
+                _buildDetailRow(
+                  'Service Data',
+                  _formatBytes(adv.serviceData.values.first),
+                ),
+            ] else
+              _buildDetailRow('Status', 'System Connected / Bonded'),
           ],
         ),
         actions: [

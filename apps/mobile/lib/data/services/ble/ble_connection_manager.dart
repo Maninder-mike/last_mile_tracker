@@ -93,12 +93,16 @@ class BleConnectionManager {
 
       for (var characteristic in service.characteristics) {
         final charUuid = characteristic.uuid.toString().toUpperCase();
-        FileLogger.log("ConnectionManager: Found Characteristic $charUuid");
+        FileLogger.log(
+          "ConnectionManager: Checking Characteristic $charUuid (Properties: ${characteristic.properties})",
+        );
 
         // 1. WiFi Config (FF01)
         if (_isUuidMatch(charUuid, BleConstants.wifiConfigUuid)) {
           _wifiChar = characteristic;
-          FileLogger.log("ConnectionManager: Identified WiFi Config Char");
+          FileLogger.log(
+            "ConnectionManager: SUCCESS - Identified WiFi Config Char: $charUuid",
+          );
           if (characteristic.properties.notify) {
             await characteristic.setNotifyValue(true);
             await _wifiSubscription?.cancel();
@@ -106,6 +110,10 @@ class BleConnectionManager {
               _handleWifiNotification(value);
             });
             FileLogger.log("ConnectionManager: Subscribed to WiFi Results");
+          } else {
+            FileLogger.log(
+              "ConnectionManager: WARNING - WiFi Config Char does NOT support Notify!",
+            );
           }
         }
         // 2. Sensor Data (2A6E)

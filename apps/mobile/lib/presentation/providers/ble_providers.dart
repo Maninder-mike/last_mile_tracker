@@ -31,15 +31,17 @@ Stream<List<ScannedTracker>> bleScanResults(Ref ref) {
 }
 
 @riverpod
-Stream<List<WifiScanResult>> wifiScanResults(Ref ref) {
+Stream<List<WifiScanResult>> wifiScanResults(Ref ref) async* {
   final service = ref.watch(bleServiceProvider);
-  return service.wifiScanResults;
+  yield service.lastWifiResults;
+  yield* service.wifiScanResults;
 }
 
 @riverpod
-Stream<bool> isWifiScanning(Ref ref) {
+Stream<bool> isWifiScanning(Ref ref) async* {
   final service = ref.watch(bleServiceProvider);
-  return service.isWifiScanning;
+  yield service.isWifiScanningState;
+  yield* service.isWifiScanning;
 }
 
 @riverpod

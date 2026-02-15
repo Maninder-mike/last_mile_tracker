@@ -58,6 +58,12 @@ class BleService {
   String? _deviceFirmwareVersion;
   String? get deviceFirmwareVersion => _deviceFirmwareVersion;
 
+  bool _isWifiScanning = false;
+  bool get isWifiScanningState => _isWifiScanning;
+
+  final List<WifiScanResult> _lastWifiResults = [];
+  List<WifiScanResult> get lastWifiResults => _lastWifiResults;
+
   // Data buffering for high-frequency sensor readings
   final List<db.SensorReadingsCompanion> _readingsBuffer = [];
   Timer? _bufferTimer;
@@ -81,13 +87,29 @@ class BleService {
 
     _otaManager = BleOtaManager();
     _simulationService = BleSimulationService(
-      onReadingGenerated: (reading) => _bufferReading(reading),
+      onReadingGenerated: (reading) {
+        _bufferReading(reading);
+        _liveTelemetryController.add(reading);
+
+        // If simulating "connected" device, we could update scanner here
+        // but simulation usually represents a device already "known" to the app.
+        final device = _connectionManager.device;
+        if (device != null) {
+          _scanner.updateDeviceTelemetry(device.remoteId, reading);
+        }
+      },
     );
 
     _startBufferTimer();
+    _init(); // Call the async init method
+  }
+
+  Future<void> _init() async {
+    await _initAutoConnect();
     _setupWifiStreams();
-    _initAutoConnect();
     _setupAutoConnectListener();
+    // Quick check for already connected/bonded devices
+    await _scanner.checkKnownDevices();
   }
 
   Future<void> _readDeviceFirmwareVersion() async {
@@ -139,19 +161,33 @@ class BleService {
 
   void _setupWifiStreams() {
     _cmWifiSub = _connectionManager.wifiScanResults.listen((results) {
-      if (!simulationActive) _wifiScanResultsController.add(results);
+      if (!simulationActive) {
+        _lastWifiResults.clear();
+        _lastWifiResults.addAll(results);
+        _wifiScanResultsController.add(results);
+      }
     });
 
     _simWifiSub = _simulationService.wifiScanResults.listen((results) {
-      if (simulationActive) _wifiScanResultsController.add(results);
+      if (simulationActive) {
+        _lastWifiResults.clear();
+        _lastWifiResults.addAll(results);
+        _wifiScanResultsController.add(results);
+      }
     });
 
     _cmScanSub = _connectionManager.isWifiScanning.listen((isScanning) {
-      if (!simulationActive) _isWifiScanningController.add(isScanning);
+      if (!simulationActive) {
+        _isWifiScanning = isScanning;
+        _isWifiScanningController.add(isScanning);
+      }
     });
 
     _simScanSub = _simulationService.isWifiScanning.listen((isScanning) {
-      if (simulationActive) _isWifiScanningController.add(isScanning);
+      if (simulationActive) {
+        _isWifiScanning = isScanning;
+        _isWifiScanningController.add(isScanning);
+      }
     });
   }
 
@@ -160,6 +196,12 @@ class BleService {
     if (reading != null) {
       _liveTelemetryController.add(reading);
       _bufferReading(reading);
+
+      // Update tracker in scanner so UI (Discovered Devices) shows real data
+      final device = _connectionManager.device;
+      if (device != null) {
+        _scanner.updateDeviceTelemetry(device.remoteId, reading);
+      }
     }
   }
 
