@@ -42,8 +42,11 @@ class LastMileTracker:
         }
 
         # Rule 5: Critical startup invariant assertions
-        assert self.config.get("shock_threshold") >= 0, "Invalid shock threshold"
-        assert self.config.get("ingest_interval") >= 1, "Ingest interval too low"
+        # Replaced assert with runtime check (B101 fix)
+        if self.config.get("shock_threshold") < 0:
+            raise ValueError("Invalid shock threshold")
+        if self.config.get("ingest_interval") < 1:
+            raise ValueError("Ingest interval too low")
 
         # Rule 3: Pre-allocate BLE data buffers to avoid heap churn
         self._v1_buf = bytearray(24)

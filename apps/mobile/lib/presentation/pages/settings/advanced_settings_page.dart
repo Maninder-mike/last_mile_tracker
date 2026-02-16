@@ -12,6 +12,7 @@ import 'package:last_mile_tracker/core/utils/file_logger.dart';
 import 'settings_theme.dart';
 import 'widgets/settings_tile.dart';
 import 'widgets/firmware_update_tile.dart';
+import 'widgets/glass_settings_section.dart';
 import '../../widgets/floating_header.dart';
 
 class AdvancedSettingsPage extends ConsumerStatefulWidget {
@@ -50,17 +51,15 @@ class _AdvancedSettingsPageState extends ConsumerState<AdvancedSettingsPage> {
   }
 
   Widget _buildUpdatesSection() {
-    return CupertinoListSection.insetGrouped(
-      header: const Text('FIRMWARE & SYSTEM'),
-      margin: SettingsTheme.sectionMargin,
-      children: const [FirmwareUpdateTile()],
+    return const GlassSettingsSection(
+      title: 'Firmware & System',
+      children: [FirmwareUpdateTile()],
     );
   }
 
   Widget _buildDataSection() {
-    return CupertinoListSection.insetGrouped(
-      header: const Text('DATA MANAGEMENT'),
-      margin: SettingsTheme.sectionMargin,
+    return GlassSettingsSection(
+      title: 'Data Management',
       children: [
         SettingsTile(
           title: 'Export Logs',
@@ -88,9 +87,8 @@ class _AdvancedSettingsPageState extends ConsumerState<AdvancedSettingsPage> {
   }
 
   Widget _buildDangerZone() {
-    return CupertinoListSection.insetGrouped(
-      header: const Text('DANGER ZONE'),
-      margin: SettingsTheme.sectionMargin,
+    return GlassSettingsSection(
+      title: 'Danger Zone',
       children: [
         SettingsTile(
           title: 'Reboot Device',
@@ -264,9 +262,8 @@ class _AdvancedSettingsPageState extends ConsumerState<AdvancedSettingsPage> {
   Widget _buildDeveloperSection() {
     final simulationState = ref.watch(simulationStateProvider);
 
-    return CupertinoListSection.insetGrouped(
-      header: const Text('DEVELOPER'),
-      margin: SettingsTheme.sectionMargin,
+    return GlassSettingsSection(
+      title: 'Developer',
       children: [
         SettingsTile(
           title: 'Simulate Tracker Data',

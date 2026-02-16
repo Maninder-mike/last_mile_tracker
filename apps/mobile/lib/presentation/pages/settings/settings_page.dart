@@ -17,6 +17,7 @@ import 'widgets/settings_tile.dart';
 import 'widgets/device_card.dart';
 import 'advanced_settings_page.dart';
 import 'notifications_settings_page.dart';
+import 'widgets/glass_settings_section.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -66,13 +67,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _buildOperationsSection() {
-    return CupertinoListSection.insetGrouped(
-      header: const Text('OPERATIONS'),
-      margin: SettingsTheme.sectionMargin,
+    return GlassSettingsSection(
+      title: 'Data & Sync',
       children: [
         SettingsTile(
-          title: 'Cloud Sync',
-          subtitle: 'Sync telemetry to portal',
+          title: 'Sync Data',
+          subtitle: 'Back up to the cloud',
           icon: CupertinoIcons.cloud_upload,
           iconColor: CupertinoColors.systemIndigo,
           trailing: _isSyncing
@@ -92,9 +92,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final themeState = ref.watch(themeProvider);
     final themeNotifier = ref.read(themeProvider.notifier);
 
-    return CupertinoListSection.insetGrouped(
-      header: const Text('APPEARANCE'),
-      margin: SettingsTheme.sectionMargin,
+    return GlassSettingsSection(
+      title: 'Appearance',
       children: [
         _buildThemeModeItem(themeState, themeNotifier),
         CupertinoListTile(
@@ -225,15 +224,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       builder: (context, snapshot) {
         final isRunning = snapshot.data ?? false;
 
-        return CupertinoListSection.insetGrouped(
-          header: const Text('BACKGROUND MODE'),
-          footer: const Text(
-            'Keep BLE active even when the app is closed or backgrounded. This ensures data is always logged.',
-          ),
-          margin: SettingsTheme.sectionMargin,
+        return GlassSettingsSection(
+          title: 'Tracking Behavior',
+          footer:
+              'Keep Tracking in Background ensures data is always logged even when the app is closed.',
           children: [
             CupertinoListTile(
-              title: const Text('Persistent Connection'),
+              title: const Text('Keep Tracking in Background'),
               leading: Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
@@ -271,9 +268,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _buildNotificationsSection() {
-    return CupertinoListSection.insetGrouped(
-      header: const Text('PREFERENCES'),
-      margin: SettingsTheme.sectionMargin,
+    return GlassSettingsSection(
+      title: 'Preferences',
       children: [
         SettingsTile(
           title: 'Notifications',
@@ -293,9 +289,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _buildSupportSection() {
-    return CupertinoListSection.insetGrouped(
-      header: const Text('HELP & SUPPORT'),
-      margin: SettingsTheme.sectionMargin,
+    return GlassSettingsSection(
+      title: 'Help & Support',
       children: [
         SettingsTile(
           title: 'Help Center',
@@ -314,8 +309,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _buildAdvancedSectionEntry() {
-    return CupertinoListSection.insetGrouped(
-      margin: SettingsTheme.sectionMargin,
+    return GlassSettingsSection(
       children: [
         SettingsTile(
           title: 'Advanced Settings',

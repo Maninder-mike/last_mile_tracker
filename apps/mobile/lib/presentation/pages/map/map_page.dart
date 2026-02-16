@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Colors;
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:flutter_map_marker_popup/flutter_map_marker_popup.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
@@ -35,7 +35,7 @@ class MapPage extends ConsumerStatefulWidget {
 
 class _MapPageState extends ConsumerState<MapPage>
     with TickerProviderStateMixin {
-  late final _mapController = AnimatedMapController(vsync: this);
+  final _mapController = MapController();
   final _popupController = PopupController();
   bool _isFollowingMode = true;
 
@@ -75,7 +75,7 @@ class _MapPageState extends ConsumerState<MapPage>
   }
 
   void _recenter(LatLng point) {
-    _mapController.animateTo(dest: point, zoom: 16.0);
+    _mapController.move(point, 16.0);
     setState(() => _isFollowingMode = true);
   }
 
@@ -85,21 +85,23 @@ class _MapPageState extends ConsumerState<MapPage>
     if (success) {
       final pos = ref.read(userLocationProvider).value;
       if (pos != null) {
-        _mapController.animateTo(dest: pos, zoom: 16.0);
+        _mapController.move(pos, 16.0);
         setState(() => _isFollowingMode = false);
       }
     }
   }
 
   void _zoomIn() {
-    _mapController.animateTo(
-      zoom: _mapController.mapController.camera.zoom + 1,
+    _mapController.move(
+      _mapController.camera.center,
+      _mapController.camera.zoom + 1,
     );
   }
 
   void _zoomOut() {
-    _mapController.animateTo(
-      zoom: _mapController.mapController.camera.zoom - 1,
+    _mapController.move(
+      _mapController.camera.center,
+      _mapController.camera.zoom - 1,
     );
   }
 
@@ -139,113 +141,142 @@ class _MapPageState extends ConsumerState<MapPage>
 
     // Auto-center in following mode (smooth camera)
     if (_isFollowingMode && readingData != null) {
-      _mapController.animateTo(dest: currentPoint);
+      _mapController.move(currentPoint, _mapController.camera.zoom);
     }
 
     final userLocationAsync = ref.watch(userLocationProvider);
     final userPos = userLocationAsync.value;
 
     return CupertinoPageScaffold(
-      child: Stack(
-        children: [
-          FlutterMap(
-            mapController: _mapController.mapController,
-            options: MapOptions(
-              initialCenter: currentPoint,
-              initialZoom: 15.0,
-              onPositionChanged: (pos, hasGesture) {
-                if (hasGesture && _isFollowingMode) {
-                  setState(() => _isFollowingMode = false);
-                }
-              },
-              onTap: (tapPosition, point) => _popupController.hideAllPopups(),
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: urlTemplate,
-                subdomains: const ['a', 'b', 'c', 'd'],
-                userAgentPackageName: 'com.last_mile_tracker.app',
+      child: PopupScope(
+        popupController: _popupController,
+        child: Stack(
+          children: [
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: currentPoint,
+                initialZoom: 15.0,
+                onPositionChanged: (pos, hasGesture) {
+                  if (hasGesture && _isFollowingMode) {
+                    setState(() => _isFollowingMode = false);
+                  }
+                },
+                onTap: (tapPosition, point) => _popupController.hideAllPopups(),
               ),
-              if (pathData != null && pathData.isNotEmpty)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: pathData
-                          .map((e) => LatLng(e.lat, e.lon))
-                          .toList(),
-                      color: CupertinoTheme.of(
-                        context,
-                      ).primaryColor.withValues(alpha: 0.6),
-                      strokeWidth: 5.0,
-                    ),
-                  ],
-                ),
-              PopupMarkerLayer(
-                options: PopupMarkerLayerOptions(
-                  popupController: _popupController,
-                  markers: [
-                    if (readingData != null)
-                      Marker(
-                        point: currentPoint,
-                        width: 60,
-                        height: 60,
-                        child: _LiveMarker(isFollowing: _isFollowingMode),
-                      ),
-                    if (userPos != null)
-                      Marker(
-                        point: userPos,
-                        width: 30,
-                        height: 30,
-                        child: const _UserMarker(),
-                      ),
-                  ],
-                  popupDisplayOptions: PopupDisplayOptions(
-                    builder: (context, marker) =>
-                        _MarkerPopup(reading: readingData!),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          // Telemetry Overlay
-          const TelemetryOverlay(),
-
-          // Map Controls Stack
-          Positioned(
-            bottom: 180,
-            right: 16,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                _MapControlButton(
-                  icon: CupertinoIcons.plus,
-                  onPressed: _zoomIn,
+                TileLayer(
+                  urlTemplate: urlTemplate,
+                  subdomains: const ['a', 'b', 'c', 'd'],
+                  userAgentPackageName: 'com.last_mile_tracker.app',
                 ),
-                const SizedBox(height: 8),
-                _MapControlButton(
-                  icon: CupertinoIcons.minus,
-                  onPressed: _zoomOut,
-                ),
-                const SizedBox(height: 16),
-                _MapControlButton(
-                  icon: CupertinoIcons.location_fill,
-                  onPressed: _centerOnUser,
-                ),
-                const SizedBox(height: 8),
-                _MapControlButton(
-                  icon: _isFollowingMode
-                      ? CupertinoIcons.scope
-                      : CupertinoIcons.scope,
-                  active: _isFollowingMode,
-                  onPressed: () => _recenter(currentPoint),
+                if (pathData != null && pathData.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: pathData
+                            .map((e) => LatLng(e.lat, e.lon))
+                            .toList(),
+                        color: CupertinoTheme.of(
+                          context,
+                        ).primaryColor.withValues(alpha: 0.6),
+                        strokeWidth: 5.0,
+                      ),
+                    ],
+                  ),
+                MarkerClusterLayerWidget(
+                  options: MarkerClusterLayerOptions(
+                    maxClusterRadius: 45,
+                    size: const Size(40, 40),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.all(50),
+                    maxZoom: 15,
+                    markers: [
+                      if (readingData != null)
+                        Marker(
+                          point: currentPoint,
+                          width: 60,
+                          height: 60,
+                          child: _LiveMarker(isFollowing: _isFollowingMode),
+                        ),
+                      if (userPos != null)
+                        Marker(
+                          point: userPos,
+                          width: 30,
+                          height: 30,
+                          child: const _UserMarker(),
+                        ),
+                    ],
+                    builder: (context, markers) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          color: CupertinoTheme.of(context).primaryColor,
+                        ),
+                        child: Center(
+                          child: Text(
+                            markers.length.toString(),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      );
+                    },
+                    popupOptions: PopupOptions(
+                      popupController: _popupController,
+                      popupBuilder: (context, marker) {
+                        if (readingData == null) return const SizedBox();
+                        // Only show popup for device marker, not user marker
+                        // Simple check: if marker point matches userPos, it's user marker
+                        if (userPos != null && marker.point == userPos) {
+                          return const SizedBox();
+                        }
+                        return _MarkerPopup(reading: readingData);
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
 
-          const FloatingHeader(title: 'Live Map'),
-        ],
+            // Telemetry Overlay
+            const TelemetryOverlay(),
+
+            // Map Controls Stack
+            Positioned(
+              bottom: 180,
+              right: 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MapControlButton(
+                    icon: CupertinoIcons.plus,
+                    onPressed: _zoomIn,
+                  ),
+                  const SizedBox(height: 8),
+                  _MapControlButton(
+                    icon: CupertinoIcons.minus,
+                    onPressed: _zoomOut,
+                  ),
+                  const SizedBox(height: 16),
+                  _MapControlButton(
+                    icon: CupertinoIcons.location_fill,
+                    onPressed: _centerOnUser,
+                  ),
+                  const SizedBox(height: 8),
+                  _MapControlButton(
+                    icon: _isFollowingMode
+                        ? CupertinoIcons.scope
+                        : CupertinoIcons.scope,
+                    active: _isFollowingMode,
+                    onPressed: () => _recenter(currentPoint),
+                  ),
+                ],
+              ),
+            ),
+
+            const FloatingHeader(title: 'Live Map'),
+          ],
+        ),
       ),
     );
   }

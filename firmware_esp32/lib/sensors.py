@@ -147,8 +147,10 @@ class SensorHub:
 
                 self._ds.convert_temp()  # Trigger next conversion for all
                 self._last_temp_read = time.ticks_ms()
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Sensor error: {e}")
+                if self.diagnostics:
+                    self.diagnostics.increment("temp_read_errors")
 
         shock = 0
         if self._mpu:
@@ -176,8 +178,14 @@ class SensorHub:
         self._read_result["internal_temp"] = self.read_internal_c()
 
         # Rule 5: Assertions for critical data sanity
-        assert -180 <= self._read_result["lon"] <= 180, "Lon out of bounds"
-        assert -90 <= self._read_result["lat"] <= 90, "Lat out of bounds"
+        # Replaced assert with runtime check (B101 fix)
+        if not (-180 <= self._read_result["lon"] <= 180):
+            print(f"Warning: Lon out of bounds: {self._read_result['lon']}")
+            self._read_result["lon"] = max(-180, min(180, self._read_result["lon"]))
+            
+        if not (-90 <= self._read_result["lat"] <= 90):
+            print(f"Warning: Lat out of bounds: {self._read_result['lat']}")
+            self._read_result["lat"] = max(-90, min(90, self._read_result["lat"]))
 
         return self._read_result
 
@@ -199,8 +207,10 @@ class SensorHub:
                             self._last_gps["speed"] = 0.0
                     else:
                         self._last_gps["fix"] = False
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"GPS parse error: {e}")
+                if self.diagnostics:
+                    self.diagnostics.increment("gps_parse_errors")
 
     def _parse_coord(self, value: str, direction: str) -> float:
         if not value or "." not in value:

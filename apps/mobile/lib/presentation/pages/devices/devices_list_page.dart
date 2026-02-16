@@ -14,6 +14,7 @@ import 'package:last_mile_tracker/presentation/widgets/swipe_action_cell.dart';
 import 'package:last_mile_tracker/presentation/widgets/skeleton_loader.dart';
 import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
 import 'package:last_mile_tracker/presentation/providers/optimistic_favorites_provider.dart';
+import 'package:last_mile_tracker/presentation/widgets/empty_state.dart';
 import 'device_detail_page.dart';
 
 class DevicesListPage extends ConsumerStatefulWidget {
@@ -140,17 +141,13 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                     }).toList();
 
                     if (filteredDevices.isEmpty) {
-                      return const SliverToBoxAdapter(
-                        child: Center(
-                          child: Padding(
-                            padding: EdgeInsets.only(top: 32.0),
-                            child: Text(
-                              'No devices found',
-                              style: TextStyle(
-                                color: CupertinoColors.systemGrey,
-                              ),
-                            ),
-                          ),
+                      return const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: EmptyState(
+                          icon: CupertinoIcons.search,
+                          title: 'No Devices Found',
+                          subtitle:
+                              'Try adjusting your filters or search query to find what you\'re looking for.',
                         ),
                       );
                     }
@@ -276,7 +273,10 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                   },
                   loading: () => SliverList(
                     delegate: SliverChildBuilderDelegate(
-                      (context, index) => SkeletonLoader.deviceCard(),
+                      (context, index) => Padding(
+                        padding: AppPadding.listItem,
+                        child: SkeletonLoader.deviceCard(),
+                      ),
                       childCount: 5,
                     ),
                   ),

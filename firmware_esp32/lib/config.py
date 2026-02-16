@@ -7,7 +7,7 @@ class Config:
     DEFAULTS = {
         "device_id": None,  # None means auto-generate from MAC
         "wifi_ssid": "",
-        "wifi_pass": "",
+        "wifi_pass": "",  # nosec
         "shock_threshold": 500,  # 0-1000 scale
         "sleep_timeout": 300,  # Seconds before deep sleep
         "adv_interval": 100,  # ms
@@ -20,7 +20,7 @@ class Config:
         "fleet_id": None,
         # Cloud Ingest
         "ingest_url": "",
-        "ingest_token": "",
+        "ingest_token": "",  # nosec
         "ingest_interval_sec": 60,
         # Firmware Version (semver)
         "firmware_version": "0.0.2",

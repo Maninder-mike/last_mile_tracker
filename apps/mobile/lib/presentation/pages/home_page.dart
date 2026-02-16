@@ -34,6 +34,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     super.initState();
     // Auto-check for firmware updates on startup
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (!_checkedForUpdate) {
         _checkedForUpdate = true;
         final deviceVersion = ref

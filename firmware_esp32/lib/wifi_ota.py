@@ -120,7 +120,7 @@ class WiFiOta:
                 try:
                     os.remove(temp_file)
                 except Exception:
-                    pass
+                    pass  # File may not exist or is locked, safe to ignore
                 return
 
             Logger.log("WiFi OTA: Download verified. Applying update...")
@@ -133,4 +133,4 @@ class WiFiOta:
             try:
                 os.remove(temp_file)
             except Exception:
-                pass
+                pass  # Cleanup: safe to ignore if file missing

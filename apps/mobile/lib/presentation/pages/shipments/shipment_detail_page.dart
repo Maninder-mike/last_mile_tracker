@@ -10,7 +10,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class ShipmentDetailPage extends StatefulWidget {
@@ -22,22 +21,22 @@ class ShipmentDetailPage extends StatefulWidget {
   State<ShipmentDetailPage> createState() => _ShipmentDetailPageState();
 }
 
-class _ShipmentDetailPageState extends State<ShipmentDetailPage>
-    with TickerProviderStateMixin {
-  late final _animatedMapController = AnimatedMapController(vsync: this);
+class _ShipmentDetailPageState extends State<ShipmentDetailPage> {
+  final _mapController = MapController();
   bool _isMapFull = false;
 
   @override
   void dispose() {
-    _animatedMapController.dispose();
+    // MapController likely doesn't need dispose in this version, check if it does.
+    // Usually it doesn't. Leaving it out for now.
     super.dispose();
   }
 
   void _recenterMap() {
     if (widget.shipment.latitude != null && widget.shipment.longitude != null) {
-      _animatedMapController.animateTo(
-        dest: LatLng(widget.shipment.latitude!, widget.shipment.longitude!),
-        zoom: 14.5,
+      _mapController.move(
+        LatLng(widget.shipment.latitude!, widget.shipment.longitude!),
+        14.5,
       );
     }
   }
@@ -61,7 +60,7 @@ class _ShipmentDetailPageState extends State<ShipmentDetailPage>
                 widget.shipment.latitude != null &&
                     widget.shipment.longitude != null
                 ? FlutterMap(
-                    mapController: _animatedMapController.mapController,
+                    mapController: _mapController,
                     options: MapOptions(
                       initialCenter: LatLng(
                         widget.shipment.latitude!,

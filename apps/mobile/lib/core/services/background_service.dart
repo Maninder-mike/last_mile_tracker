@@ -36,7 +36,7 @@ class BackgroundServiceInstance {
     await service.configure(
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
-        autoStart: true, // Start automatically on app launch
+        autoStart: false, // Prevent FATAL crash on Android 12+
         isForegroundMode: true,
         notificationChannelId: channelId,
         initialNotificationTitle: 'Last Mile Tracker',
@@ -44,7 +44,7 @@ class BackgroundServiceInstance {
         foregroundServiceNotificationId: notificationId,
       ),
       iosConfiguration: IosConfiguration(
-        autoStart: true,
+        autoStart: false,
         onForeground: onStart,
         onBackground: onIosBackground,
       ),
