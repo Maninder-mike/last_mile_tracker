@@ -1,6 +1,6 @@
 import sys
 import unittest
-from unittest.mock import mock_open, patch, MagicMock
+from unittest.mock import mock_open, patch
 
 # Ensure we can import from lib
 sys.path.append("firmware_esp32")
