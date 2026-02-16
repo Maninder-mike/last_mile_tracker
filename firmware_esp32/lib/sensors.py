@@ -182,7 +182,7 @@ class SensorHub:
         if not (-180 <= self._read_result["lon"] <= 180):
             print(f"Warning: Lon out of bounds: {self._read_result['lon']}")
             self._read_result["lon"] = max(-180, min(180, self._read_result["lon"]))
-            
+
         if not (-90 <= self._read_result["lat"] <= 90):
             print(f"Warning: Lat out of bounds: {self._read_result['lat']}")
             self._read_result["lat"] = max(-90, min(90, self._read_result["lat"]))

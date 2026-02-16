@@ -7,6 +7,7 @@ sys.path.append("firmware_esp32")
 
 from lib.config import Config
 
+
 class TestConfig(unittest.TestCase):
     def setUp(self):
         # Reset any singleton state if necessary, or just create fresh instances
@@ -15,7 +16,7 @@ class TestConfig(unittest.TestCase):
     def test_defaults(self):
         """Test that a new Config object has default values."""
         # Mock load to prevent file I/O during init
-        with patch.object(Config, 'load'):
+        with patch.object(Config, "load"):
             cfg = Config()
             self.assertEqual(cfg.get("wifi_ssid"), "")
             self.assertEqual(cfg.get("shock_threshold"), 500)
@@ -34,17 +35,18 @@ class TestConfig(unittest.TestCase):
 
     def test_save_config(self):
         """Test saving configuration to a JSON file."""
-        with patch.object(Config, 'load'):
+        with patch.object(Config, "load"):
             cfg = Config()
             cfg.set("wifi_ssid", "new_net")
-            
+
             m = mock_open()
             with patch("builtins.open", m):
                 cfg.save()
-            
+
             m.assert_called_with("config.json", "w")
-            # We can't easily check the json.dump content with simple mock_open, 
+            # We can't easily check the json.dump content with simple mock_open,
             # but we verified the file was opened for writing.
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
