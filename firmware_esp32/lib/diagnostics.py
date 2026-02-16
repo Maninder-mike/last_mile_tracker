@@ -1,7 +1,7 @@
 class Diagnostics:
     SAVE_THRESHOLD = 5  # Save every 5 increments
 
-    def __init__(self, config):
+    def __init__(self, config) -> None:
         self.config = config
         self.counters = {
             "reboots": 0,
@@ -21,20 +21,20 @@ class Diagnostics:
         # Increment reboot counter on startup
         self.increment("reboots")
 
-    def _load(self):
+    def _load(self) -> None:
         saved = self.config.get("diagnostics")
         if saved:
             for k, v in saved.items():
                 self.counters[k] = v
 
-    def flush(self):
+    def flush(self) -> None:
         """Manually flush diagnostics to storage"""
         if self._unsaved_count > 0:
             self.config.set("diagnostics", self.counters)
             self._unsaved_count = 0
             print("Diagnostics: Flushed to config.")
 
-    def increment(self, metric):
+    def increment(self, metric: str) -> None:
         if metric not in self.counters:
             self.counters[metric] = 0
 
@@ -46,5 +46,5 @@ class Diagnostics:
         if self._unsaved_count >= self.SAVE_THRESHOLD:
             self.flush()
 
-    def get_report(self):
+    def get_report(self) -> dict:
         return self.counters
