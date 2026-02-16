@@ -38,7 +38,7 @@ class SkeletonLoader extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: AppTheme.s8),
       child: Container(
-        height: 120,
+        height: 140,
         decoration: BoxDecoration(
           color: AppTheme.surfaceGlass,
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -50,14 +50,22 @@ class SkeletonLoader extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SkeletonLoader(width: 120, height: 20),
-                const SkeletonLoader(width: 60, height: 20, borderRadius: 12),
+                const SkeletonLoader(width: 140, height: 24),
+                const SkeletonLoader(width: 80, height: 24, borderRadius: 12),
               ],
             ),
+            AppGaps.standard,
+            const SkeletonLoader(width: 220, height: 16),
             AppGaps.large,
-            const SkeletonLoader(width: 200, height: 16),
-            AppGaps.medium,
-            const SkeletonLoader(width: 150, height: 14),
+            Row(
+              children: [
+                const SkeletonLoader(width: 60, height: 24, borderRadius: 8),
+                AppGaps.horizontalMedium,
+                const SkeletonLoader(width: 60, height: 24, borderRadius: 8),
+                const Spacer(),
+                const SkeletonLoader(width: 60, height: 16),
+              ],
+            ),
           ],
         ),
       ),
@@ -68,7 +76,7 @@ class SkeletonLoader extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: AppTheme.s8),
       child: Container(
-        height: 100,
+        height: 88,
         decoration: BoxDecoration(
           color: AppTheme.surfaceGlass,
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -83,12 +91,24 @@ class SkeletonLoader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SkeletonLoader(width: 120, height: 20),
-                  AppGaps.medium,
-                  const SkeletonLoader(width: 180, height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SkeletonLoader(width: 140, height: 18),
+                      const SkeletonLoader(
+                        width: 60,
+                        height: 22,
+                        borderRadius: 6,
+                      ),
+                    ],
+                  ),
+                  AppGaps.small,
+                  const SkeletonLoader(width: 100, height: 14),
                 ],
               ),
             ),
+            AppGaps.horizontalStandard,
+            const SkeletonLoader(width: 24, height: 24, borderRadius: 4),
           ],
         ),
       ),

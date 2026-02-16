@@ -9,11 +9,11 @@ from lib.config import Config
 
 
 class TestConfig(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         # Reset any singleton state if necessary, or just create fresh instances
         pass
 
-    def test_defaults(self):
+    def test_defaults(self) -> None:
         """Test that a new Config object has default values."""
         # Mock load to prevent file I/O during init
         with patch.object(Config, "load"):
@@ -22,7 +22,7 @@ class TestConfig(unittest.TestCase):
             self.assertEqual(cfg.get("shock_threshold"), 500)
             self.assertEqual(cfg.get("firmware_version"), "0.0.2")
 
-    def test_load_existing_config(self):
+    def test_load_existing_config(self) -> None:
         """Test loading configuration from a JSON file."""
         mock_data = '{"wifi_ssid": "test_net", "shock_threshold": 800}'
         with patch("builtins.open", mock_open(read_data=mock_data)):
@@ -33,7 +33,7 @@ class TestConfig(unittest.TestCase):
                 self.assertEqual(cfg.get("wifi_ssid"), "test_net")
                 self.assertEqual(cfg.get("shock_threshold"), 800)
 
-    def test_save_config(self):
+    def test_save_config(self) -> None:
         """Test saving configuration to a JSON file."""
         with patch.object(Config, "load"):
             cfg = Config()

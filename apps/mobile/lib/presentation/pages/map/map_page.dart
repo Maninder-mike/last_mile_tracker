@@ -12,6 +12,7 @@ import 'package:lmt_models/lmt_models.dart' as models;
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../widgets/floating_header.dart';
 import 'widgets/telemetry_overlay.dart';
+import 'widgets/map_cluster_marker.dart';
 
 class LatLngTween extends Tween<LatLng> {
   LatLngTween({super.begin, super.end});
@@ -208,18 +209,7 @@ class _MapPageState extends ConsumerState<MapPage>
                         ),
                     ],
                     builder: (context, markers) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          color: CupertinoTheme.of(context).primaryColor,
-                        ),
-                        child: Center(
-                          child: Text(
-                            markers.length.toString(),
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      );
+                      return MapClusterMarker(count: markers.length);
                     },
                     popupOptions: PopupOptions(
                       popupController: _popupController,

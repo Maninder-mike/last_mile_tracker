@@ -119,8 +119,8 @@ class WiFiOta:
 
                 try:
                     os.remove(temp_file)
-                except Exception:
-                    pass  # File may not exist or is locked, safe to ignore
+                except Exception as e:
+                    Logger.log(f"WiFi OTA: Cleanup temp failed: {e}")
                 return
 
             Logger.log("WiFi OTA: Download verified. Applying update...")
@@ -132,5 +132,5 @@ class WiFiOta:
 
             try:
                 os.remove(temp_file)
-            except Exception:
-                pass  # Cleanup: safe to ignore if file missing
+            except Exception as e:
+                Logger.log(f"WiFi OTA: Cleanup failed: {e}")

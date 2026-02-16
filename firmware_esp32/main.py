@@ -27,7 +27,7 @@ SERVICE_UUID = "181A"
 
 
 class LastMileTracker:
-    def __init__(self):
+    def __init__(self) -> None:
         Logger.log("Booting Last-Mile Optimized Firmware...")
 
         self.config = Config()
@@ -123,7 +123,7 @@ class LastMileTracker:
         self.config.set("device_id", new_id)
         return new_id
 
-    def _set_led(self, color):
+    def _set_led(self, color) -> None:
         if self.np:
             self.np[0] = color
             self.np.write()
@@ -170,7 +170,7 @@ class LastMileTracker:
         self._v2_length = offset
         return memoryview(self._v2_buf)[: self._v2_length]
 
-    async def sensor_task(self):
+    async def sensor_task(self) -> None:
         """High-frequency sensor monitoring"""
         Logger.log("Task: Sensor monitor started.")
         shock_threshold = self.config.get("shock_threshold") or 500
@@ -203,7 +203,7 @@ class LastMileTracker:
             self._task_ticks["sensor"] = time.ticks_ms()
             await asyncio.sleep_ms(100)  # 10Hz sampling
 
-    async def update_task(self):
+    async def update_task(self) -> None:
         """UI and BLE update loop"""
         Logger.log("Task: UI/BLE update started.")
         update_interval = self.config.get("adv_interval") or 1000
@@ -241,7 +241,7 @@ class LastMileTracker:
             self._task_ticks["update"] = time.ticks_ms()
             await asyncio.sleep_ms(update_interval)
 
-    async def maintenance_task(self):
+    async def maintenance_task(self) -> None:
         """Background flushes, GC and Sleep checks"""
         Logger.log("Task: Maintenance started.")
         sleep_timeout = self.config.get("sleep_timeout") or 300
@@ -280,7 +280,7 @@ class LastMileTracker:
 
             await asyncio.sleep(5)  # Every 5s
 
-    def handle_ble_write(self, conn_handle, value_handle, value):
+    def handle_ble_write(self, conn_handle, value_handle, value) -> None:
         """Callback for when a central writes to a characteristic"""
         if value_handle == self.ble.wifi_config_handle:
             try:
@@ -388,10 +388,10 @@ class LastMileTracker:
             # Route OTA writes explicitly
             self.ota.handle_command(value)
 
-    async def cloud_upload_task(self):
+    async def cloud_upload_task(self) -> None:
         """Periodic telemetry upload to cloud via WiFi with Adaptive Sampling"""
         Logger.log("Task: Cloud ingest started.")
-        retry_buffer = []  # Simple in-memory retry buffer
+        retry_buffer: list[dict] = []  # Simple in-memory retry buffer
 
         while True:
             # Adaptive Sampling Logic
@@ -441,7 +441,7 @@ class LastMileTracker:
             self._task_ticks["cloud"] = time.ticks_ms()
             await asyncio.sleep(interval)
 
-    async def remote_management_task(self):
+    async def remote_management_task(self) -> None:
         """Check for remote config and OTA updates monthly/daily"""
         Logger.log("Task: Remote management started.")
         import urequests
@@ -475,7 +475,7 @@ class LastMileTracker:
             interval = self.config.get("ota_check_interval") or 86400
             await asyncio.sleep(interval)
 
-    async def main_loop(self):
+    async def main_loop(self) -> None:
         # Initialize NTP
         self.ntp = NTPClient(self.config)
 
