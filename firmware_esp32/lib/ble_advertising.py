@@ -1,4 +1,5 @@
 # BLE GATT Server for ESP32-C6
+from typing import Any, Callable, Optional, Union, List
 import bluetooth
 from micropython import const
 
@@ -9,7 +10,9 @@ _IRQ_GATTS_INDICATE_DONE = const(20)
 
 
 class BLEAdvertiser:
-    def __init__(self, name="Last-Mile-Tracker", service_uuid=None, version=1):
+    def __init__(
+        self, name: str = "Last-Mile-Tracker", service_uuid: Optional[str] = None, version: int = 1
+    ) -> None:
         self._ble = bluetooth.BLE()
         self._ble.active(True)
         self._ble.irq(self._irq)
@@ -17,17 +20,25 @@ class BLEAdvertiser:
         self._name = name
         self._version = version  # Firmware version
         self._connected = False
-        self._conn_handle = None
-        self._write_callback = None
+        self._conn_handle: Optional[int] = None
+        self._write_callback: Optional[Callable[[int, int, bytes], None]] = None
 
         # Register GATT service
         if service_uuid:
             self._register_services(service_uuid)
+        else:
+            # Initialize handles to None or sensible defaults if service_uuid is missing
+            # For now, just setting strict types on the attributes based on usage
+            self._sensor_handle = 0
+            self._ext_sensor_handle = 0
+            self._ota_ctrl_handle = 0
+            self._ota_data_handle = 0
+            self._wifi_config_handle = 0
 
-    def set_write_callback(self, callback):
+    def set_write_callback(self, callback: Callable[[int, int, bytes], None]) -> None:
         self._write_callback = callback
 
-    def _register_services(self, service_uuid):
+    def _register_services(self, service_uuid: str) -> None:
         """Register Environmental Sensing + OTA Service"""
         # Service and characteristic definitions
         ENV_SENSING_UUID = bluetooth.UUID(int(service_uuid, 16))
@@ -91,27 +102,28 @@ class BLEAdvertiser:
         self._ble.gatts_set_buffer(self._ota_data_handle, 512)
 
     @property
-    def ext_sensor_handle(self):
+    def ext_sensor_handle(self) -> int:
         return self._ext_sensor_handle
 
     @property
-    def ota_ctrl_handle(self):
+    def ota_ctrl_handle(self) -> int:
         return self._ota_ctrl_handle
 
     @property
-    def ota_data_handle(self):
+    def ota_data_handle(self) -> int:
         return self._ota_data_handle
 
     @property
-    def wifi_config_handle(self):
+    def wifi_config_handle(self) -> int:
         return self._wifi_config_handle
 
-    def set_firmware_version(self, version):
+    def set_firmware_version(self, version: str) -> None:
         """Write firmware version to OTA Control char so centrals can read it"""
+        # Accept str to match config
         payload = f"FW:{version}".encode()
         self._ble.gatts_write(self._ota_ctrl_handle, payload)
 
-    def _irq(self, event, data):
+    def _irq(self, event: int, data: Any) -> None:
         if event == _IRQ_CENTRAL_CONNECT:
             self._conn_handle, _, _ = data
             self._connected = True
@@ -130,14 +142,14 @@ class BLEAdvertiser:
             if self._write_callback:
                 self._write_callback(conn_handle, value_handle, value)
 
-    def restart_advertising(self, name=None):
+    def restart_advertising(self, name: Optional[str] = None) -> None:
         """Update advertising name and restart"""
         if name:
             self._name = name
         self._ble.gap_advertise(None)  # Stop
         self.start_advertising()
 
-    def start_advertising(self):
+    def start_advertising(self) -> None:
         """Start BLE advertising"""
         # Pre-allocate payload buffer (max 31 bytes for scan response/adv)
         self._payload_buf = bytearray(31)
@@ -147,7 +159,12 @@ class BLEAdvertiser:
         self._ble.gap_advertise(100_000, adv_data=self._advertising_payload())
         print(f"Advertising as '{self._name}'")
 
-    def _update_payload(self, name=None, services=None, appearance=0):
+    def _update_payload(
+        self,
+        name: Optional[str] = None,
+        services: Optional[List[str]] = None,
+        appearance: int = 0,
+    ) -> None:
         if not name:
             name = "LMT-Device"
 
@@ -177,14 +194,19 @@ class BLEAdvertiser:
 
         self._payload_len = idx
 
-    def _advertising_payload(self, name=None, services=None, appearance=0):
+    def _advertising_payload(
+        self,
+        name: Optional[str] = None,
+        services: Optional[List[str]] = None,
+        appearance: int = 0,
+    ) -> memoryview:
         # Rule 3: Return a memoryview of the pre-allocated buffer
         return memoryview(self._payload_buf)[: self._payload_len]
 
     def is_connected(self) -> bool:
         return self._connected
 
-    def notify(self, data: bytes, handle=None):
+    def notify(self, data: bytes, handle: Optional[int] = None) -> None:
         """Send notification to connected central"""
         if self._connected and self._conn_handle is not None:
             # Default to sensor handle if none provided

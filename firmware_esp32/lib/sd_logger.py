@@ -1,8 +1,8 @@
 # SD Card Logger for offline data backup
+from typing import Any, Optional, Dict
 from machine import Pin, SPI
 import os
 import time
-
 
 class SDLogger:
     """Log sensor data to SD card as CSV backup"""
@@ -14,7 +14,7 @@ class SDLogger:
     PIN_MOSI = 3
     PIN_MISO = 4
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._mounted = False
         try:
             # Requires 'sdcard.py' driver to be present in lib/
@@ -33,14 +33,14 @@ class SDLogger:
             try:
                 os.stat("/sd")
             except OSError:
-                os.mount(self._sd, "/sd")
+                os.mount(self._sd, "/sd")  # type: ignore
 
             self._mounted = True
             self._ensure_log_file()
         except Exception as e:
             print(f"SD card init failed (missing sdcard.py?): {e}")
 
-    def _ensure_log_file(self):
+    def _ensure_log_file(self) -> None:
         if not self._mounted:
             return
         try:
@@ -50,7 +50,7 @@ class SDLogger:
                 # Version 2 Header
                 f.write("timestamp,lat,lon,speed,temp,shock,battery_mv,int_temp\n")
 
-    def log(self, data: dict):
+    def log(self, data: Dict[str, Any]) -> None:
         """Append sensor reading to CSV"""
         if not self._mounted:
             return

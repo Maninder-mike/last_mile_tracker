@@ -3,16 +3,17 @@ import hashlib
 import urequests
 from lib.logger import Logger
 from lib.ota_utils import compare_semver, apply_firmware_update
+from typing import Any
 
 
 class WiFiOta:
-    def __init__(self, config):
+    def __init__(self, config: Any) -> None:
         self.config = config
         self.owner = config.get("ota_github_owner")
         self.repo = config.get("ota_github_repo")
         self.current_version = config.get("firmware_version") or "0.0.0"
 
-    def check_and_update(self):
+    def check_and_update(self) -> None:
         """Check GitHub for new firmware and update if found."""
         Logger.log("WiFi OTA: Checking for updates...")
 
@@ -48,7 +49,7 @@ class WiFiOta:
         except Exception as e:
             Logger.log(f"WiFi OTA: Check failed: {e}")
 
-    def _perform_update(self, release_data, new_version):
+    def _perform_update(self, release_data: dict[str, Any], new_version: str) -> None:
         """Download and apply the update."""
         assets = release_data.get("assets", [])
 

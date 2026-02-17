@@ -1,11 +1,11 @@
 import network
-
 import uasyncio as asyncio
 from lib.logger import Logger
+from typing import Any, Callable, Optional, Tuple, List
 
 
 class WiFiManager:
-    def __init__(self, config, status_led_callback=None, ntp_client=None):
+    def __init__(self, config: Any, status_led_callback: Optional[Callable[[Tuple[int, int, int]], None]] = None, ntp_client: Any = None) -> None:
         self.config = config
         self.wlan = network.WLAN(network.STA_IF)
         self.wlan.active(True)
@@ -13,7 +13,7 @@ class WiFiManager:
         self.ntp_client = ntp_client
         self._connecting = False
 
-    async def connect(self, on_status_change=None):
+    async def connect(self, on_status_change: Optional[Callable[[str, str], None]] = None) -> bool:
         """Attempt to connect to WiFi using configured credentials"""
         if self._connecting:
             Logger.log("WiFi: Connection already in progress. Skipping.")
@@ -108,7 +108,7 @@ class WiFiManager:
 
         return False
 
-    async def disconnect(self):
+    async def disconnect(self) -> bool:
         """Disconnect from WiFi and de-activate interface"""
         Logger.log("WiFi: Disconnecting...")
         self.wlan.disconnect()
@@ -116,10 +116,10 @@ class WiFiManager:
         self._connecting = False
         return True
 
-    def is_connected(self):
-        return self.wlan.isconnected()
+    def is_connected(self) -> bool:
+        return bool(self.wlan.isconnected())
 
-    async def manage_connection(self):
+    async def manage_connection(self) -> None:
         """Background task to keep WiFi alive"""
         while True:
             if not self.wlan.isconnected() and not self._connecting:
@@ -129,7 +129,7 @@ class WiFiManager:
 
             await asyncio.sleep(60)  # Check every minute
 
-    async def scan_networks(self):
+    async def scan_networks(self) -> List[Tuple[str, int]]:
         """Scan for available WiFi networks"""
         Logger.log("WiFi: Scanning networks...")
         self.wlan.active(True)
@@ -142,7 +142,7 @@ class WiFiManager:
             valid_networks = [n for n in networks if n[0]]
             valid_networks.sort(key=lambda x: x[3], reverse=True)
 
-            unique_ssids = []
+            unique_ssids: List[Tuple[str, int]] = []
             seen = set()
             for n in valid_networks:
                 ssid = n[0].decode("utf-8")

@@ -1,6 +1,7 @@
 import os
 import hashlib
 from lib.logger import Logger
+from typing import Any, BinaryIO
 
 
 class BleOta:
@@ -9,15 +10,15 @@ class BleOta:
     CMD_DATA = 0x02
     CMD_END = 0x03
 
-    def __init__(self, config=None):
+    def __init__(self, config: Any = None) -> None:
         self._config = config
-        self._update_filename = None
-        self._file_handle = None
+        self._update_filename: str | None = None
+        self._file_handle: BinaryIO | None = None
         self._received_size = 0
         self._expected_size = 0
-        self._hash = None
+        self._hash: Any = None
 
-    def handle_command(self, cmd_bytes):
+    def handle_command(self, cmd_bytes: bytes) -> None:
         """Handle incoming OTA commands from BLE"""
         if not cmd_bytes:
             return
@@ -32,7 +33,7 @@ class BleOta:
         elif cmd == self.CMD_END:
             self._handle_end(data)
 
-    def _handle_start(self, data):
+    def _handle_start(self, data: bytes) -> None:
         """Start update: [type(1), size(4)]"""
         try:
             import struct
@@ -56,7 +57,7 @@ class BleOta:
             Logger.log(f"OTA Start Error: {e}")
             self._close_file()
 
-    def _handle_data(self, data):
+    def _handle_data(self, data: bytes) -> None:
         """Append data chunk"""
         if not self._file_handle:
             return
@@ -74,7 +75,7 @@ class BleOta:
             Logger.log(f"OTA Write Error: {e}")
             self._close_file()
 
-    def _handle_end(self, data):
+    def _handle_end(self, data: bytes) -> None:
         """Finish: [checksum(32)]"""
         if not self._file_handle:
             return
@@ -90,20 +91,24 @@ class BleOta:
             else:
                 Logger.log("OTA: Checksum MISMATCH!")
                 try:
-                    os.remove(self._update_filename)
+                    if self._update_filename:
+                        os.remove(self._update_filename)
                 except OSError:
                     pass
 
         except Exception as e:
             Logger.log(f"OTA End Error: {e}")
 
-    def _close_file(self):
+    def _close_file(self) -> None:
         if self._file_handle:
             self._file_handle.close()
             self._file_handle = None
 
-    def _apply_update(self):
+    def _apply_update(self) -> None:
         """Rename .tmp to actual file and reset"""
+        if self._update_filename is None:
+            return
+
         try:
             from lib.ota_utils import apply_firmware_update
 

@@ -1,16 +1,17 @@
 # http_poster.py - Lightweight cloud ingest client
 import urequests
 import time
+from typing import Any
 
 
 class HttpPoster:
-    def __init__(self, config, diagnostics=None):
+    def __init__(self, config: Any, diagnostics: Any = None) -> None:
         self.config = config
         self.diagnostics = diagnostics
-        self._last_sent_data = None
-        self._last_sent_time = 0
+        self._last_sent_data: dict[str, Any] | None = None
+        self._last_sent_time = 0.0
 
-    def _should_send(self, data):
+    def _should_send(self, data: dict[str, Any]) -> bool:
         """Check if data has changed enough to warrant an upload (Bandwidth Optimization)"""
         if self._last_sent_data is None:
             return True
@@ -44,7 +45,7 @@ class HttpPoster:
         # No significant change
         return False
 
-    async def post_telemetry(self, data):
+    async def post_telemetry(self, data: dict[str, Any]) -> bool:
         if not self._should_send(data):
             # Quietly skip to save bandwidth
             return True  # Pretend success as no action was needed

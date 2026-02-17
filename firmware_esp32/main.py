@@ -8,6 +8,7 @@ import uasyncio as asyncio
 from machine import Pin, WDT
 from lib.ble_advertising import BLEAdvertiser
 from lib.sensors import SensorHub
+from typing import Any, Dict, Optional, Tuple, List, Union
 
 # from lib.st7789_display import Display
 from lib.config import Config
@@ -19,6 +20,8 @@ from lib.sd_logger import SDLogger
 from lib.buzzer import Buzzer
 from lib.http_poster import HttpPoster
 from lib.ntp_time import NTPClient
+from lib.wifi_manager import WiFiManager
+
 
 # Constants
 NEOPIXEL_PIN = 8
@@ -35,10 +38,10 @@ class LastMileTracker:
         self.wdt = WDT(timeout=30000)
 
         # Rule 2: Multi-task health monitoring for Rule 2 (Bounded Loops)
-        self._task_ticks = {
-            "sensor": time.ticks_ms(),
-            "update": time.ticks_ms(),
-            "cloud": time.ticks_ms(),
+        self._task_ticks: Dict[str, int] = {
+            "sensor": time.ticks_ms(),  # type: ignore
+            "update": time.ticks_ms(),  # type: ignore
+            "cloud": time.ticks_ms(),  # type: ignore
         }
 
         # Rule 5: Critical startup invariant assertions
@@ -54,11 +57,12 @@ class LastMileTracker:
         self._v2_length = 0
 
         # Shared sensor state
-        self._reading = {}
+        self._reading: Dict[str, Any] = {}
         self.wdt.feed()
 
         self.device_id = self._init_device_id()
 
+        self.np: Optional[neopixel.NeoPixel] = None
         try:
             self.np = neopixel.NeoPixel(Pin(NEOPIXEL_PIN), NUM_LEDS)
             self._set_led((0, 0, 0))
@@ -72,6 +76,7 @@ class LastMileTracker:
         # except Exception:
         #     self.display = None
 
+        self.sensors: Optional[SensorHub] = None
         try:
             self.sensors = SensorHub(self.diagnostics)
         except Exception:
@@ -80,6 +85,10 @@ class LastMileTracker:
         self.sd_logger = SDLogger()
         self.http_poster = HttpPoster(self.config, self.diagnostics)
         self.shock_buffer = ShockBuffer()
+        
+        # Initialized later
+        self.ntp: Optional[NTPClient] = None
+        self.wifi: Optional[WiFiManager] = None
 
         # Buzzer Init
         buzzer_pin = self.config.get("buzzer_pin")
@@ -96,7 +105,7 @@ class LastMileTracker:
         Logger.log(f"Firmware Version: {fw_version}")
 
         self._last_activity = time.time()
-        self.data_store = {
+        self.data_store: Dict[str, Any] = {
             "lat": 0.0,
             "lon": 0.0,
             "speed": 0.0,
@@ -105,17 +114,17 @@ class LastMileTracker:
             "gps_fix": False,
         }
 
-    def _init_device_id(self):
+    def _init_device_id(self) -> str:
         # 1. Check for provisioned ID first (for fleet scale)
         p_id = self.config.get("provisioned_id")
         if p_id:
             Logger.log(f"Identity: Using Provisioned ID: {p_id}")
-            return p_id
+            return str(p_id)
 
         # 2. Check for saved manual ID
         saved_id = self.config.get("device_id")
         if saved_id:
-            return saved_id
+            return str(saved_id)
 
         # 3. Fallback to MAC-based ID
         mac = ubinascii.hexlify(machine.unique_id()).decode()
@@ -123,23 +132,23 @@ class LastMileTracker:
         self.config.set("device_id", new_id)
         return new_id
 
-    def _set_led(self, color) -> None:
+    def _set_led(self, color: Tuple[int, int, int]) -> None:
         if self.np:
             self.np[0] = color
             self.np.write()
 
-    def _pack_sensor_data(self, data):
+    def _pack_sensor_data(self, data: Dict[str, Any]) -> bytearray:
         """Rule 3: Use pre-allocated buffer for V1 packet"""
         struct.pack_into(
             "<ffffHHHBBH",
             self._v1_buf,
             0,
-            data["lat"],
-            data["lon"],
-            data["speed"],
-            data["temp"],
-            data["shock"],
-            data["battery_mv"],
+            float(data["lat"]),
+            float(data["lon"]),
+            float(data["speed"]),
+            float(data["temp"]),
+            int(data["shock"]),
+            int(data["battery_mv"]),
             int(data["internal_temp"]),
             1 if data["gps_fix"] else 0,
             0,  # Reset reason placeholder
@@ -147,7 +156,7 @@ class LastMileTracker:
         )
         return self._v1_buf
 
-    def _pack_extended_data(self, data):
+    def _pack_extended_data(self, data: Dict[str, Any]) -> memoryview:
         """Rule 3: Build V2 packet into pre-allocated buffer"""
         all_temps = data.get("all_temps", {})
         num_temps = min(len(all_temps), 10)
@@ -188,7 +197,7 @@ class LastMileTracker:
                     # Shock handling
                     if new_data["shock"] > shock_threshold:
                         Logger.log(f"Shock Alert: {new_data['shock']}")
-                        self.shock_buffer.add(new_data["shock"], time.ticks_ms())
+                        self.shock_buffer.add(new_data["shock"], time.ticks_ms())  # type: ignore
                         asyncio.create_task(self.buzzer.alarm())
 
                     # SD Logging (Local backup)
@@ -200,8 +209,8 @@ class LastMileTracker:
                     self.diagnostics.increment("sensor_read_fails")
 
             # Rule 2: Mark task as healthy
-            self._task_ticks["sensor"] = time.ticks_ms()
-            await asyncio.sleep_ms(100)  # 10Hz sampling
+            self._task_ticks["sensor"] = time.ticks_ms()  # type: ignore
+            await asyncio.sleep_ms(100)  # 10Hz sampling  # type: ignore
 
     async def update_task(self) -> None:
         """UI and BLE update loop"""
@@ -230,15 +239,15 @@ class LastMileTracker:
             if self.ble.is_connected():
                 # V1 Legacy Data
                 packed_v1 = self._pack_sensor_data(self.data_store)
-                self.ble.notify(packed_v1)
+                self.ble.notify(bytes(packed_v1))
 
                 # V2 Extended Data (Optional delay to avoid congestion)
                 await asyncio.sleep_ms(50)
                 packed_ext = self._pack_extended_data(self.data_store)
-                self.ble.notify(packed_ext, self.ble.ext_sensor_handle)
+                self.ble.notify(bytes(packed_ext), self.ble.ext_sensor_handle)
 
             # Rule 2: Mark task as healthy
-            self._task_ticks["update"] = time.ticks_ms()
+            self._task_ticks["update"] = time.ticks_ms()  # type: ignore
             await asyncio.sleep_ms(update_interval)
 
     async def maintenance_task(self) -> None:
@@ -248,10 +257,11 @@ class LastMileTracker:
 
         while True:
             # Rule 2: Check health of all tasks before feeding hardware watchdog
-            now = time.ticks_ms()
+            now = time.ticks_ms()  # type: ignore
             all_healthy = True
             for task, last_tick in self._task_ticks.items():
-                if time.ticks_diff(now, last_tick) > 60000:  # 1 minute grace
+                # 1 minute grace
+                if time.ticks_diff(now, last_tick) > 60000:  # type: ignore
                     Logger.log(f"CRITICAL: Task {task} hung!")
                     all_healthy = False
 
@@ -280,7 +290,7 @@ class LastMileTracker:
 
             await asyncio.sleep(5)  # Every 5s
 
-    def handle_ble_write(self, conn_handle, value_handle, value) -> None:
+    def handle_ble_write(self, conn_handle: int, value_handle: int, value: bytes) -> None:
         """Callback for when a central writes to a characteristic"""
         if value_handle == self.ble.wifi_config_handle:
             try:
@@ -290,7 +300,9 @@ class LastMileTracker:
                 if command == "CMD:SCAN":
                     Logger.log("BLE: Received Scan Command - Starting WiFi Scan")
 
-                    async def perform_scan():
+                    async def perform_scan() -> None:
+                        if self.wifi is None:
+                            return
                         try:
                             networks = await self.wifi.scan_networks()
                             Logger.log(
@@ -300,7 +312,7 @@ class LastMileTracker:
                                 # Send "SSID,RSSI" notification
                                 payload = f"{ssid},{rssi}".encode()
                                 self.ble.notify(payload, self.ble.wifi_config_handle)
-                                await asyncio.sleep_ms(150)  # Stable delay
+                                await asyncio.sleep_ms(150)  # Stable delay  # type: ignore
 
                             # Signal end of scan
                             Logger.log("BLE: Scan notified ALL - Sending SCAN:END")
@@ -314,7 +326,7 @@ class LastMileTracker:
                 if command == "CMD:IDENTIFY":
                     Logger.log("BLE: Received Identify Command")
 
-                    async def identify():
+                    async def identify() -> None:
                         for _ in range(10):
                             self._set_led((10, 10, 10))  # White
                             await asyncio.sleep_ms(100)
@@ -327,7 +339,7 @@ class LastMileTracker:
                 if command == "CMD:REBOOT":
                     Logger.log("BLE: Received Reboot Command")
 
-                    async def reboot():
+                    async def reboot() -> None:
                         await asyncio.sleep(1)
                         machine.reset()
 
@@ -339,8 +351,9 @@ class LastMileTracker:
                     self.config.set("wifi_ssid", "")
                     self.config.set("wifi_pass", "")
 
-                    async def reset_wifi():
-                        await self.wifi.disconnect()
+                    async def reset_wifi() -> None:
+                        if self.wifi:
+                            await self.wifi.disconnect()
                         Logger.log("WiFi: Config cleared and disconnected.")
 
                     asyncio.create_task(reset_wifi())
@@ -374,14 +387,15 @@ class LastMileTracker:
                             self.config.set("wifi_ssid", ssid)
                             self.config.set("wifi_pass", password)
 
-                            def on_wifi_status(status, detail):
+                            def on_wifi_status(status: str, detail: str) -> None:
                                 # Send "WIFI:CONNECTED:SSID" or "WIFI:FAILED:Reason"
                                 payload = f"WIFI:{status}:{detail}".encode()
                                 self.ble.notify(payload, self.ble.wifi_config_handle)
                                 Logger.log(f"BLE: Notified WiFi Status: {status} ({detail})")
 
                             # Trigger connection attempt (async)
-                            asyncio.create_task(self.wifi.connect(on_status_change=on_wifi_status))
+                            if self.wifi:
+                                asyncio.create_task(self.wifi.connect(on_status_change=on_wifi_status))
             except Exception as e:
                 Logger.log(f"BLE: WiFi Config Error: {e}")
         elif value_handle in (self.ble.ota_ctrl_handle, self.ble.ota_data_handle):
@@ -391,7 +405,7 @@ class LastMileTracker:
     async def cloud_upload_task(self) -> None:
         """Periodic telemetry upload to cloud via WiFi with Adaptive Sampling"""
         Logger.log("Task: Cloud ingest started.")
-        retry_buffer: list[dict] = []  # Simple in-memory retry buffer
+        retry_buffer: List[Dict[str, Any]] = []  # Simple in-memory retry buffer
 
         while True:
             # Adaptive Sampling Logic
@@ -411,7 +425,7 @@ class LastMileTracker:
 
             url = self.config.get("ingest_url")
 
-            if url and self.wifi.is_connected():
+            if url and self.wifi and self.wifi.is_connected():
                 # Measure battery before upload for profiling
                 v_before = self.sensors.read_battery_mv() if self.sensors else 0
 
@@ -438,7 +452,7 @@ class LastMileTracker:
                         retry_buffer.append(self.data_store.copy())
 
             # Rule 2: Mark task as healthy
-            self._task_ticks["cloud"] = time.ticks_ms()
+            self._task_ticks["cloud"] = time.ticks_ms()  # type: ignore
             await asyncio.sleep(interval)
 
     async def remote_management_task(self) -> None:
@@ -449,7 +463,7 @@ class LastMileTracker:
         while True:
             # 1. Remote Config
             config_url = self.config.get("config_url")
-            if config_url and self.wifi.is_connected():
+            if config_url and self.wifi and self.wifi.is_connected():
                 try:
                     Logger.log("WiFi: Fetching remote config...")
                     res = urequests.get(config_url)
@@ -462,7 +476,7 @@ class LastMileTracker:
                     Logger.log(f"WiFi: Remote config check failed: {e}")
 
             # 2. WiFi OTA
-            if self.wifi.is_connected():
+            if self.wifi and self.wifi.is_connected():
                 try:
                     from lib.wifi_ota import WiFiOta
 
@@ -480,7 +494,7 @@ class LastMileTracker:
         self.ntp = NTPClient(self.config)
 
         # Initialize WiFi
-        from lib.wifi_manager import WiFiManager
+        # from lib.wifi_manager import WiFiManager # Imported at top now
 
         self.wifi = WiFiManager(self.config, self._set_led, ntp_client=self.ntp)
 

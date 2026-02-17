@@ -7,18 +7,18 @@ class Logger:
     LOG_FILE = "log.txt"
     BUFFER_SIZE = 5
 
-    _buffer = []
-    _boot_time = time.ticks_ms()
+    _buffer: list[str] = []
+    _boot_time = time.ticks_ms()  # type: ignore
     SILENT_PERIOD_MS = 3000
 
     @staticmethod
-    def log(message):
+    def log(message: str) -> None:
         try:
-            timestamp = time.ticks_ms()
+            timestamp = time.ticks_ms()  # type: ignore
             entry = f"[{timestamp}] {message}"
 
             # Print to serial if past silent period
-            if time.ticks_diff(timestamp, Logger._boot_time) > Logger.SILENT_PERIOD_MS:
+            if time.ticks_diff(timestamp, Logger._boot_time) > Logger.SILENT_PERIOD_MS:  # type: ignore
                 print(entry)
 
             # Add to buffer
@@ -31,7 +31,7 @@ class Logger:
             print(f"Logger Error: {e}")
 
     @staticmethod
-    def flush():
+    def flush() -> None:
         if not Logger._buffer:
             return
 

@@ -1,10 +1,11 @@
 import json
+from typing import Any
 
 
 class Config:
     CONFIG_FILE = "config.json"
 
-    DEFAULTS = {
+    DEFAULTS: dict[str, Any] = {
         "device_id": None,  # None means auto-generate from MAC
         "wifi_ssid": "",
         "wifi_pass": "",  # nosec
@@ -35,11 +36,11 @@ class Config:
         "timezone_offset": 0,  # Hours (0=UTC)
     }
 
-    def __init__(self):
-        self._config = self.DEFAULTS.copy()
+    def __init__(self) -> None:
+        self._config: dict[str, Any] = self.DEFAULTS.copy()
         self.load()
 
-    def load(self):
+    def load(self) -> None:
         try:
             with open(self.CONFIG_FILE, "r") as f:
                 saved = json.load(f)
@@ -53,14 +54,14 @@ class Config:
             print("Config not found or corrupt, using defaults")
             self.save()  # Create new file
 
-    def save(self):
+    def save(self) -> None:
         try:
             with open(self.CONFIG_FILE, "w") as f:
                 json.dump(self._config, f)
         except Exception as e:
             print(f"Failed to save config: {e}")
 
-    def merge_config(self, new_data):
+    def merge_config(self, new_data: dict[str, Any]) -> bool:
         """Merge new config data without overwriting essential local values if missing"""
         if not isinstance(new_data, dict):
             return False
@@ -88,7 +89,7 @@ class Config:
             self.save()
         return modified
 
-    def verify_signature(self, data, signature, public_key):
+    def verify_signature(self, data: dict[str, Any], signature: Any, public_key: Any) -> bool:
         """Phase 2: Simplified HMAC/Hash check for demonstration"""
         if not signature:
             return False
@@ -97,10 +98,10 @@ class Config:
         # to demonstrate the security boundary.
         return True  # Simulation: Placeholder for actual crypto logic
 
-    def get(self, key):
+    def get(self, key: str) -> Any:
         return self._config.get(key, self.DEFAULTS.get(key))
 
-    def set(self, key, value):
+    def set(self, key: str, value: Any) -> bool:
         if key in self._config:
             self._config[key] = value
             self.save()

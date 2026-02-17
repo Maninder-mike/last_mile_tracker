@@ -1,4 +1,5 @@
 import math
+from typing import Any, Dict, List, Tuple, Optional
 from machine import Pin, I2C, UART, ADC
 import onewire
 import ds18x20
@@ -20,7 +21,7 @@ class MPU6050:
         except OSError:
             print("MPU6050 not found")
 
-    def read_accel(self) -> tuple:
+    def read_accel(self) -> Tuple[float, float, float]:
         """Read accelerometer X, Y, Z in g-force"""
         try:
             data = self._i2c.readfrom_mem(self.MPU_ADDR, self.ACCEL_XOUT_H, 6)
@@ -51,18 +52,19 @@ class MPU6050:
 class SensorHub:
     """Unified sensor interface - Non-blocking ready"""
 
-    def __init__(self, diagnostics=None):
+    def __init__(self, diagnostics: Any = None):
         self.diagnostics = diagnostics
 
         try:
             self._i2c = I2C(0, scl=Pin(7), sda=Pin(6), freq=400000)
-            self._mpu = MPU6050(self._i2c)
+            self._mpu: Optional[MPU6050] = MPU6050(self._i2c)
         except Exception as e:
             print(f"MPU6050 init failed: {e}")
             self._mpu = None
             if self.diagnostics:
                 self.diagnostics.increment("i2c_errors")
 
+        self._temp_roms: List[bytearray] = []
         try:
             # Enable internal pull-up (~45k) for resistor-less operation
             self._ow_pin = Pin(4, Pin.IN, Pin.PULL_UP)
@@ -78,12 +80,12 @@ class SensorHub:
                 self.diagnostics.increment("onewire_errors")
 
         self._gps_uart = UART(1, baudrate=115200, tx=21, rx=20)
-        self._last_gps = {"lat": 0.0, "lon": 0.0, "speed": 0.0, "fix": False}
-        self._last_temps = {}  # ROM ID: Value
+        self._last_gps: Dict[str, Any] = {"lat": 0.0, "lon": 0.0, "speed": 0.0, "fix": False}
+        self._last_temps: Dict[str, float] = {}  # ROM ID: Value
         self._last_temp_read = 0
 
         # Pre-allocated result dictionary to avoid heap allocation in main loop (Rule 3)
-        self._read_result = {
+        self._read_result: Dict[str, Any] = {
             "lat": 0.0,
             "lon": 0.0,
             "speed": 0.0,
@@ -95,9 +97,10 @@ class SensorHub:
             "internal_temp": 0.0,
         }
 
+        self._bat_adc: Optional[ADC] = None
         self._init_battery()
 
-    def _init_battery(self):
+    def _init_battery(self) -> None:
         try:
             # GPIO 2 is often used for battery Sense on generic boards,
             # but user should verify. Using GPIO 0 as placeholder or config.
@@ -130,23 +133,23 @@ class SensorHub:
     def read_internal_c(self) -> float:
         try:
             f = esp32.raw_temperature()
-            return (f - 32) / 1.8
+            return float((f - 32) / 1.8)
         except Exception:
             return 0.0
 
-    async def read_all(self) -> dict:
+    async def read_all(self) -> Dict[str, Any]:
         """Async-ready unified read with multi-sensor support"""
         self._read_gps()
 
         # Temperature Logic: Non-blocking state machine for ALL roms
-        if self._temp_roms and (time.ticks_ms() - self._last_temp_read > 1000):
+        if self._temp_roms and (time.ticks_ms() - self._last_temp_read > 1000):  # type: ignore
             try:
                 for rom in self._temp_roms:
                     rom_id = "".join("{:02x}".format(b) for b in rom)
                     self._last_temps[rom_id] = self._ds.read_temp(rom)
 
                 self._ds.convert_temp()  # Trigger next conversion for all
-                self._last_temp_read = time.ticks_ms()
+                self._last_temp_read = time.ticks_ms()  # type: ignore
             except Exception as e:
                 print(f"Sensor error: {e}")
                 if self.diagnostics:
@@ -179,17 +182,18 @@ class SensorHub:
 
         # Rule 5: Assertions for critical data sanity
         # Replaced assert with runtime check (B101 fix)
-        if not (-180 <= self._read_result["lon"] <= 180):
+        # Type ignored for mixed dict vs int comparison safety in mypy
+        if not (-180 <= float(self._read_result["lon"]) <= 180):
             print(f"Warning: Lon out of bounds: {self._read_result['lon']}")
-            self._read_result["lon"] = max(-180, min(180, self._read_result["lon"]))
+            self._read_result["lon"] = max(-180.0, min(180.0, float(self._read_result["lon"])))
 
-        if not (-90 <= self._read_result["lat"] <= 90):
+        if not (-90 <= float(self._read_result["lat"]) <= 90):
             print(f"Warning: Lat out of bounds: {self._read_result['lat']}")
-            self._read_result["lat"] = max(-90, min(90, self._read_result["lat"]))
+            self._read_result["lat"] = max(-90.0, min(90.0, float(self._read_result["lat"])))
 
         return self._read_result
 
-    def _read_gps(self):
+    def _read_gps(self) -> None:
         """Parse NMEA sentences from GPS - Non-blocking"""
         while self._gps_uart.any():
             try:

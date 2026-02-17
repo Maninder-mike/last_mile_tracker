@@ -2,16 +2,17 @@ import ntptime
 import time
 from machine import RTC
 from lib.logger import Logger
+from typing import Any
 
 
 class NTPClient:
-    def __init__(self, config):
+    def __init__(self, config: Any) -> None:
         self.config = config
         self.rtc = RTC()
-        self.last_sync = 0
+        self.last_sync = 0.0
         self.sync_interval = 3600 * 24  # Sync daily
 
-    def sync(self):
+    def sync(self) -> bool:
         """Synchronize time with NTP server"""
         try:
             # Set host from config or default
@@ -30,13 +31,14 @@ class NTPClient:
             Logger.log(f"NTP: Sync failed: {e}")
             return False
 
-    def get_timestamp(self):
+    def get_timestamp(self) -> float:
         """Return current timestamp (UTC) or 0 if not synced"""
         # We assume 2024+ (1704067200) to be valid
         now = time.time()
         if now < 1704067200:
-            return 0
+            return 0.0
         return now
 
-    def is_synced(self):
+    def is_synced(self) -> bool:
         return self.get_timestamp() > 0
+

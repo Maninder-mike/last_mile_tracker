@@ -2,9 +2,10 @@ import os
 import machine
 import time
 from lib.logger import Logger
+from typing import Any, Optional
 
 
-def compare_semver(remote, local):
+def compare_semver(remote: str, local: str) -> int:
     """
     Compare two semver strings.
     Returns:
@@ -29,7 +30,9 @@ def compare_semver(remote, local):
         return 0
 
 
-def apply_firmware_update(config, temp_filename, target_filename, new_version=None):
+def apply_firmware_update(
+    config: Any, temp_filename: str, target_filename: str, new_version: Optional[str] = None
+) -> None:
     """
     Rename .tmp to actual file, backup old, bump version, and reset.
     """
