@@ -46,9 +46,9 @@ class DeviceCard extends ConsumerWidget {
               if (isConnected)
                 CupertinoButton(
                   padding: EdgeInsets.zero,
-                  child: const Icon(
+                  child: Icon(
                     CupertinoIcons.settings,
-                    color: AppTheme.primary,
+                    color: CupertinoTheme.of(context).primaryColor,
                   ),
                   onPressed: () => _navigateToConnectivity(context),
                 ),
@@ -63,7 +63,7 @@ class DeviceCard extends ConsumerWidget {
             _buildConnectButton(context),
           if (isConnected) ...[
             const SizedBox(height: 16),
-            _buildSyncAction(ref, isSyncing),
+            _buildSyncAction(context, ref, isSyncing),
           ],
         ],
       ),
@@ -145,12 +145,12 @@ class DeviceCard extends ConsumerWidget {
   // We will fix this by moving sync state to a provider later if needed, but for now
   // let's assume we trigger sync from here.
 
-  Widget _buildSyncAction(WidgetRef ref, bool isSyncing) {
+  Widget _buildSyncAction(BuildContext context, WidgetRef ref, bool isSyncing) {
     return SizedBox(
       width: double.infinity,
       child: CupertinoButton(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        color: AppTheme.primary.withValues(alpha: 0.1),
+        color: CupertinoTheme.of(context).primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         onPressed: isSyncing
             ? null
@@ -167,7 +167,7 @@ class DeviceCard extends ConsumerWidget {
             : Text(
                 'Sync Now',
                 style: TextStyle(
-                  color: AppTheme.primary,
+                  color: CupertinoTheme.of(context).primaryColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),

@@ -1,0 +1,14 @@
+{
+    "@@locale": "es",
+    "appTitle": "Rastreador de Última Milla",
+    "homeTab": "Inicio",
+    "shipmentsTab": "Envíos",
+    "fleetTab": "Flota",
+    "settingsTab": "Ajustes",
+    "offlineModeAlert": "Modo sin conexión activo. Los cambios se sincronizarán más tarde.",
+    "driverScorecard": "Puntuación del Conductor",
+    "safetyScore": "Puntuación de Seguridad",
+    "batteryEfficiency": "Eficiencia de Batería",
+    "hardBraking": "Frenadas Bruscas",
+    "speeding": "Excesos de Velocidad"
+}

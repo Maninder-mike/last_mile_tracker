@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart' show Colors;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
@@ -47,7 +46,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
     final connectedDevice = ref.watch(bleServiceProvider).connectedDevice;
 
     return CupertinoPageScaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0x00000000),
       child: Stack(
         children: [
           CustomScrollView(
@@ -337,11 +336,11 @@ class _DeviceCard extends StatelessWidget {
           GlassContainer(
             padding: const EdgeInsets.all(AppTheme.s8),
             shape: BoxShape.circle,
-            color: CupertinoDynamicColor.resolve(AppTheme.primary, context),
+            color: CupertinoTheme.of(context).primaryColor,
             opacity: 0.1,
             child: Icon(
               type == 'Gateway' ? CupertinoIcons.wifi : CupertinoIcons.location,
-              color: CupertinoDynamicColor.resolve(AppTheme.primary, context),
+              color: CupertinoTheme.of(context).primaryColor,
             ),
           ),
           AppGaps.horizontalLarge,

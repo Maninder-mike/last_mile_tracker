@@ -1,0 +1,17 @@
+{
+    "@@locale": "en",
+    "appTitle": "Last Mile Tracker",
+    "@appTitle": {
+        "description": "The title of the application"
+    },
+    "homeTab": "Home",
+    "shipmentsTab": "Shipments",
+    "fleetTab": "Fleet",
+    "settingsTab": "Settings",
+    "offlineModeAlert": "Offline mode active. Changes will sync later.",
+    "driverScorecard": "Driver Scorecard",
+    "safetyScore": "Safety Score",
+    "batteryEfficiency": "Battery Efficiency",
+    "hardBraking": "Hard Braking",
+    "speeding": "Speeding Events"
+}

@@ -51,7 +51,9 @@ class TabletSidebar extends StatelessWidget {
                       horizontal: 16,
                       vertical: 12,
                     ),
-                    color: isSelected ? AppTheme.primary : null,
+                    color: isSelected
+                        ? CupertinoTheme.of(context).primaryColor
+                        : null,
                     borderRadius: BorderRadius.circular(12),
                     onPressed: () => onTap(index),
                     child: Row(

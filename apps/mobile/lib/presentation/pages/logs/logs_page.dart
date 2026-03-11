@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import '../../../../core/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -20,6 +21,7 @@ class LogsPage extends ConsumerWidget {
     final isTablet = width >= AppConstants.tabletBreakpoint;
 
     return CupertinoPageScaffold(
+      backgroundColor: AppTheme.background,
       child: Stack(
         children: [
           // Content
@@ -114,20 +116,11 @@ class _LogItem extends StatelessWidget {
             children: [
               Text(
                 DateFormat('HH:mm:ss').format(reading.timestamp),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: isDark ? CupertinoColors.white : CupertinoColors.label,
-                ),
+                style: AppTheme.body.copyWith(fontWeight: FontWeight.bold),
               ),
               Text(
                 DateFormat('MMM d').format(reading.timestamp),
-                style: TextStyle(
-                  color: isDark
-                      ? CupertinoColors.systemGrey
-                      : CupertinoColors.secondaryLabel,
-                  fontSize: 12,
-                ),
+                style: AppTheme.caption,
               ),
             ],
           ),
@@ -180,7 +173,7 @@ class _LogCard extends StatelessWidget {
             children: [
               Text(
                 DateFormat('HH:mm:ss').format(reading.timestamp),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: AppTheme.body.copyWith(fontWeight: FontWeight.bold),
               ),
               Icon(
                 reading.isSynced
@@ -196,10 +189,7 @@ class _LogCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             DateFormat('MMM d, yyyy').format(reading.timestamp),
-            style: const TextStyle(
-              color: CupertinoColors.systemGrey,
-              fontSize: 11,
-            ),
+            style: AppTheme.caption.copyWith(fontSize: 11),
           ),
           const Spacer(),
           Row(
@@ -241,7 +231,13 @@ class _MiniStat extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 4),
-        Text(value, style: const TextStyle(fontSize: 13)),
+        Text(
+          value,
+          style: AppTheme.caption.copyWith(
+            color: AppTheme.textPrimary,
+            fontSize: 13,
+          ),
+        ),
       ],
     );
   }

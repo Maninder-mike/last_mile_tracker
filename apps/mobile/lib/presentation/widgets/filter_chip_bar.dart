@@ -26,10 +26,7 @@ class FilterChipBar<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = CupertinoTheme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final primaryColor = CupertinoDynamicColor.resolve(
-      AppTheme.primary,
-      context,
-    );
+    final primaryColor = theme.primaryColor;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -56,9 +53,7 @@ class FilterChipBar<T> extends StatelessWidget {
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeInOut,
                   // Ensure minimum touch target height of 44px
-                  constraints: const BoxConstraints(
-                    minHeight: 44,
-                  ),
+                  constraints: const BoxConstraints(minHeight: 44),
                   padding: EdgeInsets.symmetric(
                     horizontal: AppTheme.s16,
                     vertical: AppTheme.s12, // Increased for better touch target
@@ -67,15 +62,15 @@ class FilterChipBar<T> extends StatelessWidget {
                     color: isSelected
                         ? primaryColor
                         : (isDark
-                              ? const Color(0x1AFFFFFF)
-                              : const Color(0x0A000000)),
+                              ? CupertinoColors.white.withValues(alpha: 0.1)
+                              : CupertinoColors.black.withValues(alpha: 0.04)),
                     borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
                     border: Border.all(
                       color: isSelected
                           ? primaryColor
                           : (isDark
-                                ? const Color(0x33FFFFFF)
-                                : const Color(0x1A000000)),
+                                ? CupertinoColors.white.withValues(alpha: 0.2)
+                                : CupertinoColors.black.withValues(alpha: 0.1)),
                       width: 1,
                     ),
                   ),
@@ -85,12 +80,10 @@ class FilterChipBar<T> extends StatelessWidget {
                       style: AppTheme.caption.copyWith(
                         color: isSelected
                             ? CupertinoColors.white
-                            : CupertinoDynamicColor.resolve(
-                                AppTheme.textPrimary,
-                                context,
-                              ),
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.w500,
+                            : primaryColor,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                       ),
                     ),
                   ),

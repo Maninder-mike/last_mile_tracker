@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart' show Colors;
 import 'package:last_mile_tracker/domain/models/shipment.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
@@ -12,18 +11,23 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-class ShipmentDetailPage extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
+
+class ShipmentDetailPage extends ConsumerStatefulWidget {
   final Shipment shipment;
 
   const ShipmentDetailPage({super.key, required this.shipment});
 
   @override
-  State<ShipmentDetailPage> createState() => _ShipmentDetailPageState();
+  ConsumerState<ShipmentDetailPage> createState() => _ShipmentDetailPageState();
 }
 
-class _ShipmentDetailPageState extends State<ShipmentDetailPage> {
+class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
   final _mapController = MapController();
   bool _isMapFull = false;
+  double _replayProgress = 1.0; // 0.0 to 1.0
+  bool _isPlaying = false;
 
   @override
   void dispose() {
@@ -41,8 +45,35 @@ class _ShipmentDetailPageState extends State<ShipmentDetailPage> {
     }
   }
 
+  void _togglePlay() {
+    setState(() {
+      _isPlaying = !_isPlaying;
+      if (_isPlaying && _replayProgress >= 1.0) {
+        _replayProgress = 0.0;
+      }
+    });
+    if (_isPlaying) {
+      _animateReplay();
+    }
+  }
+
+  void _animateReplay() async {
+    while (_isPlaying && _replayProgress < 1.0) {
+      await Future.delayed(const Duration(milliseconds: 50));
+      if (!mounted) return;
+      setState(() {
+        _replayProgress += 0.01;
+        if (_replayProgress >= 1.0) {
+          _replayProgress = 1.0;
+          _isPlaying = false;
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final recentPathAsync = ref.watch(recentPathProvider);
     return CupertinoPageScaffold(
       backgroundColor: CupertinoDynamicColor.resolve(
         AppTheme.background,
@@ -73,21 +104,100 @@ class _ShipmentDetailPageState extends State<ShipmentDetailPage> {
                     children: [
                       TileLayer(
                         urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.example.app',
+                            'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                        subdomains: const ['a', 'b', 'c', 'd'],
+                        userAgentPackageName: 'com.last_mile_tracker.app',
                       ),
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: LatLng(
-                              widget.shipment.latitude!,
-                              widget.shipment.longitude!,
+                      recentPathAsync.maybeWhen(
+                        data: (points) {
+                          if (points.isEmpty) return const SizedBox.shrink();
+
+                          // Convert points to LatLng
+                          final route = points
+                              .map((p) => LatLng(p.lat, p.lon))
+                              .toList();
+                          // Reverse so oldest is first
+                          final reversedRoute = route.reversed.toList();
+
+                          // Calculate current position based on replay progress
+                          final progressIndex =
+                              (reversedRoute.length - 1) * _replayProgress;
+                          final index1 = progressIndex.floor();
+                          final index2 = progressIndex.ceil();
+                          final fraction = progressIndex - index1;
+
+                          LatLng currentPos;
+                          if (index1 == index2) {
+                            currentPos = reversedRoute[index1];
+                          } else {
+                            final p1 = reversedRoute[index1];
+                            final p2 = reversedRoute[index2];
+                            currentPos = LatLng(
+                              p1.latitude +
+                                  (p2.latitude - p1.latitude) * fraction,
+                              p1.longitude +
+                                  (p2.longitude - p1.longitude) * fraction,
+                            );
+                          }
+
+                          // Only show path up to the current progress
+                          final visibleRoute = reversedRoute.sublist(
+                            0,
+                            index2 + 1,
+                          );
+
+                          return Stack(
+                            children: [
+                              PolylineLayer(
+                                polylines: [
+                                  Polyline(
+                                    points: reversedRoute, // Full subtle path
+                                    color: CupertinoColors.systemGrey
+                                        .withValues(alpha: 0.3),
+                                    strokeWidth: 4,
+                                  ),
+                                  Polyline(
+                                    points: visibleRoute, // Active path
+                                    color: CupertinoDynamicColor.resolve(
+                                      AppTheme.primary,
+                                      context,
+                                    ),
+                                    strokeWidth: 5,
+                                  ),
+                                ],
+                              ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: currentPos,
+                                    width: 120,
+                                    height: 120,
+                                    child: _PulseMarker(
+                                      color: CupertinoTheme.of(
+                                        context,
+                                      ).primaryColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                        orElse: () => MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: LatLng(
+                                widget.shipment.latitude!,
+                                widget.shipment.longitude!,
+                              ),
+                              width: 120,
+                              height: 120,
+                              child: _PulseMarker(
+                                color: CupertinoTheme.of(context).primaryColor,
+                              ),
                             ),
-                            width: 120,
-                            height: 120,
-                            child: _PulseMarker(color: AppTheme.primary),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   )
@@ -115,6 +225,26 @@ class _ShipmentDetailPageState extends State<ShipmentDetailPage> {
                   ),
           ),
 
+          // Map Masking Gradient
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.35,
+            left: 0,
+            right: 0,
+            height: MediaQuery.of(context).size.height * 0.1,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0x00000000),
+                    AppTheme.background.withValues(alpha: 0.8),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // Draggable/Scrollable Sheet Content
           Positioned.fill(
             child: DraggableScrollableSheet(
@@ -133,9 +263,15 @@ class _ShipmentDetailPageState extends State<ShipmentDetailPage> {
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(32),
                       ),
+                      border: Border.all(
+                        color: CupertinoColors.systemGrey4.withValues(
+                          alpha: 0.2,
+                        ),
+                        width: 1,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: const Color(0x1A000000),
                           blurRadius: 20,
                           offset: const Offset(0, -5),
                         ),
@@ -178,40 +314,92 @@ class _ShipmentDetailPageState extends State<ShipmentDetailPage> {
                                 delegate: SliverChildListDelegate(
                                   [
                                         Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Tracking Number',
-                                                  style: AppTheme.caption,
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  widget
-                                                      .shipment
-                                                      .trackingNumber,
-                                                  style: AppTheme.heading2,
-                                                ),
-                                              ],
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Shipment ID',
+                                                    style: AppTheme.caption
+                                                        .copyWith(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          letterSpacing: 0.5,
+                                                        ),
+                                                  ),
+                                                  Text(
+                                                    widget
+                                                        .shipment
+                                                        .trackingNumber,
+                                                    style: AppTheme.heading1
+                                                        .copyWith(
+                                                          fontSize: 28,
+                                                          letterSpacing: -1,
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                             _StatusBadge(
                                               status: widget.shipment.status,
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 24),
-                                        _RouteInfo(shipment: widget.shipment),
                                         const SizedBox(height: 32),
+                                        _JourneyBridge(
+                                          shipment: widget.shipment,
+                                        ),
+                                        const SizedBox(height: 40),
                                       ]
                                       .animate(interval: 50.ms)
                                       .fadeIn()
                                       .slideX(begin: 0.1),
                                 ),
                               ),
+                            ),
+
+                            // Interactive Timeline Scrubber (Tier 2 Polish)
+                            recentPathAsync.maybeWhen(
+                              data: (points) {
+                                if (points.length < 2) {
+                                  return const SliverToBoxAdapter(
+                                    child: SizedBox.shrink(),
+                                  );
+                                }
+                                return SliverToBoxAdapter(
+                                  child:
+                                      Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 24,
+                                              vertical: 16,
+                                            ),
+                                            child: _RouteScrubber(
+                                              progress: _replayProgress,
+                                              isPlaying: _isPlaying,
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  _replayProgress = val;
+                                                  _isPlaying =
+                                                      false; // Pause when scrubbing
+                                                });
+                                              },
+                                              onTogglePlay: _togglePlay,
+                                            ),
+                                          )
+                                          .animate()
+                                          .fadeIn(delay: 200.ms)
+                                          .slideY(begin: 0.2),
+                                );
+                              },
+                              orElse: () => const SliverToBoxAdapter(
+                                child: SizedBox.shrink(),
+                              ),
+                            ),
+
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: 16),
                             ),
 
                             // Telemetry Section
@@ -294,6 +482,20 @@ class _ShipmentDetailPageState extends State<ShipmentDetailPage> {
                                   ],
                                 ),
                               ).animate().fadeIn().slideX(begin: 0.1),
+                            ),
+
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: 32),
+                            ),
+
+                            // Quick Action Hub
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: _ActionHub(shipment: widget.shipment),
+                              ),
                             ),
 
                             const SliverToBoxAdapter(
@@ -398,7 +600,11 @@ class _MapActionButton extends StatelessWidget {
       child: CupertinoButton(
         padding: const EdgeInsets.all(12),
         onPressed: onPressed,
-        child: Icon(icon, size: 22, color: AppTheme.primary),
+        child: Icon(
+          icon,
+          size: 22,
+          color: CupertinoTheme.of(context).primaryColor,
+        ),
       ),
     );
   }
@@ -414,7 +620,7 @@ class _StatusBadge extends StatelessWidget {
     Color color;
     switch (status) {
       case ShipmentStatus.inTransit:
-        color = AppTheme.primary;
+        color = CupertinoTheme.of(context).primaryColor;
         break;
       case ShipmentStatus.delivered:
         color = AppTheme.success;
@@ -427,78 +633,170 @@ class _StatusBadge extends StatelessWidget {
         break;
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: CupertinoDynamicColor.resolve(
-          color,
-          context,
-        ).withValues(alpha: 0.1),
-        border: Border.all(
+    return Semantics(
+      label: 'Shipment Status: ${status.name}',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
           color: CupertinoDynamicColor.resolve(
             color,
             context,
-          ).withValues(alpha: 0.2),
+          ).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: CupertinoDynamicColor.resolve(
+              color,
+              context,
+            ).withValues(alpha: 0.25),
+            width: 1.5,
+          ),
         ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        status.name.toUpperCase(),
-        style: TextStyle(
-          color: CupertinoDynamicColor.resolve(color, context),
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: CupertinoDynamicColor.resolve(color, context),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              status.name.toUpperCase(),
+              style: TextStyle(
+                color: CupertinoDynamicColor.resolve(color, context),
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _RouteInfo extends StatelessWidget {
+class _JourneyBridge extends StatelessWidget {
   final Shipment shipment;
 
-  const _RouteInfo({required this.shipment});
+  const _JourneyBridge({required this.shipment});
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
+
+    return Semantics(
+      label: 'Journey from ${shipment.origin} to ${shipment.destination}',
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemGrey6.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: CupertinoColors.systemGrey4.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Column(
+          children: [
+            _buildLocationItem(
+              context,
+              'Origin',
+              shipment.origin,
+              CupertinoIcons.circle_fill,
+              CupertinoColors.systemGrey,
+              showLine: true,
+            ),
+            _buildLocationItem(
+              context,
+              'Destination',
+              shipment.destination,
+              CupertinoIcons.location_solid,
+              primaryColor,
+              isDestination: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationItem(
+    BuildContext context,
+    String label,
+    String address,
+    IconData icon,
+    Color color, {
+    bool showLine = false,
+    bool isDestination = false,
+  }) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Column(
           children: [
-            Icon(
-              CupertinoIcons.circle,
-              size: 12,
-              color: CupertinoDynamicColor.resolve(
-                AppTheme.textSecondary,
-                context,
-              ),
-            ),
             Container(
-              height: 30,
-              width: 1,
-              color: CupertinoDynamicColor.resolve(
-                AppTheme.textSecondary,
-                context,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
               ),
+              child: Icon(icon, size: 16, color: color),
             ),
-            Icon(
-              CupertinoIcons.location_solid,
-              size: 12,
-              color: CupertinoDynamicColor.resolve(AppTheme.primary, context),
-            ),
+            if (showLine)
+              Container(
+                width: 2,
+                height: 30,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [color, CupertinoTheme.of(context).primaryColor],
+                  ),
+                ),
+              ),
           ],
         ),
         const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Origin', style: AppTheme.caption),
-            Text(shipment.origin, style: AppTheme.body),
-            const SizedBox(height: 16),
-            Text('Destination', style: AppTheme.caption),
-            Text(shipment.destination, style: AppTheme.body),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTheme.caption.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                address,
+                style: AppTheme.body.copyWith(
+                  fontWeight: isDestination ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
         ),
+        if (isDestination)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: CupertinoColors.systemGrey5.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'ETA 14:30',
+              style: AppTheme.caption.copyWith(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -523,12 +821,19 @@ class _TelemetryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveColor = CupertinoDynamicColor.resolve(color, context);
 
-    return GlassContainer(
-      color: effectiveColor.withValues(alpha: 0.05),
-      child: Container(
-        width: 110,
-        height: 140,
-        padding: const EdgeInsets.all(4),
+    return Container(
+      width: 120,
+      height: 150,
+      decoration: BoxDecoration(
+        color: effectiveColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: effectiveColor.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
             // Background Sparkline
@@ -536,7 +841,7 @@ class _TelemetryCard extends StatelessWidget {
               bottom: 0,
               left: 4,
               right: 4,
-              height: 40,
+              height: 50,
               child: LineChart(
                 LineChartData(
                   gridData: const FlGridData(show: false),
@@ -558,8 +863,8 @@ class _TelemetryCard extends StatelessWidget {
                         const FlSpot(6, 5),
                       ],
                       isCurved: true,
-                      color: effectiveColor.withValues(alpha: 0.3),
-                      barWidth: 2,
+                      color: effectiveColor.withValues(alpha: 0.4),
+                      barWidth: 3,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
@@ -573,7 +878,7 @@ class _TelemetryCard extends StatelessWidget {
             ),
 
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -581,47 +886,143 @@ class _TelemetryCard extends StatelessWidget {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: effectiveColor.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(icon, size: 20, color: effectiveColor),
+                    child: Icon(icon, size: 18, color: effectiveColor),
                   ),
                   const Spacer(),
                   Text(
                     value,
                     style: AppTheme.heading1.copyWith(
                       color: effectiveColor,
-                      fontSize: 18,
+                      fontSize: 20,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: AppTheme.caption.copyWith(fontSize: 11),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (trend != null) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          trend! >= 0
-                              ? CupertinoIcons.arrow_up_right
-                              : CupertinoIcons.arrow_down_right,
-                          size: 10,
-                          color: effectiveColor.withValues(alpha: 0.7),
-                        ),
-                      ],
-                    ],
+                  Text(
+                    title,
+                    style: AppTheme.caption.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
+            if (trend != null)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Icon(
+                  trend! >= 0
+                      ? CupertinoIcons.arrow_up_right
+                      : CupertinoIcons.arrow_down_right,
+                  size: 14,
+                  color: effectiveColor.withValues(alpha: 0.6),
+                ),
+              ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ActionHub extends StatelessWidget {
+  final Shipment shipment;
+
+  const _ActionHub({required this.shipment});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey6.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: CupertinoColors.systemGrey4.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quick Actions',
+            style: AppTheme.caption.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildActionButton(
+                context,
+                'Call',
+                CupertinoIcons.phone_fill,
+                CupertinoColors.activeGreen,
+                () => HapticFeedback.mediumImpact(),
+              ),
+              _buildActionButton(
+                context,
+                'Share',
+                CupertinoIcons.share,
+                CupertinoColors.activeBlue,
+                () => HapticFeedback.mediumImpact(),
+              ),
+              _buildActionButton(
+                context,
+                'Report',
+                CupertinoIcons.exclamationmark_triangle_fill,
+                CupertinoColors.systemRed,
+                () => HapticFeedback.mediumImpact(),
+              ),
+              _buildActionButton(
+                context,
+                'Logs',
+                CupertinoIcons.doc_text_fill,
+                CupertinoColors.systemGrey,
+                () => HapticFeedback.mediumImpact(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    BuildContext context,
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Column(
+      children: [
+        CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: onTap,
+          child: Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withValues(alpha: 0.2)),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(label, style: AppTheme.caption.copyWith()),
+      ],
     );
   }
 }
@@ -659,13 +1060,13 @@ class _TimelineItem extends StatelessWidget {
                 height: 12,
                 decoration: BoxDecoration(
                   color: isActive
-                      ? CupertinoDynamicColor.resolve(AppTheme.primary, context)
+                      ? CupertinoTheme.of(context).primaryColor
                       : CupertinoColors.systemGrey4,
                   shape: BoxShape.circle,
                   border: isActive
                       ? Border.all(
                           color: CupertinoDynamicColor.resolve(
-                            AppTheme.primary,
+                            CupertinoTheme.of(context).primaryColor,
                             context,
                           ).withValues(alpha: 0.3),
                           width: 4,
@@ -753,7 +1154,7 @@ class _PulseMarkerState extends State<_PulseMarker>
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: CupertinoColors.white,
                 shape: BoxShape.circle,
                 border: Border.all(color: widget.color, width: 4),
                 boxShadow: [
@@ -768,6 +1169,82 @@ class _PulseMarkerState extends State<_PulseMarker>
           ],
         );
       },
+    );
+  }
+}
+
+class _RouteScrubber extends StatelessWidget {
+  final double progress;
+  final bool isPlaying;
+  final ValueChanged<double> onChanged;
+  final VoidCallback onTogglePlay;
+
+  const _RouteScrubber({
+    required this.progress,
+    required this.isPlaying,
+    required this.onChanged,
+    required this.onTogglePlay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey6.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: CupertinoColors.systemGrey4.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Route Replay',
+                style: AppTheme.caption.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: AppTheme.caption.copyWith(
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: onTogglePlay,
+                child: Icon(
+                  isPlaying
+                      ? CupertinoIcons.pause_fill
+                      : CupertinoIcons.play_fill,
+                  color: AppTheme.primary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CupertinoSlider(
+                  value: progress,
+                  onChanged: onChanged,
+                  activeColor: AppTheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

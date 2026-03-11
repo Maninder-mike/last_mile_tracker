@@ -9,22 +9,36 @@ import 'tables/trips.dart';
 import 'daos/sensor_dao.dart';
 import 'daos/tracker_dao.dart';
 import 'daos/alert_dao.dart';
+import 'daos/trip_dao.dart';
+import 'daos/sync_queue_dao.dart';
 
 import 'tables/alerts.dart';
 import 'tables/trackers.dart';
+import 'tables/sync_queue.dart';
 import '../../core/utils/file_logger.dart';
 
 part 'app_database.g.dart';
 
 @DriftDatabase(
-  tables: [SensorReadings, Trips, Trackers, Alerts],
-  daos: [SensorDao, TrackerDao, AlertDao],
+  tables: [SensorReadings, Trips, Trackers, Alerts, SyncQueue],
+  daos: [SensorDao, TrackerDao, AlertDao, TripDao, SyncQueueDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 10;
+  SensorDao get sensorDao => SensorDao(this);
+  @override
+  TrackerDao get trackerDao => TrackerDao(this);
+  @override
+  AlertDao get alertDao => AlertDao(this);
+  @override
+  TripDao get tripDao => TripDao(this);
+  @override
+  SyncQueueDao get syncQueueDao => SyncQueueDao(this);
+
+  @override
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -91,6 +105,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 10) {
         await m.addColumn(trackers, trackers.isFavorite);
+      }
+      if (from < 11) {
+        await m.createTable(syncQueue);
       }
     },
   );

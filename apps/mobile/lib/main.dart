@@ -6,7 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'core/services/analytics_service.dart';
-import 'core/services/notification_service.dart';
+import 'logic/notification_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';

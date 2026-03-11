@@ -1,42 +1,44 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/models/notification.dart';
+import '../providers/database_providers.dart';
+import '../../data/database/app_database.dart';
 
-class NotificationNotifier extends Notifier<List<AppNotification>> {
-  @override
-  List<AppNotification> build() {
-    return AppNotification.mockData;
-  }
-
-  void addNotification(AppNotification notification) {
-    state = [notification, ...state];
-  }
-
-  void markAsRead(String id) {
-    state = state
-        .map((n) => n.id == id ? n.copyWith(isRead: true) : n)
-        .toList();
-  }
-
-  void markAllAsRead() {
-    state = state.map((n) => n.copyWith(isRead: true)).toList();
-  }
-
-  void clearAll() {
-    state = [];
-  }
-
-  void remove(String id) {
-    state = state.where((n) => n.id != id).toList();
-  }
-
-  int get unreadCount => state.where((n) => !n.isRead).length;
-}
-
-final notificationProvider =
-    NotifierProvider<NotificationNotifier, List<AppNotification>>(() {
-      return NotificationNotifier();
-    });
-
-final unreadNotificationCountProvider = Provider<int>((ref) {
-  return ref.watch(notificationProvider).where((n) => !n.isRead).length;
+final alertsStreamProvider = StreamProvider<List<Alert>>((ref) {
+  final dao = ref.watch(alertDaoProvider);
+  return dao.watchAllAlerts();
 });
+
+final unreadNotificationCountProvider = StreamProvider<int>((ref) {
+  final dao = ref.watch(alertDaoProvider);
+  return dao.watchUnreadCount();
+});
+
+final notificationManagerProvider = NotifierProvider<NotificationManager, void>(
+  () {
+    return NotificationManager();
+  },
+);
+
+class NotificationManager extends Notifier<void> {
+  @override
+  void build() {}
+
+  Future<void> markAsRead(int id) async {
+    final dao = ref.read(alertDaoProvider);
+    await dao.markAsRead(id);
+  }
+
+  Future<void> markAllAsRead() async {
+    final dao = ref.read(alertDaoProvider);
+    await dao.markAllAsRead();
+  }
+
+  Future<void> deleteAlert(int id) async {
+    final dao = ref.read(alertDaoProvider);
+    await dao.deleteAlert(id);
+  }
+
+  Future<void> clearAll() async {
+    final dao = ref.read(alertDaoProvider);
+    await dao.deleteAllAlerts();
+  }
+}

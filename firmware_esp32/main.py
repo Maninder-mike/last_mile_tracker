@@ -8,7 +8,7 @@ import uasyncio as asyncio
 from machine import Pin, WDT
 from lib.ble_advertising import BLEAdvertiser
 from lib.sensors import SensorHub
-from typing import Any, Dict, Optional, Tuple, List, Union
+from typing import Any, Dict, Optional, Tuple, List
 
 # from lib.st7789_display import Display
 from lib.config import Config
@@ -85,7 +85,7 @@ class LastMileTracker:
         self.sd_logger = SDLogger()
         self.http_poster = HttpPoster(self.config, self.diagnostics)
         self.shock_buffer = ShockBuffer()
-        
+
         # Initialized later
         self.ntp: Optional[NTPClient] = None
         self.wifi: Optional[WiFiManager] = None
@@ -395,7 +395,9 @@ class LastMileTracker:
 
                             # Trigger connection attempt (async)
                             if self.wifi:
-                                asyncio.create_task(self.wifi.connect(on_status_change=on_wifi_status))
+                                asyncio.create_task(
+                                    self.wifi.connect(on_status_change=on_wifi_status)
+                                )
             except Exception as e:
                 Logger.log(f"BLE: WiFi Config Error: {e}")
         elif value_handle in (self.ble.ota_ctrl_handle, self.ble.ota_data_handle):

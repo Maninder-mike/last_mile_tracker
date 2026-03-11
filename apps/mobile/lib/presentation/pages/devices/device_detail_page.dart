@@ -209,6 +209,7 @@ class _BatteryModule extends ConsumerWidget {
     );
 
     final isUsbPowered = bat != null && bat < 1.0;
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
     return _TelemetryModule(
           title: 'BATTERY',
           value: isUsbPowered ? 'USB' : '${bat?.toStringAsFixed(0) ?? "--"}%',
@@ -216,7 +217,7 @@ class _BatteryModule extends ConsumerWidget {
               ? CupertinoIcons.bolt_fill
               : CupertinoIcons.battery_100,
           color: isUsbPowered
-              ? AppTheme.primary
+              ? primaryColor
               : (bat ?? 0) < 20
               ? AppTheme.warning
               : AppTheme.success,
@@ -245,7 +246,9 @@ class _TempModule extends ConsumerWidget {
           title: 'TEMPERATURE',
           value: '${temp?.toStringAsFixed(1) ?? "--"}°C',
           icon: CupertinoIcons.thermometer,
-          color: (temp ?? 0) > 30 ? AppTheme.warning : AppTheme.primary,
+          color: (temp ?? 0) > 30
+              ? AppTheme.warning
+              : CupertinoTheme.of(context).primaryColor,
           subtitle: _getTempSubtitle(additionalTemps),
         )
         .animate()
@@ -279,7 +282,9 @@ class _ShockModule extends ConsumerWidget {
           title: 'SHOCK',
           value: shock != null ? '${shock}G' : '--',
           icon: CupertinoIcons.wind,
-          color: (shock ?? 0) > 2 ? AppTheme.warning : AppTheme.primary,
+          color: (shock ?? 0) > 2
+              ? AppTheme.warning
+              : CupertinoTheme.of(context).primaryColor,
           subtitle: 'Impact Force',
         )
         .animate()
@@ -433,19 +438,23 @@ class _DeviceHeader extends ConsumerWidget {
                   vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  color: CupertinoTheme.of(
+                    context,
+                  ).primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppTheme.primary.withValues(alpha: 0.2),
+                    color: CupertinoTheme.of(
+                      context,
+                    ).primaryColor.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       CupertinoIcons.rocket_fill,
                       size: 10,
-                      color: AppTheme.primary,
+                      color: CupertinoTheme.of(context).primaryColor,
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -453,7 +462,7 @@ class _DeviceHeader extends ConsumerWidget {
                           ? 'v$firmwareVersion'
                           : 'ESP32 Firmware',
                       style: AppTheme.caption.copyWith(
-                        color: AppTheme.primary,
+                        color: CupertinoTheme.of(context).primaryColor,
                         fontFamily: 'monospace',
                         fontWeight: FontWeight.w700,
                         fontSize: 10,
@@ -522,9 +531,9 @@ class _LocationModule extends ConsumerWidget {
                               point: LatLng(lat, lng),
                               width: 40,
                               height: 40,
-                              child: const Icon(
+                              child: Icon(
                                 CupertinoIcons.location_solid,
-                                color: AppTheme.primary,
+                                color: CupertinoTheme.of(context).primaryColor,
                                 size: 30,
                               ),
                             ),
@@ -594,20 +603,18 @@ class _UpdateBanner extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
       child: GlassContainer(
-        color: AppTheme.primary.withValues(alpha: 0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
               Row(
                 children: [
-                  const Icon(
-                    CupertinoIcons.cloud_download,
-                    color: AppTheme.primary,
-                  ),
+                  Icon(CupertinoIcons.cloud_download, color: primaryColor),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -627,7 +634,7 @@ class _UpdateBanner extends ConsumerWidget {
                     '${(otaState.progress * 100).toStringAsFixed(0)}%',
                     style: AppTheme.body.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primary,
+                      color: primaryColor,
                     ),
                   ),
                 ],
@@ -638,11 +645,11 @@ class _UpdateBanner extends ConsumerWidget {
                 child: Container(
                   height: 4,
                   width: double.infinity,
-                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   child: FractionallySizedBox(
                     alignment: Alignment.centerLeft,
                     widthFactor: otaState.progress,
-                    child: Container(color: AppTheme.primary),
+                    child: Container(color: primaryColor),
                   ),
                 ),
               ),
@@ -927,7 +934,9 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDisabled = onTap == null;
-    final color = isDestructive ? AppTheme.critical : AppTheme.primary;
+    final color = isDestructive
+        ? AppTheme.critical
+        : CupertinoTheme.of(context).primaryColor;
 
     return AnimatedButton(
       padding: EdgeInsets.zero,

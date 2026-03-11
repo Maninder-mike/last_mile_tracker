@@ -1,5 +1,5 @@
 # BLE GATT Server for ESP32-C6
-from typing import Any, Callable, Optional, Union, List
+from typing import Any, Callable, Optional, List
 import bluetooth
 from micropython import const
 

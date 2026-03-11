@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
-import 'package:last_mile_tracker/domain/models/notification.dart';
 import 'package:last_mile_tracker/presentation/providers/notification_provider.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
+import '../../../data/database/app_database.dart';
 import 'package:flutter/services.dart';
 import 'package:last_mile_tracker/presentation/widgets/swipe_action_cell.dart';
 import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
@@ -15,46 +15,52 @@ class NotificationCenterPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notifications = ref.watch(notificationProvider);
+    final alertsAsync = ref.watch(alertsStreamProvider);
 
     return CupertinoPageScaffold(
       backgroundColor: AppTheme.background,
       child: Stack(
         children: [
-          notifications.isEmpty
-              ? _buildEmptyState()
-              : ListView.builder(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 60,
-                    bottom: 100,
-                    left: 16,
-                    right: 16,
+          alertsAsync.when(
+            data: (alerts) => alerts.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top + 60,
+                      bottom: 100,
+                      left: 16,
+                      right: 16,
+                    ),
+                    itemCount: alerts.length,
+                    itemBuilder: (context, index) {
+                      return EntranceAnimation(
+                        index: index,
+                        child: _NotificationTile(alert: alerts[index]),
+                      );
+                    },
                   ),
-                  itemCount: notifications.length,
-                  itemBuilder: (context, index) {
-                    return EntranceAnimation(
-                      index: index,
-                      child: _NotificationTile(
-                        notification: notifications[index],
-                      ),
-                    );
-                  },
-                ),
+            loading: () => const Center(child: CupertinoActivityIndicator()),
+            error: (err, _) => Center(child: Text('Error: $err')),
+          ),
           FloatingHeader(
             title: 'Alert History',
             showBackButton: true,
             wrapTrailing: false,
-            trailing: notifications.isNotEmpty
-                ? CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    child: const Text(
-                      'Clear All',
-                      style: TextStyle(color: AppTheme.critical),
-                    ),
-                    onPressed: () =>
-                        ref.read(notificationProvider.notifier).clearAll(),
-                  )
-                : null,
+            trailing: alertsAsync.maybeWhen(
+              data: (alerts) => alerts.isNotEmpty
+                  ? CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      child: const Text(
+                        'Clear All',
+                        style: TextStyle(color: AppTheme.critical),
+                      ),
+                      onPressed: () => ref
+                          .read(notificationManagerProvider.notifier)
+                          .clearAll(),
+                    )
+                  : null,
+              orElse: () => null,
+            ),
           ),
         ],
       ),
@@ -73,7 +79,7 @@ class NotificationCenterPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'No new alerts',
+            'No recent alerts',
             style: AppTheme.body.copyWith(color: CupertinoColors.systemGrey),
           ),
         ],
@@ -83,9 +89,9 @@ class NotificationCenterPage extends ConsumerWidget {
 }
 
 class _NotificationTile extends ConsumerWidget {
-  final AppNotification notification;
+  final Alert alert;
 
-  const _NotificationTile({required this.notification});
+  const _NotificationTile({required this.alert});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -95,23 +101,19 @@ class _NotificationTile extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: SwipeActionCell(
-        groupTag: notification.id,
+        groupTag: 'alert-${alert.id}',
         startActions: [
           createSwipeAction(
-            icon: notification.isRead
+            icon: alert.isRead
                 ? CupertinoIcons.check_mark_circled
                 : CupertinoIcons.check_mark_circled_solid,
-            label: notification.isRead ? 'Unread' : 'Read',
+            label: alert.isRead ? 'Unread' : 'Read',
             color: CupertinoTheme.of(context).primaryColor,
             onPressed: () {
               HapticFeedback.mediumImpact();
-              if (notification.isRead) {
-                // Potential feature: Mark as unread
-              } else {
-                ref
-                    .read(notificationProvider.notifier)
-                    .markAsRead(notification.id);
-              }
+              ref
+                  .read(notificationManagerProvider.notifier)
+                  .markAsRead(alert.id);
             },
           ),
         ],
@@ -122,14 +124,16 @@ class _NotificationTile extends ConsumerWidget {
             color: AppTheme.critical,
             onPressed: () {
               HapticFeedback.heavyImpact();
-              ref.read(notificationProvider.notifier).remove(notification.id);
+              ref
+                  .read(notificationManagerProvider.notifier)
+                  .deleteAlert(alert.id);
             },
           ),
         ],
         child: GestureDetector(
           onTap: () {
             HapticFeedback.selectionClick();
-            ref.read(notificationProvider.notifier).markAsRead(notification.id);
+            ref.read(notificationManagerProvider.notifier).markAsRead(alert.id);
           },
           child: GlassContainer(
             padding: const EdgeInsets.all(16),
@@ -152,8 +156,14 @@ class _NotificationTile extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(notification.title, style: AppTheme.heading2),
-                          if (!notification.isRead)
+                          Expanded(
+                            child: Text(
+                              alert.title,
+                              style: AppTheme.heading2.copyWith(fontSize: 16),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (!alert.isRead)
                             Container(
                               width: 8,
                               height: 8,
@@ -166,14 +176,15 @@ class _NotificationTile extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        notification.message,
+                        alert.message,
                         style: AppTheme.body.copyWith(
                           color: CupertinoColors.systemGrey,
+                          fontSize: 13,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        timeago.format(notification.timestamp),
+                        timeago.format(alert.timestamp),
                         style: AppTheme.caption.copyWith(fontSize: 10),
                       ),
                     ],
@@ -188,24 +199,32 @@ class _NotificationTile extends ConsumerWidget {
   }
 
   Color _getColor() {
-    switch (notification.type) {
-      case NotificationType.info:
+    switch (alert.type) {
+      case 'info':
         return CupertinoColors.activeBlue;
-      case NotificationType.warning:
+      case 'warning':
         return AppTheme.warning;
-      case NotificationType.critical:
+      case 'critical':
         return AppTheme.critical;
+      case 'proximity':
+        return CupertinoColors.systemIndigo;
+      default:
+        return CupertinoColors.systemGrey;
     }
   }
 
   IconData _getIcon() {
-    switch (notification.type) {
-      case NotificationType.info:
+    switch (alert.type) {
+      case 'info':
         return CupertinoIcons.info;
-      case NotificationType.warning:
+      case 'warning':
         return CupertinoIcons.exclamationmark_triangle_fill;
-      case NotificationType.critical:
+      case 'critical':
         return CupertinoIcons.clear_circled;
+      case 'proximity':
+        return CupertinoIcons.location_solid;
+      default:
+        return CupertinoIcons.bell;
     }
   }
 }

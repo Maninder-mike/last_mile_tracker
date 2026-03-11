@@ -12,6 +12,7 @@ class AnimatedButton extends StatefulWidget {
   final double? width;
   final double? height;
   final bool enabled;
+  final bool _isPrimary;
 
   const AnimatedButton({
     super.key,
@@ -27,7 +28,7 @@ class AnimatedButton extends StatefulWidget {
     this.width,
     this.height,
     this.enabled = true,
-  });
+  }) : _isPrimary = false;
 
   AnimatedButton.primary({
     super.key,
@@ -53,7 +54,8 @@ class AnimatedButton extends StatefulWidget {
          ],
        ),
        color = null,
-       gradient = AppTheme.primaryGradient,
+       gradient = null,
+       _isPrimary = true,
        borderRadius = AppTheme.radiusMedium,
        padding = const EdgeInsets.symmetric(
          horizontal: AppTheme.s24,
@@ -69,6 +71,7 @@ class AnimatedButton extends StatefulWidget {
     this.enabled = true,
   }) : color = AppTheme.surfaceGlassWeak,
        gradient = null,
+       _isPrimary = false,
        borderRadius = AppTheme.radiusMedium,
        padding = const EdgeInsets.all(AppTheme.s16);
 
@@ -81,7 +84,47 @@ class _AnimatedButtonState extends State<AnimatedButton> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = CupertinoTheme.of(context);
+    final primary = theme.primaryColor;
     final effectiveOpacity = widget.enabled ? 1.0 : 0.5;
+
+    Gradient? effectiveGradient = widget.gradient;
+    List<BoxShadow>? effectiveShadow;
+
+    if (widget._isPrimary) {
+      final hsl = HSLColor.fromColor(primary);
+      effectiveGradient = LinearGradient(
+        colors: [
+          primary,
+          hsl
+              .withHue((hsl.hue + 15) % 360)
+              .withLightness((hsl.lightness - 0.05).clamp(0.0, 1.0))
+              .toColor(),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+
+      if (widget.enabled) {
+        effectiveShadow = [
+          BoxShadow(
+            color: primary.withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ];
+      }
+    } else if (widget.enabled && widget.gradient != null) {
+      effectiveShadow = AppTheme.glow
+          .map(
+            (e) => BoxShadow(
+              color: e.color.withValues(alpha: 0.3),
+              blurRadius: e.blurRadius,
+              offset: e.offset,
+            ),
+          )
+          .toList();
+    }
 
     return GestureDetector(
       onTapDown: widget.enabled
@@ -109,19 +152,9 @@ class _AnimatedButtonState extends State<AnimatedButton> {
             padding: widget.padding,
             decoration: BoxDecoration(
               color: widget.color,
-              gradient: widget.gradient,
+              gradient: effectiveGradient,
               borderRadius: BorderRadius.circular(widget.borderRadius),
-              boxShadow: widget.enabled && widget.gradient != null
-                  ? AppTheme.glow
-                        .map(
-                          (e) => BoxShadow(
-                            color: e.color.withValues(alpha: 0.3),
-                            blurRadius: e.blurRadius,
-                            offset: e.offset,
-                          ),
-                        )
-                        .toList()
-                  : null,
+              boxShadow: effectiveShadow,
             ),
             child: widget.child,
           ),

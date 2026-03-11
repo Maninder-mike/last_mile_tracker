@@ -1,8 +1,9 @@
 # SD Card Logger for offline data backup
-from typing import Any, Optional, Dict
+from typing import Any, Dict
 from machine import Pin, SPI
 import os
 import time
+
 
 class SDLogger:
     """Log sensor data to SD card as CSV backup"""

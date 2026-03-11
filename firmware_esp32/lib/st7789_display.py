@@ -2,13 +2,16 @@
 from machine import Pin, SPI
 import struct
 import time
+from typing import Optional
 
 # Minimal pure python ST7789 driver since native module might not be available
 # Based on common MicroPython implementations
 
 
 class ST7789:
-    def __init__(self, spi, width, height, reset, dc, cs, backlight):
+    def __init__(
+        self, spi: SPI, width: int, height: int, reset: Pin, dc: Pin, cs: Pin, backlight: Pin
+    ) -> None:
         self.width = width
         self.height = height
         self.spi = spi
@@ -23,14 +26,14 @@ class ST7789:
 
         self.init()
 
-    def init(self):
+    def init(self) -> None:
         self.reset.value(0)
-        time.sleep_ms(50)
+        time.sleep_ms(50)  # type: ignore
         self.reset.value(1)
-        time.sleep_ms(150)
+        time.sleep_ms(150)  # type: ignore
 
         self._write(0x11)  # Sleep out
-        time.sleep_ms(150)
+        time.sleep_ms(150)  # type: ignore
 
         self._write(0x36, b"\x00")  # MADCTL: RGB
         self._write(0x3A, b"\x55")  # COLMOD: 16-bit
@@ -48,7 +51,7 @@ class ST7789:
         self._write(0xE1, b"\xd0\x04\x0c\x11\x13\x2c\x3f\x44\x51\x2f\x1f\x1f\x20\x23")  # NVGAMCTRL
         self._write(0x29)  # Display on
 
-    def _write(self, command, data=None):
+    def _write(self, command: int, data: Optional[bytes] = None) -> None:
         self.cs.value(0)
         self.dc.value(0)
         self.spi.write(bytearray([command]))
@@ -57,7 +60,7 @@ class ST7789:
             self.spi.write(data)
         self.cs.value(1)
 
-    def fill(self, color):
+    def fill(self, color: int) -> None:
         # 16-bit color (565)
         # Separate high/low bytes
         c_hi = (color >> 8) & 0xFF
@@ -80,7 +83,7 @@ class ST7789:
             bytes_remaining -= to_write
         self.cs.value(1)
 
-    def _set_window(self, x0, y0, x1, y1):
+    def _set_window(self, x0: int, y0: int, x1: int, y1: int) -> None:
         self._write(0x2A, struct.pack(">HH", x0, x1))
         self._write(0x2B, struct.pack(">HH", y0, y1))
         self._write(0x2C)
@@ -109,7 +112,7 @@ class Display:
     CYAN = 0x07FF
     YELLOW = 0xFFE0
 
-    def __init__(self):
+    def __init__(self) -> None:
         # SPI bus (SPI 1)
         self._spi = SPI(1, baudrate=40000000, sck=Pin(self.PIN_SCL), mosi=Pin(self.PIN_SDA))
 
@@ -124,10 +127,10 @@ class Display:
         )
         self.backlight(True)
 
-    def clear(self, color=BLACK):
+    def clear(self, color: int = BLACK) -> None:
         self._tft.fill(color)
 
-    def show_stats(self, speed: float, temp: float, shock: int, gps_fix: bool):
+    def show_stats(self, speed: float, temp: float, shock: int, gps_fix: bool) -> None:
         """Display live stats in large font"""
         self.clear()
 
@@ -150,9 +153,9 @@ class Display:
         # Real text requires a font file (e.g. vga1_16x16.py) to be uploaded.
         pass
 
-    def text(self, msg, x, y, color=WHITE):
+    def text(self, msg: str, x: int, y: int, color: int = WHITE) -> None:
         # Placeholder for text rendering
         pass
 
-    def backlight(self, on: bool):
+    def backlight(self, on: bool) -> None:
         self._tft.backlight.value(1 if on else 0)

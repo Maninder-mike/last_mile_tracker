@@ -109,7 +109,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
     final bleConnected = ref.watch(bleConnectionStateProvider).value;
     final isConnected = bleConnected == BluetoothConnectionState.connected;
     final bleService = ref.read(bleServiceProvider);
-    final latestReading = ref.watch(latestReadingProvider).value;
+    final latestReading = ref.watch(latestReadingProvider).asData?.value;
     final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
 
     // Listen for WiFi Status Updates
@@ -130,7 +130,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
     });
 
     return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
+      backgroundColor: AppTheme.background,
       child: Stack(
         children: [
           ListView(

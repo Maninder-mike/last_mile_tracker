@@ -41,4 +41,3 @@ class NTPClient:
 
     def is_synced(self) -> bool:
         return self.get_timestamp() > 0
-

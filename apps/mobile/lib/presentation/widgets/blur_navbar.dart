@@ -51,31 +51,61 @@ class BlurNavbar extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       )
                     : null,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
+                child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    Icon(
-                      isSelected ? item.activeIcon : item.icon,
-                      color: isSelected
-                          ? primaryColor
-                          : CupertinoDynamicColor.resolve(
-                              AppTheme.textSecondary,
-                              context,
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isSelected ? item.activeIcon : item.icon,
+                          color: isSelected
+                              ? primaryColor
+                              : CupertinoDynamicColor.resolve(
+                                  AppTheme.textSecondary,
+                                  context,
+                                ),
+                          size: 24,
+                        ),
+                        if (isSelected) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            item.label,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: primaryColor,
                             ),
-                      size: 24,
+                          ),
+                        ],
+                      ],
                     ),
-                    if (isSelected) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        item.label,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: primaryColor,
+                    if (item.badgeCount != null && item.badgeCount! > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: CupertinoColors.destructiveRed,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            item.badgeCount! > 9 ? '9+' : '${item.badgeCount}',
+                            style: const TextStyle(
+                              color: CupertinoColors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                    ],
                   ],
                 ),
               ),
@@ -91,10 +121,12 @@ class BlurNavbarItem {
   final IconData icon;
   final IconData activeIcon;
   final String label;
+  final int? badgeCount;
 
   const BlurNavbarItem({
     required this.icon,
     required this.activeIcon,
     required this.label,
+    this.badgeCount,
   });
 }

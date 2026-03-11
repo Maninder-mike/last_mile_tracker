@@ -6,6 +6,7 @@ import 'package:last_mile_tracker/presentation/providers/analytics_providers.dar
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
+import 'package:last_mile_tracker/presentation/pages/analytics/signal_heatmap_page.dart';
 
 class AnalyticsPage extends ConsumerWidget {
   const AnalyticsPage({super.key});
@@ -41,10 +42,33 @@ class AnalyticsPage extends ConsumerWidget {
                   primaryColor,
                 ),
               ),
-              const SizedBox(height: 24),
               EntranceAnimation(
                 index: 2,
                 child: _buildSummaryMetrics(shipmentStats, healthStats),
+              ),
+              const SizedBox(height: 24),
+              EntranceAnimation(
+                index: 3,
+                child: GlassContainer(
+                  padding: const EdgeInsets.all(12),
+                  child: CupertinoButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      CupertinoPageRoute(
+                        builder: (context) => const SignalHeatmapPage(),
+                      ),
+                    ),
+                    padding: EdgeInsets.zero,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(CupertinoIcons.map_pin_ellipse, size: 18),
+                        const SizedBox(width: 8),
+                        Text('View Signal Heatmap', style: AppTheme.heading3),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

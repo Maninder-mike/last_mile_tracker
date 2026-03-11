@@ -5,7 +5,12 @@ from typing import Any, Callable, Optional, Tuple, List
 
 
 class WiFiManager:
-    def __init__(self, config: Any, status_led_callback: Optional[Callable[[Tuple[int, int, int]], None]] = None, ntp_client: Any = None) -> None:
+    def __init__(
+        self,
+        config: Any,
+        status_led_callback: Optional[Callable[[Tuple[int, int, int]], None]] = None,
+        ntp_client: Any = None,
+    ) -> None:
         self.config = config
         self.wlan = network.WLAN(network.STA_IF)
         self.wlan.active(True)

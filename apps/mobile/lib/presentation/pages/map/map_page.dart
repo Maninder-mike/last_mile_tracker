@@ -1,17 +1,14 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Colors;
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_marker_popup/flutter_map_marker_popup.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
-import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
+import 'package:last_mile_tracker/presentation/providers/fleet_tracker_provider.dart';
 import 'package:last_mile_tracker/presentation/providers/location_providers.dart';
-import 'package:lmt_models/lmt_models.dart' as models;
+import 'package:last_mile_tracker/domain/models/fleet_tracker.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../widgets/floating_header.dart';
-import 'widgets/telemetry_overlay.dart';
 import 'widgets/map_cluster_marker.dart';
 
 class LatLngTween extends Tween<LatLng> {
@@ -40,44 +37,11 @@ class _MapPageState extends ConsumerState<MapPage>
   final _popupController = PopupController();
   bool _isFollowingMode = true;
 
-  // Animation for marker smoothing
-  late AnimationController _markerMoveController;
-  late Animation<LatLng> _markerMoveAnimation;
-  LatLng _markerPoint = const LatLng(37.7749, -122.4194);
-
-  @override
-  void initState() {
-    super.initState();
-    _markerMoveController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _markerMoveAnimation = LatLngTween(begin: _markerPoint, end: _markerPoint)
-        .animate(
-          CurvedAnimation(
-            parent: _markerMoveController,
-            curve: Curves.easeInOutCubic,
-          ),
-        );
-
-    _markerMoveController.addListener(() {
-      setState(() {
-        _markerPoint = _markerMoveAnimation.value;
-      });
-    });
-  }
-
   @override
   void dispose() {
     _mapController.dispose();
     _popupController.dispose();
-    _markerMoveController.dispose();
     super.dispose();
-  }
-
-  void _recenter(LatLng point) {
-    _mapController.move(point, 16.0);
-    setState(() => _isFollowingMode = true);
   }
 
   void _centerOnUser() async {
@@ -108,45 +72,31 @@ class _MapPageState extends ConsumerState<MapPage>
 
   @override
   Widget build(BuildContext context) {
-    final readingAsync = ref.watch(latestReadingProvider);
-    final pathAsync = ref.watch(recentPathProvider);
+    final fleetTrackersAsync = ref.watch(fleetTrackersProvider);
+    final userLocationAsync = ref.watch(userLocationProvider);
+    final userPos = userLocationAsync.value;
     final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
 
-    // CartoDB Tiles (Cleaner than OSM for professional apps)
     final urlTemplate = isDark
         ? 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png'
         : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-    final readingData = readingAsync.asData?.value;
-    final pathData = pathAsync.asData?.value;
-
-    // Detect coordinate changes and trigger smoothing animation
-    ref.listen<AsyncValue<models.SensorReading?>>(latestReadingProvider, (
-      prev,
-      next,
-    ) {
-      if (next.hasValue && next.value != null) {
-        final newTarget = LatLng(next.value!.lat, next.value!.lon);
-        _markerMoveAnimation = LatLngTween(begin: _markerPoint, end: newTarget)
-            .animate(
-              CurvedAnimation(
-                parent: _markerMoveController,
-                curve: Curves.easeOutCubic,
-              ),
+    // Auto-center on the first critical or nearby tracker if following
+    if (_isFollowingMode) {
+      fleetTrackersAsync.whenData((trackers) {
+        final target = trackers
+            .where((t) => t.latitude != null && t.longitude != null)
+            .firstOrNull;
+        if (target != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _mapController.move(
+              LatLng(target.lat, target.lon),
+              _mapController.camera.zoom,
             );
-        _markerMoveController.forward(from: 0);
-      }
-    });
-
-    final currentPoint = _markerPoint;
-
-    // Auto-center in following mode (smooth camera)
-    if (_isFollowingMode && readingData != null) {
-      _mapController.move(currentPoint, _mapController.camera.zoom);
+          });
+        }
+      });
     }
-
-    final userLocationAsync = ref.watch(userLocationProvider);
-    final userPos = userLocationAsync.value;
 
     return CupertinoPageScaffold(
       child: PopupScope(
@@ -156,7 +106,7 @@ class _MapPageState extends ConsumerState<MapPage>
             FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: currentPoint,
+                initialCenter: const LatLng(37.7749, -122.4194),
                 initialZoom: 15.0,
                 onPositionChanged: (pos, hasGesture) {
                   if (hasGesture && _isFollowingMode) {
@@ -171,67 +121,67 @@ class _MapPageState extends ConsumerState<MapPage>
                   subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.last_mile_tracker.app',
                 ),
-                if (pathData != null && pathData.isNotEmpty)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: pathData
-                            .map((e) => LatLng(e.lat, e.lon))
-                            .toList(),
-                        color: CupertinoTheme.of(
-                          context,
-                        ).primaryColor.withValues(alpha: 0.6),
-                        strokeWidth: 5.0,
-                      ),
-                    ],
-                  ),
-                MarkerClusterLayerWidget(
-                  options: MarkerClusterLayerOptions(
-                    maxClusterRadius: 45,
-                    size: const Size(40, 40),
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.all(50),
-                    maxZoom: 15,
-                    markers: [
-                      if (readingData != null)
-                        Marker(
-                          point: currentPoint,
-                          width: 60,
-                          height: 60,
-                          child: _LiveMarker(isFollowing: _isFollowingMode),
-                        ),
-                      if (userPos != null)
+                fleetTrackersAsync.when(
+                  data: (trackers) {
+                    final markers = trackers
+                        .where((t) => t.latitude != null && t.longitude != null)
+                        .map(
+                          (t) => Marker(
+                            point: LatLng(t.lat, t.lon),
+                            width: 60,
+                            height: 60,
+                            child: _FleetTrackerMarker(tracker: t),
+                          ),
+                        )
+                        .toList();
+
+                    if (userPos != null) {
+                      markers.add(
                         Marker(
                           point: userPos,
                           width: 30,
                           height: 30,
                           child: const _UserMarker(),
                         ),
-                    ],
-                    builder: (context, markers) {
-                      return MapClusterMarker(count: markers.length);
-                    },
-                    popupOptions: PopupOptions(
-                      popupController: _popupController,
-                      popupBuilder: (context, marker) {
-                        if (readingData == null) return const SizedBox();
-                        // Only show popup for device marker, not user marker
-                        // Simple check: if marker point matches userPos, it's user marker
-                        if (userPos != null && marker.point == userPos) {
-                          return const SizedBox();
-                        }
-                        return _MarkerPopup(reading: readingData);
-                      },
-                    ),
-                  ),
+                      );
+                    }
+
+                    return MarkerClusterLayerWidget(
+                      options: MarkerClusterLayerOptions(
+                        maxClusterRadius: 45,
+                        size: const Size(40, 40),
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.all(50),
+                        maxZoom: 15,
+                        markers: markers,
+                        builder: (context, markers) {
+                          return MapClusterMarker(count: markers.length);
+                        },
+                        popupOptions: PopupOptions(
+                          popupController: _popupController,
+                          popupBuilder: (context, marker) {
+                            if (userPos != null && marker.point == userPos) {
+                              return const SizedBox();
+                            }
+                            final tracker = trackers.firstWhere(
+                              (t) =>
+                                  t.lat == marker.point.latitude &&
+                                  t.lon == marker.point.longitude,
+                              orElse: () => trackers.first,
+                            );
+                            return _FleetTrackerPopup(tracker: tracker);
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (e, _) => const SizedBox.shrink(),
                 ),
               ],
             ),
 
-            // Telemetry Overlay
-            const TelemetryOverlay(),
-
-            // Map Controls Stack
+            // Map Controls
             Positioned(
               bottom: 180,
               right: 16,
@@ -252,14 +202,6 @@ class _MapPageState extends ConsumerState<MapPage>
                     icon: CupertinoIcons.location_fill,
                     onPressed: _centerOnUser,
                   ),
-                  const SizedBox(height: 8),
-                  _MapControlButton(
-                    icon: _isFollowingMode
-                        ? CupertinoIcons.scope
-                        : CupertinoIcons.scope,
-                    active: _isFollowingMode,
-                    onPressed: () => _recenter(currentPoint),
-                  ),
                 ],
               ),
             ),
@@ -272,70 +214,74 @@ class _MapPageState extends ConsumerState<MapPage>
   }
 }
 
-class _LiveMarker extends StatelessWidget {
-  final bool isFollowing;
-  const _LiveMarker({required this.isFollowing});
+class _FleetTrackerMarker extends StatelessWidget {
+  final FleetTracker tracker;
+  const _FleetTrackerMarker({required this.tracker});
 
   @override
   Widget build(BuildContext context) {
+    final statusColor = _getStatusColor(context);
+    final isCritical =
+        tracker.status == 'critical' || (tracker.batteryLevel ?? 100) < 15;
+
     return Stack(
       alignment: Alignment.center,
       children: [
-        if (isFollowing)
+        if (isCritical)
           Container(
-                width: 60,
-                height: 60,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: CupertinoTheme.of(
-                      context,
-                    ).primaryColor.withValues(alpha: 0.5),
-                    width: 2,
-                  ),
-                  color: CupertinoTheme.of(
-                    context,
-                  ).primaryColor.withValues(alpha: 0.2),
+                  color: AppTheme.critical.withValues(alpha: 0.2),
                 ),
               )
-              .animate(onPlay: (controller) => controller.repeat())
+              .animate(onPlay: (c) => c.repeat())
               .scale(
-                begin: const Offset(0.3, 0.3),
-                end: const Offset(1.2, 1.2),
+                begin: const Offset(0.8, 0.8),
+                end: const Offset(1.4, 1.4),
+                duration: 1.5.seconds,
                 curve: Curves.easeOut,
-                duration: 2.seconds,
               )
-              .fadeOut(begin: 0.6, curve: Curves.easeIn, duration: 2.seconds),
+              .fadeOut(),
         Container(
-          width: 24,
-          height: 24,
-          decoration: const BoxDecoration(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
             color: CupertinoColors.white,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Color(0x33000000),
+                color: CupertinoColors.black.withValues(alpha: 0.1),
                 blurRadius: 4,
-                offset: Offset(0, 2),
+                offset: const Offset(0, 2),
               ),
             ],
+            border: Border.all(color: statusColor, width: 2),
           ),
-          padding: const EdgeInsets.all(3),
-          child: Container(
-            decoration: BoxDecoration(
-              color: CupertinoTheme.of(context).primaryColor,
-              shape: BoxShape.circle,
-            ),
+          child: Icon(
+            tracker.isInRange
+                ? CupertinoIcons.wifi
+                : CupertinoIcons.location_solid,
+            size: 14,
+            color: statusColor,
           ),
         ),
       ],
     );
   }
+
+  Color _getStatusColor(BuildContext context) {
+    if (tracker.status == 'critical') return AppTheme.critical;
+    if (tracker.status == 'warning') return AppTheme.warning;
+    return tracker.isInRange
+        ? AppTheme.success
+        : CupertinoTheme.of(context).primaryColor;
+  }
 }
 
 class _UserMarker extends StatelessWidget {
   const _UserMarker();
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -343,13 +289,16 @@ class _UserMarker extends StatelessWidget {
         color: CupertinoColors.white,
         shape: BoxShape.circle,
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4),
+          BoxShadow(
+            color: CupertinoColors.black.withValues(alpha: 0.2),
+            blurRadius: 4,
+          ),
         ],
       ),
       padding: const EdgeInsets.all(2),
       child: Container(
         decoration: const BoxDecoration(
-          color: CupertinoColors.systemGreen,
+          color: CupertinoColors.systemBlue,
           shape: BoxShape.circle,
         ),
       ),
@@ -357,94 +306,88 @@ class _UserMarker extends StatelessWidget {
   }
 }
 
-class _MapControlButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onPressed;
-  final bool active;
-
-  const _MapControlButton({
-    required this.icon,
-    required this.onPressed,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
-    final theme = CupertinoTheme.of(context);
-
-    return CupertinoButton(
-      padding: EdgeInsets.zero,
-      minimumSize: const Size(44, 44), // Minimum touch target for accessibility
-      onPressed: onPressed,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: active ? theme.primaryColor : theme.barBackgroundColor,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Icon(
-          icon,
-          size: AppTheme.iconSizeMedium,
-          color: active
-              ? CupertinoColors.white
-              : (isDark ? CupertinoColors.white : theme.primaryColor),
-        ),
-      ),
-    );
-  }
-}
-
-class _MarkerPopup extends StatelessWidget {
-  final models.SensorReading reading;
-  const _MarkerPopup({required this.reading});
+class _FleetTrackerPopup extends StatelessWidget {
+  final FleetTracker tracker;
+  const _FleetTrackerPopup({required this.tracker});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 200,
+      width: 220,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: CupertinoTheme.of(context).barBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10),
+          BoxShadow(
+            color: CupertinoColors.black.withValues(alpha: 0.2),
+            blurRadius: 10,
+          ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Device Info',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  tracker.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              _buildBatteryIcon(),
+            ],
           ),
-          const SizedBox(height: 8),
-          _PopupRow(label: 'Uptime', value: '${reading.uptime}s'),
-          _PopupRow(label: 'RSSI', value: '${reading.rssi} dBm'),
-          _PopupRow(
-            label: 'Voltage',
-            value: '${reading.batteryLevel.toStringAsFixed(2)}V',
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Last updated: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-            style: const TextStyle(
-              fontSize: 10,
-              color: CupertinoColors.systemGrey,
+          if (tracker.trackingNumber != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                'ID: ${tracker.trackingNumber}',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: CupertinoColors.systemGrey,
+                ),
+              ),
             ),
+          const SizedBox(height: 8),
+          _PopupRow(
+            label: 'Temp',
+            value: '${tracker.temp?.toStringAsFixed(1) ?? "--"}°C',
           ),
+          _PopupRow(label: 'Signal', value: '${tracker.rssi ?? "--"} dBm'),
+          _PopupRow(label: 'Last Seen', value: _formatTime(tracker.lastSeen)),
         ],
       ),
     );
+  }
+
+  Widget _buildBatteryIcon() {
+    final level = tracker.batteryLevel ?? 0;
+    final color = level < 20 ? AppTheme.critical : AppTheme.success;
+    return Row(
+      children: [
+        Icon(CupertinoIcons.battery_100, size: 12, color: color),
+        const SizedBox(width: 2),
+        Text(
+          '${level.toInt()}%',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatTime(DateTime dt) {
+    return '${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }
 
@@ -463,15 +406,45 @@ class _PopupRow extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: CupertinoColors.systemGrey,
             ),
           ),
           Text(
             value,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MapControlButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  const _MapControlButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = CupertinoTheme.of(context);
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onPressed,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: theme.barBackgroundColor,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: CupertinoColors.black.withValues(alpha: 0.1),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 20, color: theme.primaryColor),
       ),
     );
   }

@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Colors, HitTestBehavior;
 import '../../../widgets/glass_container.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -17,6 +16,8 @@ class MobileBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
+
     return Positioned(
       left: 20,
       right: 20,
@@ -43,8 +44,8 @@ class MobileBottomNav extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppTheme.primary.withValues(alpha: 0.1)
-                        : Colors.transparent,
+                        ? primaryColor.withValues(alpha: 0.1)
+                        : const Color(0x00000000),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
@@ -53,7 +54,7 @@ class MobileBottomNav extends StatelessWidget {
                       Icon(
                         isSelected ? item.activeIcon : item.icon,
                         color: isSelected
-                            ? AppTheme.primary
+                            ? primaryColor
                             : AppTheme.textSecondary,
                         size: 24,
                       ),
@@ -62,7 +63,7 @@ class MobileBottomNav extends StatelessWidget {
                         item.label,
                         style: AppTheme.caption.copyWith(
                           color: isSelected
-                              ? AppTheme.primary
+                              ? primaryColor
                               : AppTheme.textSecondary,
                           fontWeight: isSelected
                               ? FontWeight.w600

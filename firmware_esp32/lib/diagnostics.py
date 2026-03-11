@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+
 class Diagnostics:
     SAVE_THRESHOLD = 5  # Save every 5 increments
 
@@ -30,7 +31,6 @@ class Diagnostics:
     def flush(self) -> None:
         """Manually flush diagnostics to storage"""
         if self._unsaved_count > 0:
-
             self.config.set("diagnostics", self.counters)
             self._unsaved_count = 0
             print("Diagnostics: Flushed to config.")
@@ -49,4 +49,3 @@ class Diagnostics:
 
     def get_report(self) -> Dict[str, int]:
         return self.counters
-

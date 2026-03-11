@@ -23,17 +23,17 @@ class NotificationSettingsPage extends StatelessWidget {
                 header: const Text('ALERTS'),
                 margin: SettingsTheme.sectionMargin,
                 children: [
-                  _buildSwitchTile('Battery Low', true),
-                  _buildSwitchTile('Temperature Alert', true),
-                  _buildSwitchTile('Connection Lost', false),
+                  _buildSwitchTile(context, 'Battery Low', true),
+                  _buildSwitchTile(context, 'Temperature Alert', true),
+                  _buildSwitchTile(context, 'Connection Lost', false),
                 ],
               ),
               CupertinoListSection.insetGrouped(
                 header: const Text('UPDATES'),
                 margin: SettingsTheme.sectionMargin,
                 children: [
-                  _buildSwitchTile('Shipment Status', true),
-                  _buildSwitchTile('Firmware Updates', true),
+                  _buildSwitchTile(context, 'Shipment Status', true),
+                  _buildSwitchTile(context, 'Firmware Updates', true),
                 ],
               ),
             ],
@@ -44,11 +44,11 @@ class NotificationSettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSwitchTile(String title, bool value) {
+  Widget _buildSwitchTile(BuildContext context, String title, bool value) {
     return SettingsTile(
       title: title,
       icon: CupertinoIcons.bell,
-      iconColor: AppTheme.primary,
+      iconColor: CupertinoTheme.of(context).primaryColor,
       trailing: CupertinoSwitch(
         value: value,
         onChanged: (v) {}, // No-op for now
