@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:last_mile_tracker/data/services/sync_manager.dart';
 import 'package:last_mile_tracker/data/services/ota_service.dart';
 import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
+import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -17,7 +18,8 @@ FlutterSecureStorage secureStorage(Ref ref) {
 @Riverpod(keepAlive: true)
 SyncManager syncManager(Ref ref) {
   final dao = ref.watch(sensorDaoProvider);
-  return SyncManager(dao);
+  final bleService = ref.watch(bleServiceProvider);
+  return SyncManager(dao, bleService);
 }
 
 // OTA Service

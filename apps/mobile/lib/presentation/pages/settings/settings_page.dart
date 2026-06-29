@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +19,7 @@ import 'widgets/device_card.dart';
 import 'advanced_settings_page.dart';
 import 'notifications_settings_page.dart';
 import 'widgets/glass_settings_section.dart';
+import '../devices/devices_list_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -34,7 +36,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final role = ref.watch(settingsModeProvider);
 
     return CupertinoPageScaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: CupertinoDynamicColor.resolve(AppTheme.background, context),
       child: Stack(
         children: [
           ListView(
@@ -44,11 +46,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             children: [
               const DeviceCard().animate().fadeIn().slideY(begin: -0.1, end: 0),
-
+              _buildDevicesSection(),
               if (role != SettingsRole.driver) _buildOperationsSection(),
               _buildAppearanceSection(),
               _buildBackgroundSection(),
-              _buildNotificationsSection(),
+              _buildPreferencesSection(),
               _buildSupportSection(),
 
               // Always show Advanced for now to allow role switching,
@@ -63,6 +65,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           const FloatingHeader(title: 'Settings'),
         ],
       ),
+    );
+  }
+
+  Widget _buildDevicesSection() {
+    return GlassSettingsSection(
+      title: 'Devices',
+      children: [
+        SettingsTile(
+          title: 'Manage Devices',
+          subtitle: 'View and connect trackers',
+          icon: CupertinoIcons.device_phone_portrait,
+          iconColor: CupertinoColors.activeBlue,
+          onTap: () {
+            Navigator.push(
+              context,
+              CupertinoPageRoute(
+                builder: (context) => const DevicesListPage(),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -219,8 +243,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _buildBackgroundSection() {
+    final isTest = Platform.environment.containsKey('FLUTTER_TEST');
     return FutureBuilder<bool>(
-      future: FlutterBackgroundService().isRunning(),
+      future: isTest ? Future.value(false) : FlutterBackgroundService().isRunning(),
       builder: (context, snapshot) {
         final isRunning = snapshot.data ?? false;
 
@@ -267,7 +292,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildNotificationsSection() {
+  Widget _buildPreferencesSection() {
     return GlassSettingsSection(
       title: 'Preferences',
       children: [

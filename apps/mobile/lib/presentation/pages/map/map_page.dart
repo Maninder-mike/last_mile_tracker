@@ -75,7 +75,7 @@ class _MapPageState extends ConsumerState<MapPage>
     final fleetTrackersAsync = ref.watch(fleetTrackersProvider);
     final userLocationAsync = ref.watch(userLocationProvider);
     final userPos = userLocationAsync.value;
-    final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     final urlTemplate = isDark
         ? 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png'

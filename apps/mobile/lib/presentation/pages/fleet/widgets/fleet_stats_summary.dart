@@ -27,6 +27,7 @@ class FleetStatsSummary extends StatelessWidget {
       child: Row(
         children: [
           _buildStatCard(
+            context: context,
             label: 'Shipments',
             value: '$activeShipments',
             icon: CupertinoIcons.cube_box,
@@ -34,6 +35,7 @@ class FleetStatsSummary extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           _buildStatCard(
+            context: context,
             label: 'At Risk',
             value: '$atRisk',
             icon: CupertinoIcons.exclamationmark_triangle,
@@ -41,6 +43,7 @@ class FleetStatsSummary extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           _buildStatCard(
+            context: context,
             label: 'Nearby',
             value: '$nearby',
             icon: CupertinoIcons.wifi,
@@ -48,6 +51,7 @@ class FleetStatsSummary extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           _buildStatCard(
+            context: context,
             label: 'Avg Temp',
             value: '${avgTemp.toStringAsFixed(1)}°C',
             icon: CupertinoIcons.thermometer,
@@ -59,6 +63,7 @@ class FleetStatsSummary extends StatelessWidget {
   }
 
   Widget _buildStatCard({
+    required BuildContext context,
     required String label,
     required String value,
     required IconData icon,
@@ -68,14 +73,25 @@ class FleetStatsSummary extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: color),
+          Icon(icon, size: 20, color: CupertinoDynamicColor.resolve(color, context)),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(value, style: AppTheme.title.copyWith(fontSize: 18)),
-              Text(label, style: AppTheme.caption),
+              Text(
+                value,
+                style: AppTheme.title.copyWith(
+                  fontSize: 18,
+                  color: AppTheme.resolvedTextPrimary(context),
+                ),
+              ),
+              Text(
+                label,
+                style: AppTheme.caption.copyWith(
+                  color: AppTheme.resolvedTextSecondary(context),
+                ),
+              ),
             ],
           ),
         ],

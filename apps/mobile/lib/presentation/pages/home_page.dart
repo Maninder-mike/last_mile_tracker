@@ -1,5 +1,4 @@
 import 'package:last_mile_tracker/l10n/app_localizations.dart';
-import 'package:last_mile_tracker/presentation/pages/devices/devices_list_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -10,8 +9,6 @@ import 'map/map_page.dart';
 import 'settings/settings_page.dart';
 import 'fleet/fleet_overview_page.dart'; // New
 import 'shipments/shipments_page.dart';
-import 'home/inbox_page.dart';
-import '../../presentation/providers/database_providers.dart';
 
 import 'package:last_mile_tracker/presentation/layout/main_layout.dart'; // New
 import 'package:last_mile_tracker/presentation/widgets/blur_navbar.dart'; // New
@@ -37,6 +34,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     // Auto-check for firmware updates on startup
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      
+      // Initialize sync manager to start background syncing
+      ref.read(syncManagerProvider);
+
       if (!_checkedForUpdate) {
         _checkedForUpdate = true;
         final deviceVersion = ref
@@ -57,7 +58,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       const SystemUiOverlayStyle(
         statusBarColor: Color(0x00000000),
         systemNavigationBarColor: Color(0x00000000),
-        statusBarIconBrightness: Brightness.dark,
       ),
     );
   }
@@ -81,15 +81,12 @@ class _HomePageState extends ConsumerState<HomePage> {
     // Index 1: Map (Old)
     // Index 2: Devices (Connect/Disconnect - Old Dashboard/Logs mixed)
     // Index 3: Settings (Old)
-    final unreadCount = ref.watch(unreadAlertsCountProvider).value ?? 0;
     final l10n = AppLocalizations.of(context)!;
 
     final pages = [
       const FleetOverviewPage(),
       const MapPage(),
       const ShipmentsPage(),
-      const InboxPage(),
-      const DevicesListPage(),
       const SettingsPage(),
     ];
 
@@ -108,17 +105,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         icon: CupertinoIcons.cube_box,
         activeIcon: CupertinoIcons.cube_box_fill,
         label: l10n.shipmentsTab,
-      ),
-      BlurNavbarItem(
-        icon: CupertinoIcons.bell,
-        activeIcon: CupertinoIcons.bell_fill,
-        label: 'Inbox',
-        badgeCount: unreadCount,
-      ),
-      const BlurNavbarItem(
-        icon: CupertinoIcons.device_phone_portrait,
-        activeIcon: CupertinoIcons.device_phone_portrait,
-        label: 'Devices',
       ),
       BlurNavbarItem(
         icon: CupertinoIcons.settings,

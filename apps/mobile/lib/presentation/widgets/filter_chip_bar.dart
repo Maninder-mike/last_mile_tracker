@@ -24,9 +24,8 @@ class FilterChipBar<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = CupertinoTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final primaryColor = theme.primaryColor;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,

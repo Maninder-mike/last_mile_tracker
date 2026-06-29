@@ -44,6 +44,7 @@ class EmptyState extends StatelessWidget {
               style: AppTheme.heading2.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
+                color: AppTheme.resolvedTextPrimary(context),
               ),
               textAlign: TextAlign.center,
             ),
@@ -51,10 +52,7 @@ class EmptyState extends StatelessWidget {
             Text(
               subtitle,
               style: AppTheme.body.copyWith(
-                color: CupertinoDynamicColor.resolve(
-                  AppTheme.textSecondary,
-                  context,
-                ),
+                color: AppTheme.resolvedTextSecondary(context),
               ),
               textAlign: TextAlign.center,
             ),

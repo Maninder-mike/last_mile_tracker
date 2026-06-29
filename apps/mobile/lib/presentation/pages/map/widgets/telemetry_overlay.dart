@@ -9,7 +9,7 @@ class TelemetryOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final readingAsync = ref.watch(latestReadingProvider);
-    final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     return readingAsync.when(
       data: (reading) {

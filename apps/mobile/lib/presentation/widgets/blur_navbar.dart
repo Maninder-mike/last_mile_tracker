@@ -12,7 +12,7 @@ class BlurNavbar extends StatelessWidget {
     required this.currentIndex,
     required this.onTap,
     required this.items,
-  });
+  }) : assert(items.length <= 5, 'Navbar items should not exceed 5');
 
   @override
   Widget build(BuildContext context) {
@@ -66,14 +66,14 @@ class BlurNavbar extends StatelessWidget {
                                   AppTheme.textSecondary,
                                   context,
                                 ),
-                          size: 24,
+                          size: 26,
                         ),
                         if (isSelected) ...[
                           const SizedBox(height: 4),
                           Text(
                             item.label,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: primaryColor,
                             ),

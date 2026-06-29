@@ -26,16 +26,17 @@ class SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = CupertinoTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
-    final Color effectiveTextColor = isDestructive
+    final Color rawTextColor = isDestructive
         ? AppTheme.critical
         : (enabled ? AppTheme.textPrimary : AppTheme.textSecondary);
+    final Color effectiveTextColor = CupertinoDynamicColor.resolve(rawTextColor, context);
 
-    final Color effectiveIconColor = enabled
+    final Color rawIconColor = enabled
         ? (isDestructive ? AppTheme.critical : iconColor)
         : AppTheme.textSecondary;
+    final Color effectiveIconColor = CupertinoDynamicColor.resolve(rawIconColor, context);
 
     return Opacity(
       opacity: enabled ? 1.0 : 0.5,
@@ -48,7 +49,12 @@ class SettingsTile extends StatelessWidget {
           ),
         ),
         subtitle: subtitle != null
-            ? Text(subtitle!, style: AppTheme.caption)
+            ? Text(
+                subtitle!,
+                style: AppTheme.caption.copyWith(
+                  color: AppTheme.resolvedTextSecondary(context),
+                ),
+              )
             : null,
         leading: Container(
           width: SettingsTheme.tileLeadingSize,

@@ -13,7 +13,7 @@ class AppTheme {
 
   static const Color background = CupertinoDynamicColor.withBrightness(
     color: Color(0xFFF3F4F6), // Cool Gray 100
-    darkColor: Color(0xFF000000), // Pure Black for OLED
+    darkColor: Color(0xFF0A0A0F), // Rich dark background
   );
 
   static const Color surface = CupertinoDynamicColor.withBrightness(
@@ -21,9 +21,25 @@ class AppTheme {
     darkColor: Color(0xFF1C1C1E),
   );
 
+  static const Color surfaceElevated = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFFFFFFFF),
+    darkColor: Color(0xFF1A1A2E), // Rich, deep indigo-tinted dark surface
+  );
+
+  static const Color surfaceBorder = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFFE5E7EB), // Gray 200
+    darkColor: Color(0x1FFFFFFF), // White @ 12% for subtle dark outline
+  );
+
   // Gradient Tokens
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient primaryGradientDark = LinearGradient(
+    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)], // More vibrant for dark backgrounds
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -90,6 +106,10 @@ class AppTheme {
     ),
   ];
 
+  // Animation & Elevation Tokens
+  static const Duration pageTransitionDuration = Duration(milliseconds: 300);
+  static const double cardElevation = 8.0;
+
   // Text Colors
   static const Color textPrimary = CupertinoDynamicColor.withBrightness(
     color: Color(0xFF111827), // Gray 900
@@ -100,6 +120,15 @@ class AppTheme {
     color: Color(0xFF6B7280), // Gray 500
     darkColor: Color(0xFF9CA3AF), // Gray 400
   );
+
+  // Helper methods to resolve dynamic colors against BuildContext
+  static Color resolvedTextPrimary(BuildContext context) {
+    return CupertinoDynamicColor.resolve(textPrimary, context);
+  }
+
+  static Color resolvedTextSecondary(BuildContext context) {
+    return CupertinoDynamicColor.resolve(textSecondary, context);
+  }
 
   // Text Styles - Using Google Fonts
   static TextStyle get title => GoogleFonts.outfit(
@@ -181,7 +210,7 @@ class AppTheme {
       brightness: brightness,
       primaryColor: themeState.accentColor,
       scaffoldBackgroundColor: isDark
-          ? const Color(0xFF000000)
+          ? const Color(0xFF0A0A0F)
           : const Color(0xFFF3F4F6),
       barBackgroundColor: isDark
           ? const Color(0xCC1C1C1E)
@@ -190,10 +219,10 @@ class AppTheme {
         navTitleTextStyle: GoogleFonts.outfit(
           fontWeight: FontWeight.w600,
           fontSize: 17,
-          color: isDark ? CupertinoColors.white : CupertinoColors.label,
+          color: isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1D1D1F),
         ),
         textStyle: GoogleFonts.inter(
-          color: isDark ? CupertinoColors.white : CupertinoColors.label,
+          color: isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1D1D1F),
         ),
       ),
     );

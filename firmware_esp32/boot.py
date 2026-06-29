@@ -9,5 +9,3 @@ esp.osdebug(None)
 
 # Run garbage collection to free memory
 gc.collect()
-
-print("Milow-Tracker booting...")

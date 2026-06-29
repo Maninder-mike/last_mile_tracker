@@ -13,7 +13,9 @@ final alertManagerProvider = Provider<AlertManager>((ref) {
   final bleService = ref.watch(bleServiceProvider);
   final alertDao = ref.watch(alertDaoProvider);
   final notificationService = ref.watch(notificationServiceProvider);
-  return AlertManager(bleService, alertDao, notificationService);
+  final manager = AlertManager(bleService, alertDao, notificationService);
+  manager.startMonitoring();
+  return manager;
 });
 
 class AlertManager {

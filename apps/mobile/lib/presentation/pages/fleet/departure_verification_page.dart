@@ -94,7 +94,8 @@ class DepartureVerificationPage extends ConsumerWidget {
 
             return CupertinoButton(
               color: isComplete ? AppTheme.success : AppTheme.textSecondary,
-              disabledColor: AppTheme.textSecondary.withValues(alpha: 0.3),
+              disabledColor: CupertinoDynamicColor.resolve(AppTheme.textSecondary, context)
+                  .withValues(alpha: 0.3),
               onPressed: isComplete
                   ? () async {
                       HapticFeedback.mediumImpact();
@@ -129,15 +130,17 @@ class _VerificationItem extends StatelessWidget {
       border: Border.all(
         color: tracker.isInRange
             ? AppTheme.success
-            : AppTheme.critical.withValues(alpha: 0.3),
+            : CupertinoDynamicColor.resolve(AppTheme.critical, context).withValues(alpha: 0.3),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: (tracker.isInRange ? AppTheme.success : AppTheme.critical)
-                  .withValues(alpha: 0.1),
+              color: CupertinoDynamicColor.resolve(
+                tracker.isInRange ? AppTheme.success : AppTheme.critical,
+                context,
+              ).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(

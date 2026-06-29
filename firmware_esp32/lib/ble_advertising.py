@@ -22,6 +22,8 @@ class BLEAdvertiser:
         self._connected = False
         self._conn_handle: Optional[int] = None
         self._write_callback: Optional[Callable[[int, int, bytes], None]] = None
+        self._connect_callback: Optional[Callable[[], None]] = None
+        self._disconnect_callback: Optional[Callable[[], None]] = None
 
         # Register GATT service
         if service_uuid:
@@ -37,6 +39,10 @@ class BLEAdvertiser:
 
     def set_write_callback(self, callback: Callable[[int, int, bytes], None]) -> None:
         self._write_callback = callback
+
+    def set_connect_callbacks(self, on_connect: Callable[[], None], on_disconnect: Callable[[], None]) -> None:
+        self._connect_callback = on_connect
+        self._disconnect_callback = on_disconnect
 
     def _register_services(self, service_uuid: str) -> None:
         """Register Environmental Sensing + OTA Service"""
@@ -96,7 +102,7 @@ class BLEAdvertiser:
         ) = self._ble.gatts_register_services((ENV_SERVICE,))
 
         # Expand GATTS receive buffers for OTA characteristics.
-        # MicroPython default is 20 bytes — far too small for OTA data chunks.
+        # MicroPython default is 20 bytes - far too small for OTA data chunks.
         # 512 bytes allows efficient chunked transfers.
         self._ble.gatts_set_buffer(self._ota_ctrl_handle, 512)
         self._ble.gatts_set_buffer(self._ota_data_handle, 512)
@@ -128,11 +134,15 @@ class BLEAdvertiser:
             self._conn_handle, _, _ = data
             self._connected = True
             print(f"Connected: {self._conn_handle}")
+            if self._connect_callback:
+                self._connect_callback()
 
         elif event == _IRQ_CENTRAL_DISCONNECT:
             self._conn_handle = None
             self._connected = False
             print("Disconnected")
+            if self._disconnect_callback:
+                self._disconnect_callback()
             # Restart advertising
             self.start_advertising()
 

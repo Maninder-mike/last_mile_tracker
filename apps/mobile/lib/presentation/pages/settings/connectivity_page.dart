@@ -110,7 +110,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
     final isConnected = bleConnected == BluetoothConnectionState.connected;
     final bleService = ref.read(bleServiceProvider);
     final latestReading = ref.watch(latestReadingProvider).asData?.value;
-    final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     // Listen for WiFi Status Updates
     ref.listen<AsyncValue<String>>(wifiStatusProvider, (previous, next) {
@@ -611,9 +611,49 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
             label: 'Uptime',
             color: CupertinoTheme.of(context).primaryColor,
           ),
+          _buildDiagCard(
+            icon: CupertinoIcons.thermometer,
+            value: reading != null ? '${reading.internalTemp.toStringAsFixed(1)}°C' : '--',
+            label: 'Core Temp',
+            color: CupertinoColors.systemOrange,
+          ),
+          _buildDiagCard(
+            icon: CupertinoIcons.waveform_path_ecg,
+            value: reading?.batteryDrop != null
+                ? '${(reading!.batteryDrop! * 1000).toStringAsFixed(0)} mV'
+                : '--',
+            label: 'Bat Drop',
+            color: CupertinoColors.systemPurple,
+          ),
+          _buildDiagCard(
+            icon: CupertinoIcons.info_circle,
+            value: _getResetReasonString(reading?.resetReason),
+            label: 'Reset Cause',
+            color: CupertinoColors.systemRed,
+          ),
         ],
       ),
     );
+  }
+
+  String _getResetReasonString(int? code) {
+    if (code == null) return "Unknown";
+    switch (code) {
+      case 1:
+        return "Power On";
+      case 2:
+        return "Pin Reset";
+      case 3:
+        return "Soft Reset";
+      case 4:
+        return "Watchdog";
+      case 5:
+        return "Sleep Wake";
+      case 6:
+        return "Brownout";
+      default:
+        return "Code $code";
+    }
   }
 
   Widget _buildDiagCard({

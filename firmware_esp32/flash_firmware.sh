@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ─── Configuration ───────────────────────────────────────────────────────────
-MPREMOTE="python3 -m mpremote"
+MPREMOTE="/Users/maninder/Developer/last_mile_tracker/.venv/bin/python3 -m mpremote"
 PORT_PATTERN="/dev/cu.usbmodem*"
 MAX_RETRIES=3
 RETRY_DELAY=2
@@ -24,6 +24,7 @@ FILES=(
     "lib/buzzer.py:lib/buzzer.py"
     "lib/http_poster.py:lib/http_poster.py"
     "lib/ntp_time.py:lib/ntp_time.py"
+    "lib/typing.py:lib/typing.py"
 )
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────

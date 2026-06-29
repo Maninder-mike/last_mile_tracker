@@ -22,8 +22,7 @@ class FloatingHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = CupertinoTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     final isOnline = ref.watch(isOnlineProvider);
 
@@ -64,7 +63,7 @@ class FloatingHeader extends ConsumerWidget {
                   onPressed: () => Navigator.maybePop(context),
                   child: GlassContainer(
                     borderRadius: 30,
-                    opacity: 0.1,
+                    opacity: isDark ? 0.15 : 0.1,
                     padding: const EdgeInsets.all(AppTheme.s12),
                     child: Icon(
                       CupertinoIcons.chevron_left,
@@ -80,7 +79,7 @@ class FloatingHeader extends ConsumerWidget {
             ],
             GlassContainer(
               borderRadius: 30,
-              opacity: 0.1,
+              opacity: isDark ? 0.15 : 0.1,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Text(
                 title,
@@ -97,7 +96,7 @@ class FloatingHeader extends ConsumerWidget {
             if (wrapTrailing)
               GlassContainer(
                 borderRadius: 30,
-                opacity: 0.1,
+                opacity: isDark ? 0.15 : 0.1,
                 padding: const EdgeInsets.all(AppTheme.s12),
                 child: trailing ?? defaultTrailing(),
               )

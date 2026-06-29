@@ -15,7 +15,7 @@ class FleetTrackerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = _getStatusColor();
+    final statusColor = CupertinoDynamicColor.resolve(_getStatusColor(context), context);
     return GestureDetector(
       onTap: onTap,
       child: GlassContainer(
@@ -25,7 +25,7 @@ class FleetTrackerCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                _buildSignalIndicator(),
+                _buildSignalIndicator(context),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -33,16 +33,23 @@ class FleetTrackerCard extends StatelessWidget {
                     children: [
                       Text(
                         tracker.name,
-                        style: AppTheme.title,
+                        style: AppTheme.title.copyWith(
+                          color: AppTheme.resolvedTextPrimary(context),
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (tracker.trackingNumber != null)
-                        Text(tracker.trackingNumber!, style: AppTheme.caption),
+                        Text(
+                          tracker.trackingNumber!,
+                          style: AppTheme.caption.copyWith(
+                            color: AppTheme.resolvedTextSecondary(context),
+                          ),
+                        ),
                     ],
                   ),
                 ),
-                _buildStatusBadge(statusColor),
+                _buildStatusBadge(context, statusColor),
               ],
             ),
             const SizedBox(height: 16),
@@ -50,6 +57,7 @@ class FleetTrackerCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildTelemetryItem(
+                  context: context,
                   icon: CupertinoIcons.battery_100,
                   value: tracker.batteryLevel != null
                       ? '${tracker.batteryLevel!.toInt()}%'
@@ -59,6 +67,7 @@ class FleetTrackerCard extends StatelessWidget {
                       : AppTheme.success,
                 ),
                 _buildTelemetryItem(
+                  context: context,
                   icon: CupertinoIcons.thermometer,
                   value: tracker.temp != null
                       ? '${tracker.temp!.toStringAsFixed(1)}°C'
@@ -68,6 +77,7 @@ class FleetTrackerCard extends StatelessWidget {
                       : CupertinoTheme.of(context).primaryColor,
                 ),
                 _buildTelemetryItem(
+                  context: context,
                   icon: CupertinoIcons.time,
                   value: _formatTimeAgo(tracker.lastSeen),
                   color: AppTheme.textSecondary,
@@ -80,12 +90,12 @@ class FleetTrackerCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSignalIndicator() {
+  Widget _buildSignalIndicator(BuildContext context) {
     if (!tracker.isInRange) {
-      return const Icon(
+      return Icon(
         CupertinoIcons.wifi_slash,
         size: 16,
-        color: AppTheme.textSecondary,
+        color: AppTheme.resolvedTextSecondary(context),
       );
     }
 
@@ -104,49 +114,53 @@ class FleetTrackerCard extends StatelessWidget {
       color = AppTheme.critical;
     }
 
-    return Icon(icon, size: 16, color: color);
+    return Icon(icon, size: 16, color: CupertinoDynamicColor.resolve(color, context));
   }
 
-  Widget _buildStatusBadge(Color color) {
+  Widget _buildStatusBadge(BuildContext context, Color color) {
+    final resolvedColor = CupertinoDynamicColor.resolve(color, context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: resolvedColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: resolvedColor.withValues(alpha: 0.3)),
       ),
       child: Text(
         tracker.isInRange ? 'NEARBY' : 'REMOTE',
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
-          color: color,
+          color: resolvedColor,
         ),
       ),
     );
   }
 
   Widget _buildTelemetryItem({
+    required BuildContext context,
     required IconData icon,
     required String value,
     required Color color,
   }) {
+    final resolvedColor = CupertinoDynamicColor.resolve(color, context);
     return Row(
       children: [
-        Icon(icon, size: 14, color: color),
+        Icon(icon, size: 14, color: resolvedColor),
         const SizedBox(width: 4),
         Text(
           value,
           style: AppTheme.body.copyWith(
             fontSize: 12,
             fontWeight: FontWeight.w600,
+            color: AppTheme.resolvedTextPrimary(context),
           ),
         ),
       ],
     );
   }
 
-  Color _getStatusColor() {
+  Color _getStatusColor(BuildContext context) {
     if (!tracker.isInRange) return AppTheme.textSecondary;
     if (tracker.status == 'critical') return AppTheme.critical;
     if (tracker.status == 'warning') return AppTheme.warning;

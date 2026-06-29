@@ -18,8 +18,7 @@ class HeroScannerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isConnected = connectionState == BluetoothConnectionState.connected;
-    final theme = CupertinoTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     return GlassContainer(
       margin: SettingsTheme.heroMargin,

@@ -46,9 +46,9 @@ class LastMileTracker:
 
         # Rule 5: Critical startup invariant assertions
         # Replaced assert with runtime check (B101 fix)
-        if self.config.get("shock_threshold") < 0:
+        if (self.config.get("shock_threshold") or 500) < 0:
             raise ValueError("Invalid shock threshold")
-        if self.config.get("ingest_interval") < 1:
+        if (self.config.get("ingest_interval_sec") or 60) < 1:
             raise ValueError("Ingest interval too low")
 
         # Rule 3: Pre-allocate BLE data buffers to avoid heap churn
@@ -96,6 +96,7 @@ class LastMileTracker:
         self.buzzer.beep(100)  # Boot beep
 
         self.ble = BLEAdvertiser(name=self.device_id, service_uuid=SERVICE_UUID)
+        self.ble.set_connect_callbacks(self.handle_ble_connect, self.handle_ble_disconnect)
         self.ota = BleOta(config=self.config)
         self.ble.set_write_callback(self.handle_ble_write)
 
@@ -198,7 +199,21 @@ class LastMileTracker:
                     if new_data["shock"] > shock_threshold:
                         Logger.log(f"Shock Alert: {new_data['shock']}")
                         self.shock_buffer.add(new_data["shock"], time.ticks_ms())  # type: ignore
-                        asyncio.create_task(self.buzzer.alarm())
+                        
+                        async def shock_visual_alarm() -> None:
+                            asyncio.create_task(self.buzzer.alarm())
+                            for _ in range(3):
+                                self._set_led((255, 0, 0))  # Bright Red
+                                await asyncio.sleep_ms(100)
+                                self._set_led((0, 0, 0))
+                                await asyncio.sleep_ms(100)
+                            # Restore LED state
+                            if self.ble.is_connected():
+                                self._set_led((0, 30, 0))
+                            else:
+                                self._set_led((0, 0, 10))
+                                
+                        asyncio.create_task(shock_visual_alarm())
 
                     # SD Logging (Local backup)
                     # For now, log if we have a fix or every 10 samples to save SD life
@@ -222,7 +237,9 @@ class LastMileTracker:
             if self.ble.is_connected():
                 self._set_led((0, 30, 0))  # Dim Green
             else:
-                self._set_led((0, 0, 10))  # Dim Blue
+                is_low_battery = self.data_store.get("battery_mv", 4000) < 3300
+                color = (30, 10, 0) if is_low_battery else (0, 0, 10)  # Dim Orange or Dim Blue
+                self._set_led(color)
                 await asyncio.sleep_ms(20)
                 self._set_led((0, 0, 0))
 
@@ -288,7 +305,30 @@ class LastMileTracker:
                 self._set_led((0, 0, 0))
                 machine.deepsleep(3600 * 1000)
 
+            # Low battery check (every 5 minutes)
+            battery_mv = self.data_store.get("battery_mv", 4000)
+            if battery_mv < 3300:
+                current_time = time.time()
+                try:
+                    self._last_battery_alert
+                except AttributeError:
+                    self._last_battery_alert = 0
+                if current_time - self._last_battery_alert > 300:
+                    self._last_battery_alert = current_time
+                    Logger.log(f"WARNING: Low Battery! {battery_mv} mV")
+                    asyncio.create_task(self.buzzer.play_melody([(1000, 80), (0, 40), (1000, 80)]))
+
             await asyncio.sleep(5)  # Every 5s
+
+    def handle_ble_connect(self) -> None:
+        Logger.log("BLE: Central Connected")
+        self._set_led((0, 30, 0))  # Green
+        asyncio.create_task(self.buzzer.play_melody([(2500, 80), (0, 40), (2500, 80)]))
+
+    def handle_ble_disconnect(self) -> None:
+        Logger.log("BLE: Central Disconnected")
+        self._set_led((0, 0, 10))  # Blue
+        asyncio.create_task(self.buzzer.play_melody([(2000, 100), (1500, 150)]))
 
     def handle_ble_write(self, conn_handle: int, value_handle: int, value: bytes) -> None:
         """Callback for when a central writes to a characteristic"""

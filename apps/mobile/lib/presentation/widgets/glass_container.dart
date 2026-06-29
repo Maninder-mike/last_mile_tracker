@@ -48,18 +48,20 @@ class _GlassContainerState extends State<GlassContainer> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
     // Determine background color/alpha
     final baseColor = widget.color ?? AppTheme.surfaceGlass;
     final resolvedColor = CupertinoDynamicColor.resolve(baseColor, context);
 
     // Calculate final background color if no gradient is present
-    final finalColor = widget.gradient == null
-        ? resolvedColor.withValues(
-            alpha: widget.color != null ? widget.opacity : resolvedColor.a,
-          )
-        : null;
+    final effectiveOpacity = widget.color != null
+        ? widget.opacity
+        : (isDark ? 0.85 : resolvedColor.a);
 
-    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final finalColor = widget.gradient == null
+        ? resolvedColor.withValues(alpha: effectiveOpacity)
+        : null;
 
     return GestureDetector(
       onTapDown: widget.onTap != null
@@ -94,18 +96,25 @@ class _GlassContainerState extends State<GlassContainer> {
                 widget.border ??
                 Border.all(
                   color: isDark
-                      ? CupertinoColors.white.withValues(alpha: 0.15)
+                      ? CupertinoColors.white.withValues(alpha: 0.08)
                       : CupertinoColors.white.withValues(alpha: 0.6),
-                  width: 1.0,
+                  width: isDark ? 0.5 : 1.0,
                 ),
             boxShadow: [
-              if (!_isPressed)
+              if (!_isPressed) ...[
                 BoxShadow(
-                  color: CupertinoColors.black.withValues(alpha: 0.05),
+                  color: CupertinoColors.black.withValues(alpha: isDark ? 0.2 : 0.05),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                   spreadRadius: -5,
                 ),
+                if (isDark)
+                  BoxShadow(
+                    color: CupertinoTheme.of(context).primaryColor.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+              ],
             ],
           ),
           child: widget.shape == BoxShape.circle

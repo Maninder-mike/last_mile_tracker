@@ -43,12 +43,13 @@ void main() {
         FileLogger.init(),
         Supabase.initialize(
           url: SupabaseConfig.url,
-          anonKey: SupabaseConfig.anonKey,
+          publishableKey: SupabaseConfig.anonKey,
         ),
         [
           Permission.bluetoothScan,
           Permission.bluetoothConnect,
           Permission.location,
+          Permission.notification,
         ].request(),
       ]);
       debugPrint('Init: Parallel initializations complete');

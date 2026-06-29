@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/data/services/ble/scanned_tracker.dart';
 import 'package:last_mile_tracker/logic/alert_manager.dart';
 import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 final proximityServiceProvider = Provider((ref) => ProximityService(ref));
 
@@ -76,8 +75,8 @@ class ProximityService {
   }
 
   Future<void> _notify(String title, String body, String deviceId) async {
-    // Integrate with AlertManager for persistence
-    _ref
+    // Integrate with AlertManager for persistence and system notification triggering
+    await _ref
         .read(alertManagerProvider)
         .createAlert(
           title: title,
@@ -85,26 +84,5 @@ class ProximityService {
           type: 'proximity',
           trackerId: deviceId,
         );
-
-    // Trigger system notification
-    final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-    const androidDetails = AndroidNotificationDetails(
-      'proximity_alerts',
-      'Proximity Alerts',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    const iosDetails = DarwinNotificationDetails();
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await flutterLocalNotificationsPlugin.show(
-      deviceId.hashCode,
-      title,
-      body,
-      details,
-    );
   }
 }

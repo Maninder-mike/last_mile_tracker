@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/blur_navbar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,36 +32,47 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
 
     final isOnline = ref.watch(connectivityStatusProvider).value ?? true;
 
-    return CupertinoPageScaffold(
-      backgroundColor: CupertinoDynamicColor.resolve(
-        AppTheme.background,
-        context,
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: CupertinoColors.transparent,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: CupertinoColors.transparent,
+        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       ),
-      child: Stack(
-        children: [
-          // Main Content
-          IndexedStack(index: _currentIndex, children: widget.pages),
+      child: CupertinoPageScaffold(
+        backgroundColor: CupertinoDynamicColor.resolve(
+          AppTheme.background,
+          context,
+        ),
+        child: Stack(
+          children: [
+            // Main Content
+            IndexedStack(index: _currentIndex, children: widget.pages),
 
-          if (!isOnline)
+            if (!isOnline)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 8,
+                left: 16,
+                right: 16,
+                child: const _OfflineBanner(),
+              ),
+
+            // Floating Navigation Bar
             Positioned(
-              top: MediaQuery.of(context).padding.top + 8,
-              left: 16,
-              right: 16,
-              child: const _OfflineBanner(),
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: BlurNavbar(
+                currentIndex: _currentIndex,
+                onTap: (index) => setState(() => _currentIndex = index),
+                items: widget.navItems,
+              ),
             ),
-
-          // Floating Navigation Bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: BlurNavbar(
-              currentIndex: _currentIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              items: widget.navItems,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

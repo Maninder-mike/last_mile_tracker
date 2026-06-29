@@ -5,14 +5,13 @@ import 'package:last_mile_tracker/presentation/providers/fleet_tracker_provider.
 import 'package:last_mile_tracker/presentation/providers/notification_provider.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
-import 'package:last_mile_tracker/presentation/pages/analytics/analytics_page.dart';
 import 'package:last_mile_tracker/presentation/pages/notifications/notification_center_page.dart';
 import 'package:last_mile_tracker/presentation/pages/devices/device_detail_page.dart';
+import 'package:last_mile_tracker/presentation/widgets/connection_status_icon.dart';
 import 'widgets/fleet_tracker_card.dart';
 import 'widgets/fleet_stats_summary.dart';
 import 'widgets/active_load_card.dart';
 import 'departure_verification_page.dart';
-import 'package:last_mile_tracker/presentation/pages/fleet/scorecard_page.dart';
 
 class FleetOverviewPage extends ConsumerStatefulWidget {
   const FleetOverviewPage({super.key});
@@ -27,7 +26,7 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
     final fleetTrackersAsync = ref.watch(fleetTrackersProvider);
 
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0x00000000),
+      backgroundColor: AppTheme.background,
       child: Stack(
         children: [
           fleetTrackersAsync.when(
@@ -73,7 +72,9 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
                           children: [
                             Text(
                               'Live Fleet Trackers',
-                              style: AppTheme.heading2,
+                              style: AppTheme.heading2.copyWith(
+                                color: AppTheme.resolvedTextPrimary(context),
+                              ),
                             ),
                             Text(
                               '${trackers.where((t) => t.isInRange).length} nearby',
@@ -122,76 +123,31 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
             loading: () => const Center(child: CupertinoActivityIndicator()),
             error: (err, stack) => Center(child: Text('Error: $err')),
           ),
-          const FloatingHeader(
+          FloatingHeader(
             title: 'Fleet Overview',
-            trailing: SizedBox.shrink(),
+            wrapTrailing: false,
+            trailing: _buildActionButtons(context),
           ),
-          _buildActionButtons(context),
         ],
       ),
     );
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 10,
-      right: 16,
-      child: Row(
-        children: [
-          _NotificationBadge(
-            onTap: () => Navigator.push(
-              context,
-              CupertinoPageRoute(
-                builder: (context) => const NotificationCenterPage(),
-              ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const ConnectionStatusIcon(),
+        const SizedBox(width: 8),
+        _NotificationBadge(
+          onTap: () => Navigator.push(
+            context,
+            CupertinoPageRoute(
+              builder: (context) => const NotificationCenterPage(),
             ),
           ),
-          const SizedBox(width: 8),
-          CupertinoButton(
-            padding: EdgeInsets.zero,
-            onPressed: () => Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (context) => const ScorecardPage()),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: CupertinoTheme.of(
-                  context,
-                ).barBackgroundColor.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                CupertinoIcons.star_circle_fill,
-                color: CupertinoColors.systemYellow,
-                size: 24,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          CupertinoButton(
-            padding: EdgeInsets.zero,
-            onPressed: () => Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (context) => const AnalyticsPage()),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: CupertinoTheme.of(
-                  context,
-                ).barBackgroundColor.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                CupertinoIcons.graph_square,
-                color: CupertinoTheme.of(context).primaryColor,
-                size: 24,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 } // End of _FleetOverviewPageState

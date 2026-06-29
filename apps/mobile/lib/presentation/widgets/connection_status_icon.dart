@@ -21,7 +21,6 @@ class ConnectionStatusIcon extends ConsumerWidget {
             color = CupertinoColors.activeGreen;
             break;
           case BluetoothConnectionState.disconnected:
-          default:
             iconData = CupertinoIcons.bluetooth;
             color = CupertinoColors.systemRed;
             break;

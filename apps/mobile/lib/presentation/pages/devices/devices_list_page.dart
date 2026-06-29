@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
-import 'package:last_mile_tracker/presentation/widgets/filter_chip_bar.dart';
 import 'package:last_mile_tracker/presentation/widgets/app_layout.dart';
 import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
@@ -37,6 +36,330 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
     return '${diff.inDays}d ago';
   }
 
+  void _showFilterSheet() {
+    showCupertinoModalPopup<void>(
+      context: context,
+      barrierColor: CupertinoColors.black.withValues(alpha: 0.4),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return GlassContainer(
+              borderRadius: 20,
+              padding: EdgeInsets.zero,
+              child: Container(
+                padding: EdgeInsets.only(
+                  top: 20,
+                  left: 20,
+                  right: 20,
+                  bottom: MediaQuery.of(context).padding.bottom + 20,
+                ),
+                decoration: BoxDecoration(
+                  color: CupertinoTheme.of(context).barBackgroundColor.withValues(alpha: 0.8),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Filter Devices',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: CupertinoDynamicColor.resolve(
+                              AppTheme.textPrimary,
+                              context,
+                            ),
+                          ),
+                        ),
+                        CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            setModalState(() {
+                              _selectedStatus = 'All';
+                              _selectedBattery = 'All';
+                            });
+                            setState(() {
+                              _selectedStatus = 'All';
+                              _selectedBattery = 'All';
+                            });
+                          },
+                          child: Text(
+                            'Reset',
+                            style: TextStyle(
+                              color: CupertinoTheme.of(context).primaryColor,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Status Section
+                    Text(
+                      'Device Status',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoDynamicColor.resolve(
+                          AppTheme.textSecondary,
+                          context,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildFilterPill(
+                          label: 'All Statuses',
+                          isSelected: _selectedStatus == 'All',
+                          setModalState: setModalState,
+                          onTap: () {
+                            setState(() => _selectedStatus = 'All');
+                          },
+                        ),
+                        _buildFilterPill(
+                          label: 'Online',
+                          isSelected: _selectedStatus == 'Online',
+                          setModalState: setModalState,
+                          onTap: () {
+                            setState(() => _selectedStatus = 'Online');
+                          },
+                        ),
+                        _buildFilterPill(
+                          label: 'Offline',
+                          isSelected: _selectedStatus == 'Offline',
+                          setModalState: setModalState,
+                          onTap: () {
+                            setState(() => _selectedStatus = 'Offline');
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Battery Section
+                    Text(
+                      'Battery Level',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoDynamicColor.resolve(
+                          AppTheme.textSecondary,
+                          context,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildFilterPill(
+                          label: 'All Levels',
+                          isSelected: _selectedBattery == 'All',
+                          setModalState: setModalState,
+                          onTap: () {
+                            setState(() => _selectedBattery = 'All');
+                          },
+                        ),
+                        _buildFilterPill(
+                          label: 'Low Battery',
+                          isSelected: _selectedBattery == 'Low',
+                          setModalState: setModalState,
+                          onTap: () {
+                            setState(() => _selectedBattery = 'Low');
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Apply Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.primaryGradient,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: AppTheme.glow,
+                        ),
+                        child: CupertinoButton(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          onPressed: () {
+                            HapticFeedback.mediumImpact();
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text(
+                            'Apply Filters',
+                            style: TextStyle(
+                              color: CupertinoColors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterPill({
+    required String label,
+    required bool isSelected,
+    required StateSetter setModalState,
+    required VoidCallback onTap,
+  }) {
+    final activeColor = CupertinoTheme.of(context).primaryColor;
+    final textThemeColor = CupertinoDynamicColor.resolve(
+      AppTheme.textPrimary,
+      context,
+    );
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setModalState(() {
+          onTap();
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.15)
+              : CupertinoColors.systemGrey.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(
+            color: isSelected
+                ? activeColor
+                : CupertinoColors.systemGrey.withValues(alpha: 0.15),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected ? activeColor : textThemeColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterButton() {
+    final bool hasActiveFilters = _selectedStatus != 'All' || _selectedBattery != 'All';
+    final activeColor = CupertinoTheme.of(context).primaryColor;
+
+    return GlassContainer(
+      padding: EdgeInsets.zero,
+      borderRadius: 10,
+      width: 36,
+      height: 36,
+      color: hasActiveFilters ? activeColor.withValues(alpha: 0.15) : null,
+      border: Border.all(
+        color: hasActiveFilters
+            ? activeColor.withValues(alpha: 0.4)
+            : CupertinoColors.systemGrey.withValues(alpha: 0.2),
+        width: 1,
+      ),
+      child: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              CupertinoIcons.slider_horizontal_3,
+              size: 20,
+              color: hasActiveFilters
+                  ? activeColor
+                  : CupertinoDynamicColor.resolve(
+                      AppTheme.textPrimary,
+                      context,
+                    ),
+            ),
+            if (hasActiveFilters)
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: activeColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: CupertinoDynamicColor.resolve(
+                        AppTheme.surfaceGlass,
+                        context,
+                      ),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveFilterChip({
+    required String label,
+    required VoidCallback onDeleted,
+  }) {
+    final activeColor = CupertinoTheme.of(context).primaryColor;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: activeColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: activeColor.withValues(alpha: 0.24),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: activeColor,
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onDeleted,
+            child: Icon(
+              CupertinoIcons.xmark,
+              size: 10,
+              color: activeColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scannedDevicesAsync = ref.watch(allTrackersProvider);
@@ -46,10 +369,14 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
     final connectedDevice = ref.watch(bleServiceProvider).connectedDevice;
 
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0x00000000),
+      backgroundColor: CupertinoDynamicColor.resolve(
+        AppTheme.background,
+        context,
+      ),
       child: Stack(
         children: [
           CustomScrollView(
+            physics: const BouncingScrollPhysics(),
             slivers: [
               CupertinoSliverRefreshControl(
                 onRefresh: () async {
@@ -59,55 +386,88 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
               ),
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: MediaQuery.of(context).padding.top + 60,
+                  height: MediaQuery.of(context).padding.top + 68,
                 ),
               ),
 
-              // Search Bar
+              // Search & Filter Row
               SliverToBoxAdapter(
                 child: Padding(
                   padding: AppPadding.searchBar,
-                  child: CupertinoSearchTextField(
-                    controller: _searchController,
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    style: TextStyle(
-                      color: CupertinoDynamicColor.resolve(
-                        AppTheme.textPrimary,
-                        context,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: CupertinoSearchTextField(
+                          controller: _searchController,
+                          onChanged: (value) => setState(() => _searchQuery = value),
+                          style: TextStyle(
+                            color: CupertinoDynamicColor.resolve(
+                              AppTheme.textPrimary,
+                              context,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: _showFilterSheet,
+                        child: _buildFilterButton(),
+                      ),
+                    ],
                   ),
                 ),
               ),
 
-              // Filters
-              SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    FilterChipBar<String>(
-                      items: [
-                        FilterItem(label: 'All Devices', value: 'All'),
-                        FilterItem(label: 'Online', value: 'Online'),
-                        FilterItem(label: 'Offline', value: 'Offline'),
-                      ],
-                      selectedValue: _selectedStatus,
-                      onSelected: (value) =>
-                          setState(() => _selectedStatus = value),
+              // Active Filters tags (compact chips)
+              if (_selectedStatus != 'All' || _selectedBattery != 'All')
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          if (_selectedStatus != 'All')
+                            _buildActiveFilterChip(
+                              label: 'Status: $_selectedStatus',
+                              onDeleted: () {
+                                HapticFeedback.lightImpact();
+                                setState(() => _selectedStatus = 'All');
+                              },
+                            ),
+                          if (_selectedStatus != 'All' && _selectedBattery != 'All')
+                            const SizedBox(width: 8),
+                          if (_selectedBattery != 'All')
+                            _buildActiveFilterChip(
+                              label: 'Battery: Low',
+                              onDeleted: () {
+                                HapticFeedback.lightImpact();
+                                setState(() => _selectedBattery = 'All');
+                              },
+                            ),
+                          const SizedBox(width: 12),
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              setState(() {
+                                _selectedStatus = 'All';
+                                _selectedBattery = 'All';
+                              });
+                            },
+                            child: Text(
+                              'Clear All',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: CupertinoTheme.of(context).primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    AppGaps.standard,
-                    FilterChipBar<String>(
-                      items: [
-                        FilterItem(label: 'All Battery', value: 'All'),
-                        FilterItem(label: 'Low Battery', value: 'Low'),
-                      ],
-                      selectedValue: _selectedBattery,
-                      onSelected: (value) =>
-                          setState(() => _selectedBattery = value),
-                    ),
-                    AppGaps.large,
-                  ],
+                  ),
                 ),
-              ),
 
               SliverPadding(
                 padding: AppPadding.horizontal,
@@ -294,7 +654,15 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
               ),
             ],
           ),
-          const FloatingHeader(title: 'Devices'),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: FloatingHeader(
+              title: 'Devices',
+              showBackButton: true,
+            ),
+          ),
         ],
       ),
     );

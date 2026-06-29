@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Colors;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
@@ -8,7 +7,6 @@ import 'package:last_mile_tracker/presentation/providers/optimistic_favorites_pr
 import 'package:last_mile_tracker/presentation/providers/shipment_match_provider.dart';
 import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
 import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
-import 'package:last_mile_tracker/presentation/widgets/filter_chip_bar.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
 import 'package:last_mile_tracker/presentation/widgets/app_layout.dart';
@@ -47,7 +45,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
     // to ensure it operates on the data once it's available.
 
     return CupertinoPageScaffold(
-      backgroundColor: Colors.transparent, // Let MainLayout background show
+      backgroundColor: AppTheme.background,
       child: Stack(
         children: [
           CustomScrollView(
@@ -67,63 +65,84 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                 ),
               ),
 
-              // Search Bar
+              // Search & Filter Row
               SliverToBoxAdapter(
                 child: Padding(
                   padding: AppPadding.searchBar,
-                  child: CupertinoSearchTextField(
-                    controller: _searchController,
-                    onChanged: _onSearchChanged,
-                    style: TextStyle(
-                      color: CupertinoDynamicColor.resolve(
-                        AppTheme.textPrimary,
-                        context,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: CupertinoSearchTextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          style: TextStyle(
+                            color: CupertinoDynamicColor.resolve(
+                              AppTheme.textPrimary,
+                              context,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: _showFilterSheet,
+                        child: _buildFilterButton(),
+                      ),
+                    ],
                   ),
                 ),
               ),
 
-              // Filters
-              SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    AppGaps.medium,
-                    FilterChipBar<ShipmentStatus?>(
-                      items: [
-                        FilterItem(label: 'All Status', value: null),
-                        ...ShipmentStatus.values.map(
-                          (s) => FilterItem(
-                            label:
-                                s.name[0].toUpperCase() + s.name.substring(1),
-                            value: s,
+              // Active Filters tags (compact chips)
+              if (_selectedStatus != null || _selectedTimeRange != 'All')
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          if (_selectedStatus != null)
+                            _buildActiveFilterChip(
+                              label: 'Status: ${_selectedStatus!.name[0].toUpperCase()}${_selectedStatus!.name.substring(1)}',
+                              onDeleted: () {
+                                HapticFeedback.lightImpact();
+                                setState(() => _selectedStatus = null);
+                              },
+                            ),
+                          if (_selectedStatus != null && _selectedTimeRange != 'All')
+                            const SizedBox(width: 8),
+                          if (_selectedTimeRange != 'All')
+                            _buildActiveFilterChip(
+                              label: 'Time: $_selectedTimeRange',
+                              onDeleted: () {
+                                HapticFeedback.lightImpact();
+                                setState(() => _selectedTimeRange = 'All');
+                              },
+                            ),
+                          const SizedBox(width: 12),
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              setState(() {
+                                _selectedStatus = null;
+                                _selectedTimeRange = 'All';
+                              });
+                            },
+                            child: Text(
+                              'Clear All',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: CupertinoTheme.of(context).primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                      selectedValue: _selectedStatus,
-                      onSelected: (value) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _selectedStatus = value);
-                      },
+                        ],
+                      ),
                     ),
-                    AppGaps.standard,
-                    FilterChipBar<String>(
-                      items: [
-                        FilterItem(label: 'All Time', value: 'All'),
-                        FilterItem(label: 'Today', value: 'Today'),
-                        FilterItem(label: 'This Week', value: 'This Week'),
-                        FilterItem(label: 'This Month', value: 'This Month'),
-                      ],
-                      selectedValue: _selectedTimeRange,
-                      onSelected: (value) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _selectedTimeRange = value);
-                      },
-                    ),
-                    AppGaps.medium,
-                  ],
+                  ),
                 ),
-              ),
 
               // Shipment List
               SliverPadding(
@@ -291,6 +310,323 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
       ),
     );
   }
+
+  void _showFilterSheet() {
+    showCupertinoModalPopup<void>(
+      context: context,
+      barrierColor: CupertinoColors.black.withValues(alpha: 0.4),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return GlassContainer(
+              borderRadius: 20,
+              padding: EdgeInsets.zero,
+              child: Container(
+                padding: EdgeInsets.only(
+                  top: 20,
+                  left: 20,
+                  right: 20,
+                  bottom: MediaQuery.of(context).padding.bottom + 20,
+                ),
+                decoration: BoxDecoration(
+                  color: CupertinoTheme.of(context).barBackgroundColor.withValues(alpha: 0.8),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Filter Shipments',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: CupertinoDynamicColor.resolve(
+                              AppTheme.textPrimary,
+                              context,
+                            ),
+                          ),
+                        ),
+                        CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            setModalState(() {
+                              _selectedStatus = null;
+                              _selectedTimeRange = 'All';
+                            });
+                            setState(() {
+                              _selectedStatus = null;
+                              _selectedTimeRange = 'All';
+                            });
+                          },
+                          child: Text(
+                            'Reset',
+                            style: TextStyle(
+                              color: CupertinoTheme.of(context).primaryColor,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Status Section
+                    Text(
+                      'Shipment Status',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoDynamicColor.resolve(
+                          AppTheme.textSecondary,
+                          context,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildFilterPill(
+                          label: 'All Status',
+                          isSelected: _selectedStatus == null,
+                          setModalState: setModalState,
+                          onTap: () {
+                            setState(() => _selectedStatus = null);
+                          },
+                        ),
+                        ...ShipmentStatus.values.map((status) {
+                          final label = status.name[0].toUpperCase() + status.name.substring(1);
+                          return _buildFilterPill(
+                            label: label,
+                            isSelected: _selectedStatus == status,
+                            setModalState: setModalState,
+                            onTap: () {
+                              setState(() => _selectedStatus = status);
+                            },
+                          );
+                        }),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Time Range Section
+                    Text(
+                      'Delivery Timeframe',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoDynamicColor.resolve(
+                          AppTheme.textSecondary,
+                          context,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        'All',
+                        'Today',
+                        'This Week',
+                        'This Month',
+                      ].map((time) {
+                        final label = time == 'All' ? 'All Time' : time;
+                        return _buildFilterPill(
+                          label: label,
+                          isSelected: _selectedTimeRange == time,
+                          setModalState: setModalState,
+                          onTap: () {
+                            setState(() => _selectedTimeRange = time);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Apply Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.primaryGradient,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: AppTheme.glow,
+                        ),
+                        child: CupertinoButton(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          onPressed: () {
+                            HapticFeedback.mediumImpact();
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text(
+                            'Apply Filters',
+                            style: TextStyle(
+                              color: CupertinoColors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterPill({
+    required String label,
+    required bool isSelected,
+    required StateSetter setModalState,
+    required VoidCallback onTap,
+  }) {
+    final activeColor = CupertinoTheme.of(context).primaryColor;
+    final textThemeColor = CupertinoDynamicColor.resolve(
+      AppTheme.textPrimary,
+      context,
+    );
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setModalState(() {
+          onTap();
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.15)
+              : CupertinoColors.systemGrey.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(
+            color: isSelected
+                ? activeColor
+                : CupertinoColors.systemGrey.withValues(alpha: 0.15),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected ? activeColor : textThemeColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterButton() {
+    final bool hasActiveFilters = _selectedStatus != null || _selectedTimeRange != 'All';
+    final activeColor = CupertinoTheme.of(context).primaryColor;
+
+    return GlassContainer(
+      padding: EdgeInsets.zero,
+      borderRadius: 10,
+      width: 36,
+      height: 36,
+      color: hasActiveFilters ? activeColor.withValues(alpha: 0.15) : null,
+      border: Border.all(
+        color: hasActiveFilters
+            ? activeColor.withValues(alpha: 0.4)
+            : CupertinoColors.systemGrey.withValues(alpha: 0.2),
+        width: 1,
+      ),
+      child: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              CupertinoIcons.slider_horizontal_3,
+              size: 20,
+              color: hasActiveFilters
+                  ? activeColor
+                  : CupertinoDynamicColor.resolve(
+                      AppTheme.textPrimary,
+                      context,
+                    ),
+            ),
+            if (hasActiveFilters)
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: activeColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: CupertinoDynamicColor.resolve(
+                        AppTheme.surfaceGlass,
+                        context,
+                      ),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveFilterChip({
+    required String label,
+    required VoidCallback onDeleted,
+  }) {
+    final activeColor = CupertinoTheme.of(context).primaryColor;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: activeColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: activeColor.withValues(alpha: 0.24),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: activeColor,
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onDeleted,
+            child: Icon(
+              CupertinoIcons.xmark,
+              size: 10,
+              color: activeColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ShipmentListItem extends StatelessWidget {
@@ -313,7 +649,6 @@ class _ShipmentListItem extends StatelessWidget {
       },
       child: Hero(
         tag: 'shipment_card_${shipment.id}',
-
         child: GlassContainer(
           opacity: 0.6,
           padding: AppPadding.card,
@@ -328,7 +663,7 @@ class _ShipmentListItem extends StatelessWidget {
                       shipment.trackingNumber,
                       style: AppTheme.heading2.copyWith(
                         letterSpacing: -0.5,
-                        color: AppTheme.textPrimary,
+                        color: AppTheme.resolvedTextPrimary(context),
                       ),
                     ),
                   ),
@@ -339,7 +674,7 @@ class _ShipmentListItem extends StatelessWidget {
               Row(
                 children: [
                   _RouteDot(
-                    color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                    color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.5),
                   ),
                   AppGaps.horizontalMedium,
                   Expanded(
@@ -347,7 +682,7 @@ class _ShipmentListItem extends StatelessWidget {
                       '${shipment.origin} → ${shipment.destination}',
                       style: AppTheme.body.copyWith(
                         fontSize: 14,
-                        color: AppTheme.textSecondary,
+                        color: AppTheme.resolvedTextSecondary(context),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -378,6 +713,7 @@ class _ShipmentListItem extends StatelessWidget {
                     'ETA: ${_formatDate(shipment.eta)}',
                     style: AppTheme.caption.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: AppTheme.resolvedTextSecondary(context),
                     ),
                   ),
                 ],

@@ -36,7 +36,6 @@ export default function DeckMap({ devices, selectedDeviceId, onSelectDevice }: D
         if (selectedDeviceId) {
             const device = devices.find(d => d.id === selectedDeviceId);
             if (device) {
-                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setViewState(prev => ({
                     ...prev,
                     longitude: device.lon,

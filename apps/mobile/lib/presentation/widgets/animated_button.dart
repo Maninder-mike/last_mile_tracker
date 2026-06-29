@@ -86,6 +86,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
   Widget build(BuildContext context) {
     final theme = CupertinoTheme.of(context);
     final primary = theme.primaryColor;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     final effectiveOpacity = widget.enabled ? 1.0 : 0.5;
 
     Gradient? effectiveGradient = widget.gradient;
@@ -93,14 +94,25 @@ class _AnimatedButtonState extends State<AnimatedButton> {
 
     if (widget._isPrimary) {
       final hsl = HSLColor.fromColor(primary);
-      effectiveGradient = LinearGradient(
-        colors: [
-          primary,
-          hsl
+      final Color startColor = isDark
+          ? hsl
+              .withSaturation((hsl.saturation + 0.15).clamp(0.0, 1.0))
+              .withLightness((hsl.lightness + 0.05).clamp(0.0, 1.0))
+              .toColor()
+          : primary;
+      final Color endColor = isDark
+          ? hsl
+              .withHue((hsl.hue + 15) % 360)
+              .withSaturation((hsl.saturation + 0.15).clamp(0.0, 1.0))
+              .withLightness((hsl.lightness - 0.02).clamp(0.0, 1.0))
+              .toColor()
+          : hsl
               .withHue((hsl.hue + 15) % 360)
               .withLightness((hsl.lightness - 0.05).clamp(0.0, 1.0))
-              .toColor(),
-        ],
+              .toColor();
+
+      effectiveGradient = LinearGradient(
+        colors: [startColor, endColor],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       );
@@ -108,7 +120,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
       if (widget.enabled) {
         effectiveShadow = [
           BoxShadow(
-            color: primary.withValues(alpha: 0.3),
+            color: primary.withValues(alpha: isDark ? 0.4 : 0.3),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -118,7 +130,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
       effectiveShadow = AppTheme.glow
           .map(
             (e) => BoxShadow(
-              color: e.color.withValues(alpha: 0.3),
+              color: e.color.withValues(alpha: isDark ? 0.4 : 0.3),
               blurRadius: e.blurRadius,
               offset: e.offset,
             ),
@@ -154,6 +166,12 @@ class _AnimatedButtonState extends State<AnimatedButton> {
               color: widget.color,
               gradient: effectiveGradient,
               borderRadius: BorderRadius.circular(widget.borderRadius),
+              border: widget._isPrimary && isDark
+                  ? Border.all(
+                      color: primary.withValues(alpha: 0.3),
+                      width: 1.0,
+                    )
+                  : null,
               boxShadow: effectiveShadow,
             ),
             child: widget.child,

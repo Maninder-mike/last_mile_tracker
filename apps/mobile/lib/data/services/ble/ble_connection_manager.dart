@@ -19,6 +19,9 @@ class BleConnectionManager {
   BluetoothCharacteristic? _wifiChar;
 
   int _reconnectDelaySeconds = BleConstants.initialReconnectDelay.inSeconds;
+  bool _isConnecting = false;
+  bool get isConnecting => _isConnecting;
+  BluetoothConnectionState _connectionState = BluetoothConnectionState.disconnected;
 
   BleConnectionManager({
     required this.onStateChanged,
@@ -28,22 +31,25 @@ class BleConnectionManager {
   });
 
   Future<void> connect(BluetoothDevice device) async {
+    if (_isConnecting) {
+      FileLogger.log("ConnectionManager: Connection already in progress. Skipping connect request.");
+      return;
+    }
+    if (_device != null && _connectionState == BluetoothConnectionState.connected) {
+      FileLogger.log("ConnectionManager: Already connected to ${_device!.platformName}. Skipping connect request.");
+      return;
+    }
+
+    _isConnecting = true;
     _device = device;
+
     try {
-      await device.connect(license: License.free);
+      await device.connect(license: License.nonprofit);
       FileLogger.log("ConnectionManager: Connected to ${device.platformName}");
       _reconnectDelaySeconds = BleConstants.initialReconnectDelay.inSeconds;
-
-      // Request a larger MTU for OTA data transfers
-      try {
-        final mtu = await device.requestMtu(512);
-        FileLogger.log("ConnectionManager: Negotiated MTU: $mtu");
-      } catch (e) {
-        FileLogger.log("ConnectionManager: MTU negotiation failed: $e");
-      }
-
       await _connectionStateSubscription?.cancel();
       _connectionStateSubscription = device.connectionState.listen((state) {
+        _connectionState = state;
         onStateChanged(state);
 
         if (state == BluetoothConnectionState.disconnected) {
@@ -61,10 +67,27 @@ class BleConnectionManager {
       });
 
       await _discoverServices(device);
+
+      // Request a larger MTU after service discovery has finished and connection settled
+      Future.microtask(() async {
+        try {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          if (_device == device) {
+            final mtu = await device.requestMtu(256);
+            FileLogger.log("ConnectionManager: Negotiated MTU: $mtu");
+          }
+        } catch (e) {
+          FileLogger.log("ConnectionManager: MTU negotiation failed: $e");
+        }
+      });
     } catch (e) {
       FileLogger.log("ConnectionManager: Connection error: $e");
+      _connectionState = BluetoothConnectionState.disconnected;
+      onStateChanged(BluetoothConnectionState.disconnected);
       _cleanupConnectionResources();
       onDisconnected();
+    } finally {
+      _isConnecting = false;
     }
   }
 

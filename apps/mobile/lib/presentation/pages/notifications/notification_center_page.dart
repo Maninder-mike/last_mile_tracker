@@ -10,11 +10,19 @@ import 'package:last_mile_tracker/presentation/widgets/swipe_action_cell.dart';
 import 'package:last_mile_tracker/presentation/widgets/entrance_animation.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-class NotificationCenterPage extends ConsumerWidget {
+class NotificationCenterPage extends ConsumerStatefulWidget {
   const NotificationCenterPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationCenterPage> createState() =>
+      _NotificationCenterPageState();
+}
+
+class _NotificationCenterPageState extends ConsumerState<NotificationCenterPage> {
+  String _selectedFilter = 'all';
+
+  @override
+  Widget build(BuildContext context) {
     final alertsAsync = ref.watch(alertsStreamProvider);
 
     return CupertinoPageScaffold(
@@ -22,23 +30,80 @@ class NotificationCenterPage extends ConsumerWidget {
       child: Stack(
         children: [
           alertsAsync.when(
-            data: (alerts) => alerts.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).padding.top + 60,
-                      bottom: 100,
-                      left: 16,
-                      right: 16,
+            data: (alerts) {
+              final filteredAlerts = alerts.where((alert) {
+                if (_selectedFilter == 'all') return true;
+                if (_selectedFilter == 'critical') {
+                  return alert.type == 'critical' || alert.type == 'warning';
+                }
+                if (_selectedFilter == 'proximity') {
+                  return alert.type == 'proximity';
+                }
+                return true;
+              }).toList();
+
+              return CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: MediaQuery.of(context).padding.top + 60,
                     ),
-                    itemCount: alerts.length,
-                    itemBuilder: (context, index) {
-                      return EntranceAnimation(
-                        index: index,
-                        child: _NotificationTile(alert: alerts[index]),
-                      );
-                    },
                   ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: CupertinoSlidingSegmentedControl<String>(
+                          groupValue: _selectedFilter,
+                          children: const {
+                            'all': Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Text('All'),
+                            ),
+                            'critical': Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Text('Critical'),
+                            ),
+                            'proximity': Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Text('Proximity'),
+                            ),
+                          },
+                          onValueChanged: (value) {
+                            if (value != null) {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                _selectedFilter = value;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  filteredAlerts.isEmpty
+                      ? SliverToBoxAdapter(child: _buildEmptyState())
+                      : SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              return EntranceAnimation(
+                                index: index,
+                                child: _NotificationTile(
+                                  alert: filteredAlerts[index],
+                                ),
+                              );
+                            },
+                            childCount: filteredAlerts.length,
+                          ),
+                        ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              );
+            },
             loading: () => const Center(child: CupertinoActivityIndicator()),
             error: (err, _) => Center(child: Text('Error: $err')),
           ),
@@ -68,21 +133,34 @@ class NotificationCenterPage extends ConsumerWidget {
   }
 
   Widget _buildEmptyState() {
+    String text = 'No recent alerts';
+    IconData icon = CupertinoIcons.bell_slash;
+    if (_selectedFilter == 'critical') {
+      text = 'No critical alerts';
+      icon = CupertinoIcons.checkmark_shield;
+    } else if (_selectedFilter == 'proximity') {
+      text = 'No proximity alerts';
+      icon = CupertinoIcons.location_slash;
+    }
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            CupertinoIcons.bell_slash,
-            size: 64,
-            color: CupertinoColors.systemGrey.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No recent alerts',
-            style: AppTheme.body.copyWith(color: CupertinoColors.systemGrey),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.only(top: 80),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 64,
+              color: CupertinoDynamicColor.resolve(CupertinoColors.systemGrey, context)
+                  .withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              text,
+              style: AppTheme.body.copyWith(color: CupertinoColors.systemGrey),
+            ),
+          ],
+        ),
       ),
     );
   }

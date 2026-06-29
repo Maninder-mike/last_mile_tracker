@@ -44,6 +44,32 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
+    // Create Android Notification Channels
+    final androidPlugin = _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _criticalChannelId,
+          'Critical Alerts',
+          description: 'Last Mile Tracker critical shipment alerts',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _infoChannelId,
+          'Information',
+          description: 'Last Mile Tracker shipment updates',
+          importance: Importance.defaultImportance,
+          playSound: true,
+        ),
+      );
+    }
+
     // 2. Request FCM Permissions
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,

@@ -36,10 +36,13 @@ class DeviceCard extends ConsumerWidget {
                   children: [
                     Text(
                       isConnected ? 'Tracker Online' : 'Tracker Offline',
-                      style: AppTheme.heading2.copyWith(fontSize: 20),
+                      style: AppTheme.heading2.copyWith(
+                        fontSize: 20,
+                        color: AppTheme.resolvedTextPrimary(context),
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    _buildDeviceSubtitle(isConnected, latestReading),
+                    _buildDeviceSubtitle(context, isConnected, latestReading),
                   ],
                 ),
               ),
@@ -55,10 +58,10 @@ class DeviceCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-          _buildDivider(),
+          _buildDivider(context),
           const SizedBox(height: 16),
           if (isConnected)
-            _buildConnectedStats(latestReading)
+            _buildConnectedStats(context, latestReading)
           else
             _buildConnectButton(context),
           if (isConnected) ...[
@@ -90,11 +93,17 @@ class DeviceCard extends ConsumerWidget {
   }
 
   Widget _buildDeviceSubtitle(
+    BuildContext context,
     bool isConnected,
     models.SensorReading? latestReading,
   ) {
     if (!isConnected) {
-      return Text('Connect to device to sync data', style: AppTheme.caption);
+      return Text(
+        'Connect to device to sync data',
+        style: AppTheme.caption.copyWith(
+          color: AppTheme.resolvedTextSecondary(context),
+        ),
+      );
     }
 
     final wifiSsid = latestReading?.wifiSsid;
@@ -103,17 +112,27 @@ class DeviceCard extends ConsumerWidget {
         children: [
           Icon(CupertinoIcons.wifi, size: 12, color: AppTheme.success),
           const SizedBox(width: 4),
-          Text(wifiSsid, style: AppTheme.caption),
+          Text(
+            wifiSsid,
+            style: AppTheme.caption.copyWith(
+              color: AppTheme.resolvedTextSecondary(context),
+            ),
+          ),
         ],
       );
     }
-    return Text('Bluetooth Connected', style: AppTheme.caption);
+    return Text(
+      'Bluetooth Connected',
+      style: AppTheme.caption.copyWith(
+        color: AppTheme.resolvedTextSecondary(context),
+      ),
+    );
   }
 
-  Widget _buildDivider() {
+  Widget _buildDivider(BuildContext context) {
     return Container(
       height: 1,
-      color: AppTheme.textSecondary.withValues(alpha: 0.1),
+      color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.1),
     );
   }
 
@@ -175,25 +194,38 @@ class DeviceCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildConnectedStats(models.SensorReading? latest) {
+  Widget _buildConnectedStats(BuildContext context, models.SensorReading? latest) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _buildStatItem(
+          context,
           'Battery',
           '${latest?.batteryLevel.toStringAsFixed(1) ?? "--"}V',
         ),
-        _buildStatItem('Signal', '${latest?.rssi ?? "--"} dBm'),
-        _buildStatItem('Temp', '${latest?.temp.toStringAsFixed(1) ?? "--"}°C'),
+        _buildStatItem(context, 'Signal', '${latest?.rssi ?? "--"} dBm'),
+        _buildStatItem(context, 'Temp', '${latest?.temp.toStringAsFixed(1) ?? "--"}°C'),
       ],
     );
   }
 
-  Widget _buildStatItem(String label, String value) {
+  Widget _buildStatItem(BuildContext context, String label, String value) {
     return Column(
       children: [
-        Text(value, style: AppTheme.body.copyWith(fontWeight: FontWeight.bold)),
-        Text(label, style: AppTheme.caption.copyWith(fontSize: 11)),
+        Text(
+          value,
+          style: AppTheme.body.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppTheme.resolvedTextPrimary(context),
+          ),
+        ),
+        Text(
+          label,
+          style: AppTheme.caption.copyWith(
+            fontSize: 11,
+            color: AppTheme.resolvedTextSecondary(context),
+          ),
+        ),
       ],
     );
   }

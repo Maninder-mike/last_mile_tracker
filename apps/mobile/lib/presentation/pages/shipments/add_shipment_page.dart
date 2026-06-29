@@ -101,49 +101,68 @@ class _AddShipmentPageState extends ConsumerState<AddShipmentPage> {
   }
 
   void _showDatePicker() {
-    showCupertinoModalPopup(
+    showCupertinoModalPopup<void>(
       context: context,
-      builder: (context) => Container(
-        height: 300,
-        decoration: BoxDecoration(
-          color: CupertinoDynamicColor.resolve(AppTheme.background, context),
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppTheme.radiusLarge),
+      barrierColor: CupertinoColors.black.withValues(alpha: 0.4),
+      builder: (BuildContext context) {
+        return GlassContainer(
+          borderRadius: AppTheme.radiusLarge,
+          padding: EdgeInsets.zero,
+          child: Container(
+            padding: EdgeInsets.only(
+              top: 12,
+              left: AppTheme.s16,
+              right: AppTheme.s16,
+              bottom: MediaQuery.of(context).padding.bottom + AppTheme.s16,
+            ),
+            color: CupertinoTheme.of(context).barBackgroundColor.withValues(alpha: 0.8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag handle
+                Container(
+                  width: 36,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGrey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2.5),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 200,
+                  child: CupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.dateAndTime,
+                    initialDateTime: _eta,
+                    onDateTimeChanged: (DateTime newDateTime) {
+                      setState(() => _eta = newDateTime);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AnimatedButton.primary(
+                  onTap: () => Navigator.of(context).pop(),
+                  label: 'CONFIRM DATE',
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              height: 240,
-              padding: const EdgeInsets.only(top: 6),
-              child: CupertinoDatePicker(
-                mode: CupertinoDatePickerMode.dateAndTime,
-                initialDateTime: _eta,
-                onDateTimeChanged: (DateTime newDateTime) {
-                  setState(() => _eta = newDateTime);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppTheme.s16),
-              child: AnimatedButton.primary(
-                onTap: () => Navigator.of(context).pop(),
-                label: 'Confirm Date',
-              ),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: CupertinoDynamicColor.resolve(
+        AppTheme.background,
+        context,
+      ),
       child: Stack(
         children: [
           SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Padding(
               padding: EdgeInsets.only(
                 top: MediaQuery.of(context).padding.top + 88,
@@ -168,19 +187,11 @@ class _AddShipmentPageState extends ConsumerState<AddShipmentPage> {
                       const SizedBox(height: AppTheme.s12),
                       EntranceAnimation(
                         index: 1,
-                        child: GlassContainer(
-                          padding: EdgeInsets.zero,
-                          opacity: 0.6,
-                          child: Column(
-                            children: [
-                              _InputField(
-                                controller: _trackingController,
-                                placeholder: 'Enter Tracking Number',
-                                icon: CupertinoIcons.tag_fill,
-                                label: 'Tracking #',
-                              ),
-                            ],
-                          ),
+                        child: _InputField(
+                          controller: _trackingController,
+                          placeholder: 'Enter Tracking Number',
+                          icon: CupertinoIcons.tag_fill,
+                          label: 'Tracking #',
                         ),
                       ),
                       const SizedBox(height: AppTheme.s32),
@@ -195,26 +206,22 @@ class _AddShipmentPageState extends ConsumerState<AddShipmentPage> {
                       const SizedBox(height: AppTheme.s12),
                       EntranceAnimation(
                         index: 3,
-                        child: GlassContainer(
-                          padding: EdgeInsets.zero,
-                          opacity: 0.6,
-                          child: Column(
-                            children: [
-                              _InputField(
-                                controller: _originController,
-                                placeholder: 'Origin City / Hub',
-                                icon: CupertinoIcons.house_fill,
-                                label: 'Origin',
-                              ),
-                              const _Divider(),
-                              _InputField(
-                                controller: _destinationController,
-                                placeholder: 'Destination City / Final Hub',
-                                icon: CupertinoIcons.location_fill,
-                                label: 'Destination',
-                              ),
-                            ],
-                          ),
+                        child: Column(
+                          children: [
+                            _InputField(
+                              controller: _originController,
+                              placeholder: 'Origin City / Hub',
+                              icon: CupertinoIcons.house_fill,
+                              label: 'Origin',
+                            ),
+                            const SizedBox(height: AppTheme.s12),
+                            _InputField(
+                              controller: _destinationController,
+                              placeholder: 'Destination City / Final Hub',
+                              icon: CupertinoIcons.location_fill,
+                              label: 'Destination',
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: AppTheme.s32),
@@ -325,10 +332,14 @@ class _AddShipmentPageState extends ConsumerState<AddShipmentPage> {
               ),
             ),
           ),
-          const FloatingHeader(
-            title: 'Add Shipment',
-            showBackButton: true,
-            trailing: SizedBox.shrink(),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: FloatingHeader(
+              title: 'Add Shipment',
+              showBackButton: true,
+            ),
           ),
         ],
       ),
@@ -367,7 +378,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _InputField extends StatelessWidget {
+class _InputField extends StatefulWidget {
   final TextEditingController controller;
   final String placeholder;
   final String label;
@@ -381,62 +392,104 @@ class _InputField extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.s20,
-        vertical: AppTheme.s12,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                size: 14,
-                color: CupertinoDynamicColor.resolve(
-                  AppTheme.textSecondary,
-                  context,
-                ).withValues(alpha: 0.5),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label.toUpperCase(),
-                style: AppTheme.caption.copyWith(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textSecondary.withValues(alpha: 0.7),
-                ),
-              ),
-            ],
-          ),
-          CupertinoTextField(
-            controller: controller,
-            placeholder: placeholder,
-            placeholderStyle: AppTheme.body.copyWith(
-              color: AppTheme.textSecondary.withValues(alpha: 0.3),
-            ),
-            style: AppTheme.body.copyWith(fontWeight: FontWeight.w600),
-            decoration: null,
-            padding: const EdgeInsets.symmetric(vertical: AppTheme.s8),
-            cursorColor: CupertinoTheme.of(context).primaryColor,
-          ),
-        ],
-      ),
-    );
-  }
+  State<_InputField> createState() => _InputFieldState();
 }
 
-class _Divider extends StatelessWidget {
-  const _Divider();
+class _InputFieldState extends State<_InputField> {
+  late final FocusNode _focusNode;
+  bool _hasFocus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    setState(() {
+      _hasFocus = _focusNode.hasFocus;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(left: AppTheme.s20),
-      height: 0.5,
-      color: CupertinoColors.systemGrey.withValues(alpha: 0.1),
+    final activeColor = CupertinoTheme.of(context).primaryColor;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      child: GlassContainer(
+        padding: EdgeInsets.zero,
+        opacity: 0.6,
+        border: Border.all(
+          color: _hasFocus
+              ? activeColor
+              : (isDark
+                  ? CupertinoColors.white.withValues(alpha: 0.15)
+                  : CupertinoColors.white.withValues(alpha: 0.6)),
+          width: _hasFocus ? 1.5 : 1.0,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.s20,
+            vertical: AppTheme.s12,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    widget.icon,
+                    size: 14,
+                    color: _hasFocus
+                        ? activeColor
+                        : CupertinoDynamicColor.resolve(
+                            AppTheme.textSecondary,
+                            context,
+                          ).withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.label.toUpperCase(),
+                    style: AppTheme.caption.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: _hasFocus
+                          ? activeColor
+                          : AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+              CupertinoTextField(
+                controller: widget.controller,
+                focusNode: _focusNode,
+                placeholder: widget.placeholder,
+                placeholderStyle: AppTheme.body.copyWith(
+                  color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.3),
+                ),
+                style: AppTheme.body.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.resolvedTextPrimary(context),
+                ),
+                decoration: null,
+                padding: const EdgeInsets.symmetric(vertical: AppTheme.s8),
+                cursorColor: activeColor,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

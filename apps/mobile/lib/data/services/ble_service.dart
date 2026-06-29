@@ -36,6 +36,7 @@ class BleService {
 
   BluetoothConnectionState _lastState = BluetoothConnectionState.disconnected;
   BluetoothConnectionState get lastState => _lastState;
+  bool get isConnecting => _connectionManager.isConnecting;
 
   final _liveTelemetryController =
       StreamController<models.SensorReading>.broadcast();
@@ -135,7 +136,7 @@ class BleService {
   void _setupAutoConnectListener() {
     discoveredDevices.listen((devices) {
       if (!_isAutoConnectEnabled || _approvedDeviceIds.isEmpty) return;
-      if (_lastState != BluetoothConnectionState.disconnected) return;
+      if (isConnecting || _lastState != BluetoothConnectionState.disconnected) return;
 
       for (final tracker in devices) {
         if (_approvedDeviceIds.contains(tracker.device.remoteId.str)) {
