@@ -8,6 +8,7 @@ import '../presentation/providers/database_providers.dart';
 import '../presentation/providers/ble_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'notification_service.dart';
+import 'package:last_mile_tracker/core/constants/ble_constants.dart';
 
 final alertManagerProvider = Provider<AlertManager>((ref) {
   final bleService = ref.watch(bleServiceProvider);
@@ -62,11 +63,12 @@ class AlertManager {
         : tracker.device.platformName;
 
     // Check Battery
-    if (telemetry.batteryLevel < batteryThreshold) {
+    final pct = BleConstants.batteryVoltageToPercent(telemetry.batteryLevel);
+    if (pct < batteryThreshold) {
       await _triggerAlert(
         deviceId,
         'Low Battery',
-        '$deviceName battery is critical (${telemetry.batteryLevel.toInt()}%)',
+        '$deviceName battery is critical ($pct%)',
         'critical',
       );
     }

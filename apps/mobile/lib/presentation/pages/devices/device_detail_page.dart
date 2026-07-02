@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
@@ -18,6 +17,7 @@ import 'package:last_mile_tracker/data/services/ble_service.dart';
 import 'package:last_mile_tracker/data/services/ota_service.dart';
 import 'package:last_mile_tracker/presentation/providers/ota_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/service_providers.dart';
+import 'package:last_mile_tracker/core/utils/telemetry_display.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -209,19 +209,21 @@ class _BatteryModule extends ConsumerWidget {
     );
 
     final isUsbPowered = bat != null && bat < 1.0;
+    final pct = bat != null ? BleConstants.batteryVoltageToPercent(bat) : 0;
     final primaryColor = CupertinoTheme.of(context).primaryColor;
     return _TelemetryModule(
           title: 'BATTERY',
-          value: isUsbPowered ? 'USB' : '${bat?.toStringAsFixed(0) ?? "--"}%',
+          value: isUsbPowered ? 'USB' : '$pct%',
           icon: isUsbPowered
               ? CupertinoIcons.bolt_fill
               : CupertinoIcons.battery_100,
           color: isUsbPowered
               ? primaryColor
-              : (bat ?? 0) < 20
+              : pct < 20
               ? AppTheme.warning
               : AppTheme.success,
           subtitle: isUsbPowered ? 'Wired Power' : 'Charge Level',
+          helpKey: 'battery',
         )
         .animate()
         .fadeIn(delay: 100.ms, duration: 400.ms)
@@ -250,6 +252,7 @@ class _TempModule extends ConsumerWidget {
               ? AppTheme.warning
               : CupertinoTheme.of(context).primaryColor,
           subtitle: _getTempSubtitle(additionalTemps),
+          helpKey: 'temperature',
         )
         .animate()
         .fadeIn(delay: 200.ms, duration: 400.ms)
@@ -279,13 +282,14 @@ class _ShockModule extends ConsumerWidget {
     );
 
     return _TelemetryModule(
-          title: 'SHOCK',
-          value: shock != null ? '${shock}G' : '--',
+          title: 'IMPACT',
+          value: TelemetryDisplay.impactLabel(shock),
           icon: CupertinoIcons.wind,
           color: (shock ?? 0) > 2
               ? AppTheme.warning
               : CupertinoTheme.of(context).primaryColor,
-          subtitle: 'Impact Force',
+          subtitle: TelemetryDisplay.impactDescription(shock),
+          helpKey: 'impact',
         )
         .animate()
         .fadeIn(delay: 300.ms, duration: 400.ms)
@@ -310,10 +314,11 @@ class _LiveSignalModule extends ConsumerWidget {
 
     return _TelemetryModule(
       title: 'SIGNAL',
-      value: rssi != null ? '$rssi dBm' : '-- dBm',
+      value: TelemetryDisplay.signalLabel(rssi),
       icon: CupertinoIcons.antenna_radiowaves_left_right,
       color: _DeviceDetailPageState.getSignalColor(rssi ?? -100),
-      subtitle: 'RSSI (Live)',
+      subtitle: rssi != null ? 'Strength: $rssi dBm' : 'No Signal',
+      helpKey: 'signal',
     );
   }
 }
@@ -328,12 +333,15 @@ class _HealthModule extends ConsumerWidget {
       trackerProvider(deviceId).select((t) => t.value?.batteryDrop),
     );
 
+    final label = TelemetryDisplay.healthLabel(drop);
+    final isHealthy = label == 'Healthy' || label == 'Good' || label == '--';
     return _TelemetryModule(
           title: 'HEALTH',
-          value: drop != null ? '${drop.toStringAsFixed(0)}mV' : '--',
+          value: label,
           icon: CupertinoIcons.heart_fill,
-          color: (drop ?? 0) > 150 ? AppTheme.critical : AppTheme.success,
-          subtitle: (drop ?? 0) < 100 ? 'Healthy' : 'Check Battery',
+          color: isHealthy ? AppTheme.success : AppTheme.critical,
+          subtitle: TelemetryDisplay.healthDescription(drop),
+          helpKey: 'health',
         )
         .animate()
         .fadeIn(delay: 500.ms, duration: 400.ms)
@@ -427,11 +435,13 @@ class _DeviceHeader extends ConsumerWidget {
           ),
         ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
         const SizedBox(height: 12),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(lastSeenStr, style: AppTheme.caption),
-            if (isConnected || firmwareVersion != null) ...[
-              const SizedBox(width: 12),
+            if (isConnected || firmwareVersion != null)
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -471,7 +481,6 @@ class _DeviceHeader extends ConsumerWidget {
                   ],
                 ),
               ),
-            ],
           ],
         ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
       ],
@@ -687,7 +696,7 @@ class _DeviceActions extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _ActionButton(
-              title: 'OTA Update (BLE)',
+              title: 'Update Firmware',
               subtitle: 'Upload local firmware bundle',
               icon: CupertinoIcons.cloud_upload,
               onTap: isConnected
@@ -696,7 +705,7 @@ class _DeviceActions extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _ActionButton(
-              title: 'WiFi OTA Config',
+              title: 'Automatic Updates',
               subtitle: 'Configure background updates',
               icon: CupertinoIcons.wifi,
               onTap: isConnected
@@ -731,13 +740,13 @@ void _showWiFiOtaDialog(
   showCupertinoDialog(
     context: pageContext,
     builder: (dialogContext) => CupertinoAlertDialog(
-      title: const Text('WiFi OTA Config'),
+      title: const Text('Automatic Updates'),
       content: Column(
         children: [
           const SizedBox(height: 16),
           CupertinoTextField(
             controller: ownerController,
-            placeholder: 'GitHub Owner',
+            placeholder: 'Update Server Account (Owner)',
             prefix: const Padding(
               padding: EdgeInsets.only(left: 8),
               child: Icon(CupertinoIcons.person, size: 18),
@@ -746,7 +755,7 @@ void _showWiFiOtaDialog(
           const SizedBox(height: 12),
           CupertinoTextField(
             controller: repoController,
-            placeholder: 'Repository',
+            placeholder: 'Firmware Library (Repo)',
             prefix: const Padding(
               padding: EdgeInsets.only(left: 8),
               child: Icon(CupertinoIcons.folder, size: 18),
@@ -755,7 +764,7 @@ void _showWiFiOtaDialog(
           const SizedBox(height: 12),
           CupertinoTextField(
             controller: intervalController,
-            placeholder: 'Interval (seconds)',
+            placeholder: 'Check Interval (seconds)',
             keyboardType: TextInputType.number,
             prefix: const Padding(
               padding: EdgeInsets.only(left: 8),
@@ -786,9 +795,9 @@ void _showWiFiOtaDialog(
               showCupertinoDialog(
                 context: pageContext,
                 builder: (ctx) => CupertinoAlertDialog(
-                  title: const Text('Command Sent'),
+                  title: const Text('Success'),
                   content: Text(
-                    'WiFi OTA update check configured for $owner/$repo every $interval seconds.',
+                    'Automatic firmware updates successfully configured.',
                     style: AppTheme.body,
                   ),
                   actions: [
@@ -814,6 +823,7 @@ class _TelemetryModule extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final Color color;
+  final String? helpKey;
 
   const _TelemetryModule({
     required this.title,
@@ -821,12 +831,35 @@ class _TelemetryModule extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.color,
+    this.helpKey,
   });
+
+  void _showHelpPopover(BuildContext context) {
+    if (helpKey == null) return;
+    final message = TelemetryDisplay.cardHelpText[helpKey] ?? 'No information available.';
+    
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(title),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Text(message),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return GlassContainer(
-      color: color.withValues(alpha: 0.05),
       child: Stack(
         children: [
           // Background Glow
@@ -834,15 +867,11 @@ class _TelemetryModule extends StatelessWidget {
             top: -20,
             right: -20,
             child: Container(
-              width: 60,
-              height: 60,
+              width: 70,
+              height: 70,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.1),
-              ),
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: const SizedBox.shrink(),
+                color: color.withValues(alpha: 0.04),
               ),
             ),
           ),
@@ -856,42 +885,58 @@ class _TelemetryModule extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(icon, color: color, size: 18),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              style: AppTheme.label.copyWith(
+                                fontSize: 10,
+                                color: AppTheme.resolvedTextSecondary(context),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
-                          child: Icon(icon, color: color, size: 16),
-                        )
-                        .animate(
-                          onPlay: (controller) =>
-                              controller.repeat(reverse: true),
-                        )
-                        .scale(
-                          duration: 1000.ms,
-                          begin: const Offset(1, 1),
-                          end: const Offset(1.1, 1.1),
-                        ),
-                    Text(
-                      title,
-                      style: AppTheme.caption.copyWith(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 9,
-                        letterSpacing: 0.5,
-                        color: color.withValues(alpha: 0.8),
+                          if (helpKey != null) ...[
+                            const SizedBox(width: 4),
+                            CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              alignment: Alignment.center,
+                              minimumSize: Size.zero,
+                              onPressed: () => _showHelpPopover(context),
+                              child: Icon(
+                                CupertinoIcons.info_circle,
+                                size: 12,
+                                color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       value,
                       style: AppTheme.heading2.copyWith(
-                        color: color,
+                        color: AppTheme.resolvedTextPrimary(context),
                         fontSize: 26,
-                        height: 1,
+                        height: 1.1,
                         letterSpacing: -0.5,
                       ),
                     ),
@@ -899,8 +944,9 @@ class _TelemetryModule extends StatelessWidget {
                     Text(
                       subtitle,
                       style: AppTheme.caption.copyWith(
-                        fontSize: 10,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w500,
+                        color: AppTheme.resolvedTextSecondary(context),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

@@ -25,6 +25,8 @@ FILES=(
     "lib/http_poster.py:lib/http_poster.py"
     "lib/ntp_time.py:lib/ntp_time.py"
     "lib/typing.py:lib/typing.py"
+    "lib/ota_utils.py:lib/ota_utils.py"
+    "lib/wifi_ota.py:lib/wifi_ota.py"
 )
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import 'package:last_mile_tracker/presentation/providers/fleet_tracker_provider.
 import 'package:last_mile_tracker/presentation/providers/location_providers.dart';
 import 'package:last_mile_tracker/domain/models/fleet_tracker.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:last_mile_tracker/core/utils/telemetry_display.dart';
 import '../../widgets/floating_header.dart';
 import 'widgets/map_cluster_marker.dart';
 
@@ -124,7 +125,7 @@ class _MapPageState extends ConsumerState<MapPage>
                 fleetTrackersAsync.when(
                   data: (trackers) {
                     final markers = trackers
-                        .where((t) => t.latitude != null && t.longitude != null)
+                        .where((t) => t.latitude != null && t.longitude != null && t.latitude != 0.0 && t.longitude != 0.0)
                         .map(
                           (t) => Marker(
                             point: LatLng(t.lat, t.lon),
@@ -360,7 +361,7 @@ class _FleetTrackerPopup extends StatelessWidget {
             label: 'Temp',
             value: '${tracker.temp?.toStringAsFixed(1) ?? "--"}°C',
           ),
-          _PopupRow(label: 'Signal', value: '${tracker.rssi ?? "--"} dBm'),
+          _PopupRow(label: 'Signal', value: TelemetryDisplay.signalLabel(tracker.rssi)),
           _PopupRow(label: 'Last Seen', value: _formatTime(tracker.lastSeen)),
         ],
       ),

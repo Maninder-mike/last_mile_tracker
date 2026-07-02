@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
+import 'package:last_mile_tracker/core/constants/ble_constants.dart';
 import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 import 'package:last_mile_tracker/presentation/widgets/app_layout.dart';
 import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
@@ -510,20 +511,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                         ),
                       );
                     }
-                    return SliverPrototypeExtentList(
-                      prototypeItem: Padding(
-                        padding: AppPadding.listItem,
-                        child: _DeviceCard(
-                          id: 'proto',
-                          name: 'Prototype',
-                          status: 'active',
-                          battery: 100,
-                          lastSeen: 'Now',
-                          isCritical: false,
-                          isFavorite: false,
-                          type: 'Tracker',
-                        ),
-                      ),
+                    return SliverList(
                       delegate: SliverChildBuilderDelegate((context, index) {
                         final tracker = filteredDevices[index];
                         final isConnected =
@@ -611,11 +599,12 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                                     status: isConnected
                                         ? 'Connected'
                                         : tracker.status,
-                                    battery: (tracker.batteryLevel ?? 0)
-                                        .toInt(),
+                                    battery: tracker.batteryLevel != null
+                                        ? BleConstants.batteryVoltageToPercent(tracker.batteryLevel!)
+                                        : 100,
                                     lastSeen: _formatLastSeen(tracker.lastSeen),
                                     isCritical:
-                                        (tracker.batteryLevel ?? 0) < 20 ||
+                                        (tracker.batteryLevel != null && BleConstants.batteryVoltageToPercent(tracker.batteryLevel!) < 20) ||
                                         (tracker.shockValue ?? 0) > 0,
                                     isFavorite: ref.watch(
                                       isFavoriteProvider(tracker.id),
@@ -727,6 +716,7 @@ class _DeviceCard extends StatelessWidget {
                               name,
                               style: AppTheme.heading2,
                               overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
                           if (isFavorite) ...[
@@ -751,6 +741,7 @@ class _DeviceCard extends StatelessWidget {
                         id,
                         style: AppTheme.caption,
                         overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
                     AppGaps.horizontalMedium,
@@ -763,7 +754,14 @@ class _DeviceCard extends StatelessWidget {
                       ),
                     ),
                     AppGaps.horizontalMedium,
-                    Text(lastSeen, style: AppTheme.caption),
+                    Flexible(
+                      child: Text(
+                        lastSeen,
+                        style: AppTheme.caption,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
                   ],
                 ),
                 AppGaps.small,

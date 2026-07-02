@@ -40,7 +40,9 @@ class BLEAdvertiser:
     def set_write_callback(self, callback: Callable[[int, int, bytes], None]) -> None:
         self._write_callback = callback
 
-    def set_connect_callbacks(self, on_connect: Callable[[], None], on_disconnect: Callable[[], None]) -> None:
+    def set_connect_callbacks(
+        self, on_connect: Callable[[], None], on_disconnect: Callable[[], None]
+    ) -> None:
         self._connect_callback = on_connect
         self._disconnect_callback = on_disconnect
 

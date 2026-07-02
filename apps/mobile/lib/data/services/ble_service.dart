@@ -68,6 +68,8 @@ class BleService {
   // Data buffering for high-frequency sensor readings
   final List<db.SensorReadingsCompanion> _readingsBuffer = [];
   Timer? _bufferTimer;
+  DateTime? _lastDisconnectTime;
+  DateTime? _lastProcessingTime;
 
   BleService(this._sensorDao) {
     _scanner = BleScanner();
@@ -83,21 +85,16 @@ class BleService {
         // Read firmware version after chars are discovered
         _readDeviceFirmwareVersion();
       },
-      onDisconnected: () => _scanner.start(),
+      onDisconnected: () {
+        _lastDisconnectTime = DateTime.now();
+        _scanner.start();
+      },
     );
 
     _otaManager = BleOtaManager();
     _simulationService = BleSimulationService(
       onReadingGenerated: (reading) {
-        _bufferReading(reading);
-        _liveTelemetryController.add(reading);
-
-        // If simulating "connected" device, we could update scanner here
-        // but simulation usually represents a device already "known" to the app.
-        final device = _connectionManager.device;
-        if (device != null) {
-          _scanner.updateDeviceTelemetry(device.remoteId, reading);
-        }
+        _processTelemetryReading(reading);
       },
     );
 
@@ -137,6 +134,14 @@ class BleService {
     discoveredDevices.listen((devices) {
       if (!_isAutoConnectEnabled || _approvedDeviceIds.isEmpty) return;
       if (isConnecting || _lastState != BluetoothConnectionState.disconnected) return;
+
+      // Prevent connection attempts too close to a disconnection event
+      if (_lastDisconnectTime != null) {
+        final elapsed = DateTime.now().difference(_lastDisconnectTime!);
+        if (elapsed < const Duration(seconds: 4)) {
+          return;
+        }
+      }
 
       for (final tracker in devices) {
         if (_approvedDeviceIds.contains(tracker.device.remoteId.str)) {
@@ -195,6 +200,28 @@ class BleService {
   void _handleRawData(List<int> bytes) {
     final reading = SensorDataParser.parse(bytes);
     if (reading != null) {
+      _processTelemetryReading(reading);
+    }
+  }
+
+  void _processTelemetryReading(models.SensorReading reading) {
+    final batPercent = BleConstants.batteryVoltageToPercent(reading.batteryLevel);
+    final isUsbPowered = reading.batteryLevel < 1.0;
+
+    Duration throttleInterval;
+    if (isUsbPowered) {
+      throttleInterval = const Duration(seconds: 3); // 3 seconds on USB/wired power
+    } else if (batPercent >= 50) {
+      throttleInterval = const Duration(seconds: 5); // 5 seconds when healthy battery
+    } else if (batPercent >= 20) {
+      throttleInterval = const Duration(seconds: 15); // 15 seconds when medium battery
+    } else {
+      throttleInterval = const Duration(seconds: 30); // 30 seconds when low battery
+    }
+
+    final now = DateTime.now();
+    if (_lastProcessingTime == null || now.difference(_lastProcessingTime!) >= throttleInterval) {
+      _lastProcessingTime = now;
       _liveTelemetryController.add(reading);
       _bufferReading(reading);
 
@@ -261,6 +288,9 @@ class BleService {
   Future<void> startScanning() => _scanner.start();
 
   Future<void> connect(BluetoothDevice device) async {
+    // Stop scanning immediately when initiating connection to avoid
+    // duplicate connection attempts and radio interference
+    await _scanner.stop();
     await _connectionManager.connect(device);
 
     // Save to approved devices list on successful connection

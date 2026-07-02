@@ -6,7 +6,7 @@ import 'package:last_mile_tracker/core/theme/app_theme.dart';
 class GlassContainer extends StatefulWidget {
   final Widget child;
   final double blur;
-  final double opacity;
+  final double? opacity;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
   final double borderRadius;
@@ -24,7 +24,7 @@ class GlassContainer extends StatefulWidget {
     super.key,
     required this.child,
     this.blur = 20.0,
-    this.opacity = 0.7,
+    this.opacity,
     this.padding = const EdgeInsets.all(AppTheme.s16),
     this.margin,
     this.borderRadius = AppTheme.radiusMedium,
@@ -55,9 +55,9 @@ class _GlassContainerState extends State<GlassContainer> {
     final resolvedColor = CupertinoDynamicColor.resolve(baseColor, context);
 
     // Calculate final background color if no gradient is present
-    final effectiveOpacity = widget.color != null
-        ? widget.opacity
-        : (isDark ? 0.85 : resolvedColor.a);
+    final effectiveOpacity = widget.opacity ?? (widget.color != null
+        ? (resolvedColor.a == 1.0 ? 0.7 : resolvedColor.a)
+        : (isDark ? 0.85 : resolvedColor.a));
 
     final finalColor = widget.gradient == null
         ? resolvedColor.withValues(alpha: effectiveOpacity)

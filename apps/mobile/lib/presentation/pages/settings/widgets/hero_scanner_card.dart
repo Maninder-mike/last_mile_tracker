@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:lmt_models/lmt_models.dart' as models;
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/utils/telemetry_display.dart';
+import 'package:last_mile_tracker/core/constants/ble_constants.dart';
 import '../../../widgets/glass_container.dart';
 import '../settings_theme.dart';
 
@@ -139,6 +141,8 @@ class HeroScannerCard extends StatelessWidget {
   }
 
   Widget _buildStatsSection(models.SensorReading? latest) {
+    final isUsbPowered = latest?.batteryLevel != null && latest!.batteryLevel < 1.0;
+    final batPct = latest?.batteryLevel != null ? BleConstants.batteryVoltageToPercent(latest!.batteryLevel) : 0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
@@ -150,13 +154,13 @@ class HeroScannerCard extends StatelessWidget {
         ),
         _HeroStat(
           label: 'Signal',
-          value: latest != null ? '${latest.rssi ?? -60} dBm' : '-- dBm',
+          value: latest != null ? TelemetryDisplay.signalLabel(latest.rssi) : '--',
         ),
         _HeroStat(
           label: 'Battery',
           value: latest != null
-              ? '${latest.batteryLevel.toStringAsFixed(1)}V'
-              : '--V',
+              ? (isUsbPowered ? 'USB' : '$batPct%')
+              : '--',
         ),
       ],
     );

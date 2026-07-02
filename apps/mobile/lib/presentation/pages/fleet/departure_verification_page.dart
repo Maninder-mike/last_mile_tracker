@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/utils/telemetry_display.dart';
 import 'package:last_mile_tracker/domain/models/fleet_tracker.dart';
 import 'package:last_mile_tracker/presentation/providers/fleet_tracker_provider.dart';
 import 'package:last_mile_tracker/logic/active_load_service.dart';
@@ -159,7 +160,7 @@ class _VerificationItem extends StatelessWidget {
                 Text(tracker.name, style: AppTheme.title),
                 Text(
                   tracker.isInRange
-                      ? 'In Range (${tracker.rssi} dBm)'
+                      ? 'In Range (${TelemetryDisplay.signalLabel(tracker.rssi)})'
                       : 'Searching...',
                   style: AppTheme.caption.copyWith(
                     color: tracker.isInRange

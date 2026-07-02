@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/domain/models/fleet_tracker.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
+import 'package:last_mile_tracker/core/constants/ble_constants.dart';
 
 class FleetStatsSummary extends StatelessWidget {
   final List<FleetTracker> trackers;
@@ -12,7 +13,7 @@ class FleetStatsSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeShipments = trackers.where((t) => t.shipmentId != null).length;
     final atRisk = trackers
-        .where((t) => t.status == 'critical' || (t.batteryLevel ?? 100) < 15)
+        .where((t) => t.status == 'critical' || (t.batteryLevel != null && BleConstants.batteryVoltageToPercent(t.batteryLevel!) < 15))
         .length;
     final nearby = trackers.where((t) => t.isInRange).length;
 

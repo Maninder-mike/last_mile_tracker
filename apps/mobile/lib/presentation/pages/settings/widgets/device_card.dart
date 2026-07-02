@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:lmt_models/lmt_models.dart' as models;
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/constants/ble_constants.dart';
+import 'package:last_mile_tracker/core/utils/telemetry_display.dart';
 import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/service_providers.dart';
@@ -112,10 +114,14 @@ class DeviceCard extends ConsumerWidget {
         children: [
           Icon(CupertinoIcons.wifi, size: 12, color: AppTheme.success),
           const SizedBox(width: 4),
-          Text(
-            wifiSsid,
-            style: AppTheme.caption.copyWith(
-              color: AppTheme.resolvedTextSecondary(context),
+          Flexible(
+            child: Text(
+              wifiSsid,
+              style: AppTheme.caption.copyWith(
+                color: AppTheme.resolvedTextSecondary(context),
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
@@ -195,16 +201,34 @@ class DeviceCard extends ConsumerWidget {
   }
 
   Widget _buildConnectedStats(BuildContext context, models.SensorReading? latest) {
+    final isUsbPowered = latest?.batteryLevel != null && latest!.batteryLevel < 1.0;
+    final batPct = latest?.batteryLevel != null ? BleConstants.batteryVoltageToPercent(latest!.batteryLevel) : 0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _buildStatItem(
-          context,
-          'Battery',
-          '${latest?.batteryLevel.toStringAsFixed(1) ?? "--"}V',
+        Expanded(
+          child: _buildStatItem(
+            context,
+            'Battery',
+            latest != null
+                ? (isUsbPowered ? 'USB' : '$batPct%')
+                : '--',
+          ),
         ),
-        _buildStatItem(context, 'Signal', '${latest?.rssi ?? "--"} dBm'),
-        _buildStatItem(context, 'Temp', '${latest?.temp.toStringAsFixed(1) ?? "--"}°C'),
+        Expanded(
+          child: _buildStatItem(
+            context,
+            'Signal',
+            TelemetryDisplay.signalLabel(latest?.rssi),
+          ),
+        ),
+        Expanded(
+          child: _buildStatItem(
+            context,
+            'Temp',
+            '${latest?.temp.toStringAsFixed(1) ?? "--"}°C',
+          ),
+        ),
       ],
     );
   }

@@ -52,7 +52,7 @@ class LastMileTracker:
             raise ValueError("Ingest interval too low")
 
         # Rule 3: Pre-allocate BLE data buffers to avoid heap churn
-        self._v1_buf = bytearray(24)
+        self._v1_buf = bytearray(26)
         self._v2_buf = bytearray(76)
         self._v2_length = 0
 
@@ -153,7 +153,7 @@ class LastMileTracker:
             int(data["internal_temp"]),
             1 if data["gps_fix"] else 0,
             0,  # Reset reason placeholder
-            int(time.time() % 65535),
+            int(time.ticks_ms() // 1000) % 65535,
         )
         return self._v1_buf
 
@@ -199,7 +199,7 @@ class LastMileTracker:
                     if new_data["shock"] > shock_threshold:
                         Logger.log(f"Shock Alert: {new_data['shock']}")
                         self.shock_buffer.add(new_data["shock"], time.ticks_ms())  # type: ignore
-                        
+
                         async def shock_visual_alarm() -> None:
                             asyncio.create_task(self.buzzer.alarm())
                             for _ in range(3):
@@ -212,7 +212,7 @@ class LastMileTracker:
                                 self._set_led((0, 30, 0))
                             else:
                                 self._set_led((0, 0, 10))
-                                
+
                         asyncio.create_task(shock_visual_alarm())
 
                     # SD Logging (Local backup)
@@ -230,14 +230,26 @@ class LastMileTracker:
     async def update_task(self) -> None:
         """UI and BLE update loop"""
         Logger.log("Task: UI/BLE update started.")
-        update_interval = self.config.get("adv_interval") or 1000
 
         while True:
+            # Calculate dynamic update interval based on battery status to save power and stop UI flashing
+            bat_mv = self.data_store.get("battery_mv", 4000)
+            if bat_mv < 1000: # USB-powered / wired power
+                update_interval = self.config.get("adv_interval") or 2000
+            elif bat_mv < 3400: # Critical low battery
+                update_interval = 45000  # 45 seconds
+            elif bat_mv < 3600: # Low battery
+                update_interval = 20000  # 20 seconds
+            elif bat_mv < 3800: # Medium battery
+                update_interval = 10000  # 10 seconds
+            else: # Healthy battery
+                update_interval = 5000   # 5 seconds
+
             # 1. LED status
             if self.ble.is_connected():
                 self._set_led((0, 30, 0))  # Dim Green
             else:
-                is_low_battery = self.data_store.get("battery_mv", 4000) < 3300
+                is_low_battery = bat_mv < 3300 and bat_mv >= 1000
                 color = (30, 10, 0) if is_low_battery else (0, 0, 10)  # Dim Orange or Dim Blue
                 self._set_led(color)
                 await asyncio.sleep_ms(20)
@@ -308,7 +320,7 @@ class LastMileTracker:
             # Low battery check (every 5 minutes)
             battery_mv = self.data_store.get("battery_mv", 4000)
             if battery_mv < 3300:
-                current_time = time.time()
+                current_time = int(time.time())
                 try:
                     self._last_battery_alert
                 except AttributeError:
@@ -341,6 +353,8 @@ class LastMileTracker:
                     Logger.log("BLE: Received Scan Command - Starting WiFi Scan")
 
                     async def perform_scan() -> None:
+                        # Allow BLE write response to complete before scanning WiFi
+                        await asyncio.sleep_ms(800)
                         if self.wifi is None:
                             return
                         try:
@@ -392,6 +406,8 @@ class LastMileTracker:
                     self.config.set("wifi_pass", "")
 
                     async def reset_wifi() -> None:
+                        # Allow BLE write response to complete before disconnect
+                        await asyncio.sleep_ms(800)
                         if self.wifi:
                             await self.wifi.disconnect()
                         Logger.log("WiFi: Config cleared and disconnected.")
@@ -433,11 +449,13 @@ class LastMileTracker:
                                 self.ble.notify(payload, self.ble.wifi_config_handle)
                                 Logger.log(f"BLE: Notified WiFi Status: {status} ({detail})")
 
-                            # Trigger connection attempt (async)
-                            if self.wifi:
-                                asyncio.create_task(
-                                    self.wifi.connect(on_status_change=on_wifi_status)
-                                )
+                            # Trigger connection attempt with a delay (async) to allow BLE write response to complete
+                            async def connect_with_delay() -> None:
+                                await asyncio.sleep_ms(800)
+                                if self.wifi:
+                                    await self.wifi.connect(on_status_change=on_wifi_status)
+
+                            asyncio.create_task(connect_with_delay())
             except Exception as e:
                 Logger.log(f"BLE: WiFi Config Error: {e}")
         elif value_handle in (self.ble.ota_ctrl_handle, self.ble.ota_data_handle):
@@ -538,7 +556,12 @@ class LastMileTracker:
         # Initialize WiFi
         # from lib.wifi_manager import WiFiManager # Imported at top now
 
-        self.wifi = WiFiManager(self.config, self._set_led, ntp_client=self.ntp)
+        self.wifi = WiFiManager(
+            self.config,
+            self._set_led,
+            ntp_client=self.ntp,
+            ble_connected_check=self.ble.is_connected,
+        )
 
         # Handle BLE writes
         self.ble.set_write_callback(self.handle_ble_write)

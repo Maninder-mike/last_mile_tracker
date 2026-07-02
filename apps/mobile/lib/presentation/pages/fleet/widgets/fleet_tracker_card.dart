@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/domain/models/fleet_tracker.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
+import 'package:last_mile_tracker/core/constants/ble_constants.dart';
 
 class FleetTrackerCard extends StatelessWidget {
   final FleetTracker tracker;
@@ -53,16 +54,18 @@ class FleetTrackerCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
               children: [
                 _buildTelemetryItem(
                   context: context,
                   icon: CupertinoIcons.battery_100,
                   value: tracker.batteryLevel != null
-                      ? '${tracker.batteryLevel!.toInt()}%'
+                      ? '${BleConstants.batteryVoltageToPercent(tracker.batteryLevel!)}%'
                       : '--',
-                  color: (tracker.batteryLevel ?? 100) < 20
+                  color: tracker.batteryLevel != null && BleConstants.batteryVoltageToPercent(tracker.batteryLevel!) < 20
                       ? AppTheme.critical
                       : AppTheme.success,
                 ),

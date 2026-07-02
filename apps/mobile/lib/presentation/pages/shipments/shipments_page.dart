@@ -191,15 +191,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                         ),
                       );
                     }
-                    return SliverPrototypeExtentList(
-                      prototypeItem: Padding(
-                        padding: AppPadding.listItem,
-                        child: _ShipmentListItem(
-                          shipment: Shipment.mockData.first.copyWith(
-                            id: 'prototype',
-                          ),
-                        ),
-                      ),
+                    return SliverList(
                       delegate: SliverChildBuilderDelegate((context, index) {
                         final shipment = filteredShipments[index];
                         return Padding(
@@ -692,23 +684,31 @@ class _ShipmentListItem extends StatelessWidget {
               ),
               AppGaps.large,
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _TelemetryPill(
-                    icon: CupertinoIcons.thermometer,
-                    label: '${shipment.temperature}°C',
-                    color: (shipment.temperature ?? 0) > 8
-                        ? AppTheme.critical
-                        : AppTheme.success,
+                  Flexible(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        _TelemetryPill(
+                          icon: CupertinoIcons.thermometer,
+                          label: '${shipment.temperature}°C',
+                          color: (shipment.temperature ?? 0) > 8
+                              ? AppTheme.critical
+                              : AppTheme.success,
+                        ),
+                        _TelemetryPill(
+                          icon: CupertinoIcons.battery_25,
+                          label: '${shipment.batteryLevel}%',
+                          color: (shipment.batteryLevel ?? 0) < 20
+                              ? AppTheme.warning
+                              : AppTheme.success,
+                        ),
+                      ],
+                    ),
                   ),
-                  AppGaps.horizontalMedium,
-                  _TelemetryPill(
-                    icon: CupertinoIcons.battery_25,
-                    label: '${shipment.batteryLevel}%',
-                    color: (shipment.batteryLevel ?? 0) < 20
-                        ? AppTheme.warning
-                        : AppTheme.success,
-                  ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Text(
                     'ETA: ${_formatDate(shipment.eta)}',
                     style: AppTheme.caption.copyWith(

@@ -1,12 +1,14 @@
-
 # typing.py - Dummy typing module for MicroPython type hint compatibility
+
 
 class GenericMeta:
     def __getitem__(self, params):
         return Any
 
+
 class AnyType(GenericMeta):
     pass
+
 
 Any = AnyType()
 Callable = GenericMeta()

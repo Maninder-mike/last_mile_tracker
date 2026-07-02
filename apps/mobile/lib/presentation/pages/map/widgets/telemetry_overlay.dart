@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
+import 'package:last_mile_tracker/core/constants/ble_constants.dart';
+import 'package:last_mile_tracker/core/utils/telemetry_display.dart';
 
 class TelemetryOverlay extends ConsumerWidget {
   const TelemetryOverlay({super.key});
@@ -48,15 +50,15 @@ class TelemetryOverlay extends ConsumerWidget {
                     _StatItem(
                       icon: CupertinoIcons.battery_100,
                       label: 'Battery',
-                      value: '${reading.batteryLevel.toInt()}%',
-                      color: reading.batteryLevel > 20
+                      value: '${BleConstants.batteryVoltageToPercent(reading.batteryLevel)}%',
+                      color: BleConstants.batteryVoltageToPercent(reading.batteryLevel) > 20
                           ? CupertinoColors.activeGreen
                           : CupertinoColors.systemRed,
                     ),
                     _StatItem(
                       icon: CupertinoIcons.antenna_radiowaves_left_right,
-                      label: 'RSSI',
-                      value: '${reading.rssi} dBm',
+                      label: 'Signal',
+                      value: TelemetryDisplay.signalLabel(reading.rssi),
                       color: CupertinoColors.systemOrange,
                     ),
                   ],

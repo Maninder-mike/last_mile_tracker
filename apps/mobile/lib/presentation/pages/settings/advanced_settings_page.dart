@@ -8,7 +8,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/database_providers.dart';
+import 'package:last_mile_tracker/presentation/providers/settings_mode_provider.dart';
 import 'package:last_mile_tracker/core/utils/file_logger.dart';
+import 'package:last_mile_tracker/core/utils/telemetry_display.dart';
 import 'settings_theme.dart';
 import 'widgets/settings_tile.dart';
 import 'widgets/firmware_update_tile.dart';
@@ -28,6 +30,9 @@ class _AdvancedSettingsPageState extends ConsumerState<AdvancedSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final role = ref.watch(settingsModeProvider);
+    final isDeveloper = role == SettingsRole.admin || role == SettingsRole.operations;
+
     return CupertinoPageScaffold(
       backgroundColor: AppTheme.background,
       child: Stack(
@@ -40,7 +45,7 @@ class _AdvancedSettingsPageState extends ConsumerState<AdvancedSettingsPage> {
             children: [
               _buildUpdatesSection(),
               _buildDataSection(),
-              _buildDeveloperSection(),
+              if (isDeveloper) _buildDeveloperSection(),
               _buildDangerZone(),
             ],
           ),
@@ -178,7 +183,7 @@ class _AdvancedSettingsPageState extends ConsumerState<AdvancedSettingsPage> {
         _showAlert('Command Sent', successMessage);
       }
     } catch (e) {
-      if (mounted) _showAlert('Error', e.toString());
+      if (mounted) _showAlert('Error', TelemetryDisplay.friendlyBleError(e.toString()));
     }
   }
 

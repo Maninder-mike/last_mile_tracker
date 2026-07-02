@@ -81,4 +81,11 @@ class BleConstants {
   static const String wifiFailedPrefix = "WIFI:FAILED:";
   static const String otaPrefix = "OTA:";
   static const String otaConfigOk = "OTA:CONFIG:OK";
+
+  static int batteryVoltageToPercent(double voltage) {
+    if (voltage < 1.0) return 0;
+    if (voltage >= 4.15) return 100;
+    if (voltage <= 3.2) return 0;
+    return (((voltage - 3.2) / (4.15 - 3.2)) * 100).round().clamp(0, 100);
+  }
 }

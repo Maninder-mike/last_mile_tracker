@@ -277,8 +277,34 @@ class BleConnectionManager {
     }
 
     final data = List<int>.from(command.codeUnits);
-    await _wifiChar!.write(data);
-    FileLogger.log("ConnectionManager: Wrote config command: $command");
+    try {
+      await _wifiChar!.write(data);
+      FileLogger.log("ConnectionManager: Wrote config command: $command");
+    } catch (e) {
+      final errorStr = e.toString();
+      FileLogger.log("ConnectionManager: Error writing config command '$command': $errorStr");
+
+      // In production, when the mobile app sends commands like WiFi Config (SSID:Password),
+      // Scan, or Reboot to the tracker, the device might switch radio modes, reboot, or
+      // disconnect immediately. This can cause the Android/iOS BLE stack to throw a GATT error
+      // (like GATT_ERROR status 133) because the write ACK packet is not received.
+      // If the error indicates a GATT status/timeout write issue, and the device has disconnected,
+      // we suppress the exception and return success, as the command was successfully processed by the tracker.
+      final isGattOrWriteError = errorStr.contains('133') || 
+                                 errorStr.toUpperCase().contains('GATT') || 
+                                 errorStr.contains('status') ||
+                                 errorStr.contains('writeCharacteristic');
+      
+      if (isGattOrWriteError) {
+        // Wait briefly for the connection state to update in the Bluetooth stack
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (_connectionState == BluetoothConnectionState.disconnected || _device == null) {
+          FileLogger.log("ConnectionManager: Suppressed write error. Device disconnected as expected after command: $command");
+          return;
+        }
+      }
+      rethrow;
+    }
   }
 
   Future<void> identifyDevice() async {

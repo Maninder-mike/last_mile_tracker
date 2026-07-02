@@ -13,6 +13,7 @@ import 'package:last_mile_tracker/presentation/widgets/floating_header.dart';
 import 'package:last_mile_tracker/data/services/ble/scanned_tracker.dart';
 import 'package:last_mile_tracker/core/utils/file_logger.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
+import 'package:last_mile_tracker/core/utils/telemetry_display.dart';
 
 class ConnectivityPage extends ConsumerStatefulWidget {
   const ConnectivityPage({super.key});
@@ -66,7 +67,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
         );
       }
     } catch (e) {
-      _showError(e.toString());
+      _showError(TelemetryDisplay.friendlyBleError(e.toString()));
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
@@ -258,7 +259,10 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
         message: Column(
           children: [
             _buildDetailRow('Remote ID', device.remoteId.toString()),
-            _buildDetailRow('RSSI', '${tracker.rssi} dBm'),
+            _buildDetailRow(
+              'Signal Strength',
+              '${TelemetryDisplay.signalLabel(tracker.rssi)} (${tracker.rssi} dBm)',
+            ),
             if (adv != null) ...[
               _buildDetailRow('Connectable', adv.connectable.toString()),
               if (adv.txPowerLevel != null)
@@ -361,7 +365,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
         );
       }
     } catch (e) {
-      _showError(e.toString());
+      _showError(TelemetryDisplay.friendlyBleError(e.toString()));
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
@@ -398,7 +402,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
 
   Widget _buildProvisioningSection(bool isDark) {
     return CupertinoFormSection.insetGrouped(
-      header: const Text('WIFI PROVISIONING'),
+      header: const Text('CONNECT TO WIFI'),
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       children: [
         CupertinoFormRow(
@@ -407,7 +411,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
             children: const [
               Icon(CupertinoIcons.wifi, size: 20),
               SizedBox(width: 8),
-              Text('Network SSID'),
+              Text('Network Name (SSID)'),
             ],
           ),
           child: Row(
@@ -489,7 +493,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
             onPressed: (_isSending) ? null : _sendWifiCredentials,
             child: _isSending
                 ? const CupertinoActivityIndicator()
-                : const Text('Update WiFi Config'),
+                : const Text('Connect to WiFi'),
           ),
         ),
       ],
@@ -519,7 +523,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
         Padding(
           padding: EdgeInsets.only(left: 16, top: 24, bottom: 8),
           child: Text(
-            'DEVICE MANAGEMENT',
+            'DEVICE CONTROLS',
             style: AppTheme.caption.copyWith(
               fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
@@ -560,11 +564,11 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
               _buildDivider(),
               _buildToolAction(
                 icon: CupertinoIcons.wifi_exclamationmark,
-                title: 'Reset WiFi Config',
-                subtitle: 'Clears saved credentials',
+                title: 'Disconnect from WiFi',
+                subtitle: 'Clears saved WiFi name & password',
                 textColor: CupertinoColors.systemRed,
                 onTap: () => _showConfirmationDialog(
-                  title: 'Reset WiFi',
+                  title: 'Disconnect from WiFi',
                   message:
                       'This will clear the saved WiFi name and password. You will need to re-provision the device.',
                   confirmLabel: 'Reset',
@@ -583,6 +587,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
   }
 
   Widget _buildDiagnosticsGrid(models.SensorReading? reading) {
+    final isUsbPowered = reading?.batteryLevel != null && reading!.batteryLevel < 1.0;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.count(
@@ -594,20 +599,26 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
         childAspectRatio: 0.9,
         children: [
           _buildDiagCard(
-            icon: CupertinoIcons.battery_100,
-            value: '${(reading?.batteryLevel ?? 0.0).toStringAsFixed(1)}V',
-            label: 'Battery',
+            icon: isUsbPowered ? CupertinoIcons.bolt_fill : CupertinoIcons.battery_100,
+            value: reading?.batteryLevel != null
+                ? (isUsbPowered
+                    ? 'USB'
+                    : '${BleConstants.batteryVoltageToPercent(reading!.batteryLevel)}%')
+                : '--',
+            label: reading?.batteryLevel != null && reading!.batteryLevel >= 1.0
+                ? 'Battery (${reading.batteryLevel.toStringAsFixed(1)}V)'
+                : 'Battery',
             color: _getBatteryColor(reading?.batteryLevel ?? 0),
           ),
           _buildDiagCard(
             icon: CupertinoIcons.antenna_radiowaves_left_right,
-            value: '${reading?.rssi ?? "--"} dBm',
-            label: 'Signal',
+            value: TelemetryDisplay.signalLabel(reading?.rssi),
+            label: reading?.rssi != null ? 'Signal (${reading!.rssi} dBm)' : 'Signal',
             color: _getSignalColor(reading?.rssi ?? -100),
           ),
           _buildDiagCard(
             icon: CupertinoIcons.timer,
-            value: _formatUptime(reading?.uptime ?? 0),
+            value: TelemetryDisplay.uptimeLabel(reading?.uptime),
             label: 'Uptime',
             color: CupertinoTheme.of(context).primaryColor,
           ),
@@ -619,41 +630,21 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
           ),
           _buildDiagCard(
             icon: CupertinoIcons.waveform_path_ecg,
-            value: reading?.batteryDrop != null
-                ? '${(reading!.batteryDrop! * 1000).toStringAsFixed(0)} mV'
-                : '--',
-            label: 'Bat Drop',
-            color: CupertinoColors.systemPurple,
+            value: TelemetryDisplay.healthLabel(reading?.batteryDrop),
+            label: reading?.batteryDrop != null
+                ? 'Health (${(reading!.batteryDrop! * 1000).toStringAsFixed(0)} mV)'
+                : 'Health',
+            color: (reading?.batteryDrop ?? 0) > 0.150 ? AppTheme.critical : AppTheme.success,
           ),
           _buildDiagCard(
             icon: CupertinoIcons.info_circle,
-            value: _getResetReasonString(reading?.resetReason),
-            label: 'Reset Cause',
+            value: TelemetryDisplay.resetReasonLabel(reading?.resetReason),
+            label: 'Last Restart',
             color: CupertinoColors.systemRed,
           ),
         ],
       ),
     );
-  }
-
-  String _getResetReasonString(int? code) {
-    if (code == null) return "Unknown";
-    switch (code) {
-      case 1:
-        return "Power On";
-      case 2:
-        return "Pin Reset";
-      case 3:
-        return "Soft Reset";
-      case 4:
-        return "Watchdog";
-      case 5:
-        return "Sleep Wake";
-      case 6:
-        return "Brownout";
-      default:
-        return "Code $code";
-    }
   }
 
   Widget _buildDiagCard({
@@ -698,13 +689,7 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
     return CupertinoColors.systemRed;
   }
 
-  String _formatUptime(int seconds) {
-    if (seconds == 0) return "--";
-    final Duration d = Duration(seconds: seconds);
-    if (d.inHours > 0) return '${d.inHours}h ${d.inMinutes % 60}m';
-    if (d.inMinutes > 0) return '${d.inMinutes}m';
-    return '${seconds}s';
-  }
+
 
   Widget _buildToolAction({
     required IconData icon,

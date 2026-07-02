@@ -10,6 +10,7 @@ class WiFiManager:
         config: Any,
         status_led_callback: Optional[Callable[[Tuple[int, int, int]], None]] = None,
         ntp_client: Any = None,
+        ble_connected_check: Optional[Callable[[], bool]] = None,
     ) -> None:
         self.config = config
         self.wlan = network.WLAN(network.STA_IF)
@@ -17,6 +18,7 @@ class WiFiManager:
         self._set_led = status_led_callback
         self.ntp_client = ntp_client
         self._connecting = False
+        self._ble_connected_check = ble_connected_check
 
     async def connect(self, on_status_change: Optional[Callable[[str, str], None]] = None) -> bool:
         """Attempt to connect to WiFi using configured credentials"""
@@ -97,6 +99,10 @@ class WiFiManager:
             await asyncio.sleep_ms(250)
 
         Logger.log(f"WiFi: Connection failed. Status: {self.wlan.status()}")
+        try:
+            self.wlan.disconnect()
+        except Exception:
+            pass
         self._connecting = False
         if self._set_led:
             self._set_led((10, 0, 0))  # Red failure flash
@@ -127,7 +133,16 @@ class WiFiManager:
     async def manage_connection(self) -> None:
         """Background task to keep WiFi alive"""
         while True:
-            if not self.wlan.isconnected() and not self._connecting:
+            # Check BLE connection status before attempting to reconnect WiFi
+            # We want to avoid active WiFi connect attempts interfering with BLE
+            ble_connected = False
+            if self._ble_connected_check:
+                try:
+                    ble_connected = self._ble_connected_check()
+                except Exception as e:
+                    Logger.log(f"WiFi: BLE check error: {e}")
+
+            if not ble_connected and not self.wlan.isconnected() and not self._connecting:
                 ssid = self.config.get("wifi_ssid")
                 if ssid:  # Only try if we have config
                     await self.connect()
