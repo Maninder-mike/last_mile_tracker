@@ -13,6 +13,7 @@ class AnimatedButton extends StatefulWidget {
   final double? height;
   final bool enabled;
   final bool _isPrimary;
+  final String? semanticsLabel;
 
   const AnimatedButton({
     super.key,
@@ -28,6 +29,7 @@ class AnimatedButton extends StatefulWidget {
     this.width,
     this.height,
     this.enabled = true,
+    this.semanticsLabel,
   }) : _isPrimary = false;
 
   AnimatedButton.primary({
@@ -38,6 +40,7 @@ class AnimatedButton extends StatefulWidget {
     this.height,
     this.enabled = true,
     Widget? icon,
+    String? semanticsLabel,
   }) : child = Row(
          mainAxisAlignment: MainAxisAlignment.center,
          mainAxisSize: MainAxisSize.min,
@@ -56,6 +59,7 @@ class AnimatedButton extends StatefulWidget {
        color = null,
        gradient = null,
        _isPrimary = true,
+       semanticsLabel = semanticsLabel ?? label,
        borderRadius = AppTheme.radiusMedium,
        padding = const EdgeInsets.symmetric(
          horizontal: AppTheme.s24,
@@ -69,6 +73,7 @@ class AnimatedButton extends StatefulWidget {
     this.width,
     this.height,
     this.enabled = true,
+    this.semanticsLabel,
   }) : color = AppTheme.surfaceGlassWeak,
        gradient = null,
        _isPrimary = false,
@@ -138,43 +143,48 @@ class _AnimatedButtonState extends State<AnimatedButton> {
           .toList();
     }
 
-    return GestureDetector(
-      onTapDown: widget.enabled
-          ? (_) {
-              if (widget.onTap != null) HapticFeedback.lightImpact();
-              setState(() => _isPressed = true);
-            }
-          : null,
-      onTapUp: widget.enabled
-          ? (_) => setState(() => _isPressed = false)
-          : null,
-      onTapCancel: widget.enabled
-          ? () => setState(() => _isPressed = false)
-          : null,
-      onTap: widget.enabled ? widget.onTap : null,
-      child: AnimatedScale(
-        scale: _isPressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOutCubic,
-        child: Opacity(
-          opacity: effectiveOpacity,
-          child: Container(
-            width: widget.width,
-            height: widget.height,
-            padding: widget.padding,
-            decoration: BoxDecoration(
-              color: widget.color,
-              gradient: effectiveGradient,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              border: widget._isPrimary && isDark
-                  ? Border.all(
-                      color: primary.withValues(alpha: 0.3),
-                      width: 1.0,
-                    )
-                  : null,
-              boxShadow: effectiveShadow,
+    return Semantics(
+      button: true,
+      enabled: widget.enabled,
+      label: widget.semanticsLabel,
+      child: GestureDetector(
+        onTapDown: widget.enabled
+            ? (_) {
+                if (widget.onTap != null) HapticFeedback.lightImpact();
+                setState(() => _isPressed = true);
+              }
+            : null,
+        onTapUp: widget.enabled
+            ? (_) => setState(() => _isPressed = false)
+            : null,
+        onTapCancel: widget.enabled
+            ? () => setState(() => _isPressed = false)
+            : null,
+        onTap: widget.enabled ? widget.onTap : null,
+        child: AnimatedScale(
+          scale: _isPressed ? 0.96 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOutCubic,
+          child: Opacity(
+            opacity: effectiveOpacity,
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              padding: widget.padding,
+              decoration: BoxDecoration(
+                color: widget.color,
+                gradient: effectiveGradient,
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+                border: widget._isPrimary && isDark
+                    ? Border.all(
+                        color: primary.withValues(alpha: 0.3),
+                        width: 1.0,
+                      )
+                    : null,
+                boxShadow: effectiveShadow,
+              ),
+              child: widget.child,
             ),
-            child: widget.child,
           ),
         ),
       ),

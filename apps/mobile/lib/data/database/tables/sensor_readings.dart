@@ -30,4 +30,8 @@ class SensorReadings extends Table {
   // Sync Status
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
   DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  // Device context
+  TextColumn get deviceId => text().nullable()();
+  TextColumn get clientUuid => text().withDefault(const Constant(''))();
 }

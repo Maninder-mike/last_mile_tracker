@@ -38,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
   SyncQueueDao get syncQueueDao => SyncQueueDao(this);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -109,6 +109,29 @@ class AppDatabase extends _$AppDatabase {
       if (from < 11) {
         await m.createTable(syncQueue);
       }
+      if (from < 12) {
+        await m.addColumn(sensorReadings, sensorReadings.deviceId);
+      }
+      if (from < 13) {
+        await m.addColumn(trackers, trackers.customName);
+      }
+      if (from < 14) {
+        await m.addColumn(sensorReadings, sensorReadings.clientUuid);
+      }
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+      try {
+        final result = await customSelect('PRAGMA integrity_check(1)').getSingle();
+        final check = result.read<String>('integrity_check');
+        if (check != 'ok') {
+          FileLogger.log('AppDatabase: Integrity check failed: $check');
+        } else {
+          FileLogger.log('AppDatabase: Integrity check passed.');
+        }
+      } catch (e) {
+        FileLogger.log('AppDatabase: Error running integrity check: $e');
+      }
     },
   );
 }
@@ -117,6 +140,20 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'milow_driver.sqlite'));
-    return NativeDatabase.createInBackground(file);
+    
+    try {
+      // In background creation should succeed unless the directory is unwritable or file is locked
+      return NativeDatabase.createInBackground(file);
+    } catch (e) {
+      FileLogger.log("AppDatabase: Database initialization error: $e. Performing self-healing delete.");
+      try {
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (delError) {
+        FileLogger.log("AppDatabase: Failed to delete corrupted database: $delError");
+      }
+      return NativeDatabase.createInBackground(file);
+    }
   });
 }

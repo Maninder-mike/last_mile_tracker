@@ -55,6 +55,7 @@ class LastMileTracker:
         self._v1_buf = bytearray(26)
         self._v2_buf = bytearray(76)
         self._v2_length = 0
+        self._last_battery_alert = 0
 
         # Shared sensor state
         self._reading: Dict[str, Any] = {}
@@ -97,7 +98,7 @@ class LastMileTracker:
 
         self.ble = BLEAdvertiser(name=self.device_id, service_uuid=SERVICE_UUID)
         self.ble.set_connect_callbacks(self.handle_ble_connect, self.handle_ble_disconnect)
-        self.ota = BleOta(config=self.config)
+        self.ota = BleOta(config=self.config, ble=self.ble)
         self.ble.set_write_callback(self.handle_ble_write)
 
         # Report firmware version via BLE
@@ -153,7 +154,7 @@ class LastMileTracker:
             int(data["internal_temp"]),
             1 if data["gps_fix"] else 0,
             0,  # Reset reason placeholder
-            int(time.ticks_ms() // 1000) % 65535,
+            int(time.ticks_ms() // 1000) % 65535,  # type: ignore[attr-defined]
         )
         return self._v1_buf
 
@@ -234,16 +235,16 @@ class LastMileTracker:
         while True:
             # Calculate dynamic update interval based on battery status to save power and stop UI flashing
             bat_mv = self.data_store.get("battery_mv", 4000)
-            if bat_mv < 1000: # USB-powered / wired power
+            if bat_mv < 1000:  # USB-powered / wired power
                 update_interval = self.config.get("adv_interval") or 2000
-            elif bat_mv < 3400: # Critical low battery
+            elif bat_mv < 3400:  # Critical low battery
                 update_interval = 45000  # 45 seconds
-            elif bat_mv < 3600: # Low battery
+            elif bat_mv < 3600:  # Low battery
                 update_interval = 20000  # 20 seconds
-            elif bat_mv < 3800: # Medium battery
+            elif bat_mv < 3800:  # Medium battery
                 update_interval = 10000  # 10 seconds
-            else: # Healthy battery
-                update_interval = 5000   # 5 seconds
+            else:  # Healthy battery
+                update_interval = 5000  # 5 seconds
 
             # 1. LED status
             if self.ble.is_connected():
@@ -321,10 +322,6 @@ class LastMileTracker:
             battery_mv = self.data_store.get("battery_mv", 4000)
             if battery_mv < 3300:
                 current_time = int(time.time())
-                try:
-                    self._last_battery_alert
-                except AttributeError:
-                    self._last_battery_alert = 0
                 if current_time - self._last_battery_alert > 300:
                     self._last_battery_alert = current_time
                     Logger.log(f"WARNING: Low Battery! {battery_mv} mV")
@@ -344,6 +341,9 @@ class LastMileTracker:
 
     def handle_ble_write(self, conn_handle: int, value_handle: int, value: bytes) -> None:
         """Callback for when a central writes to a characteristic"""
+        Logger.log(
+            f"BLE: Write received on handle={value_handle} len={len(value)} (ota_ctrl={self.ble.ota_ctrl_handle}, ota_data={self.ble.ota_data_handle}, wifi={self.ble.wifi_config_handle})"
+        )
         if value_handle == self.ble.wifi_config_handle:
             try:
                 command = value.decode().strip()
@@ -433,29 +433,42 @@ class LastMileTracker:
                         self.ble.notify(b"OTA:CONFIG:OK", self.ble.wifi_config_handle)
                         return
 
-                # Format: "SSID:PASSWORD"
-                if ":" in command:
+                # Support both JSON payload and legacy SSID:PASSWORD formats
+                ssid = None
+                password = None
+
+                if command.startswith("{") and command.endswith("}"):
+                    try:
+                        import json
+
+                        cfg = json.loads(command)
+                        ssid = cfg.get("ssid")
+                        password = cfg.get("pass")
+                    except Exception as e:
+                        Logger.log(f"BLE: WiFi Config JSON parse error: {e}")
+                elif ":" in command:
                     parts = command.split(":", 1)
                     if len(parts) == 2:
                         ssid, password = parts
-                        if ssid:
-                            Logger.log(f"BLE: Received WiFi Config: {ssid}")
-                            self.config.set("wifi_ssid", ssid)
-                            self.config.set("wifi_pass", password)
 
-                            def on_wifi_status(status: str, detail: str) -> None:
-                                # Send "WIFI:CONNECTED:SSID" or "WIFI:FAILED:Reason"
-                                payload = f"WIFI:{status}:{detail}".encode()
-                                self.ble.notify(payload, self.ble.wifi_config_handle)
-                                Logger.log(f"BLE: Notified WiFi Status: {status} ({detail})")
+                if ssid:
+                    Logger.log(f"BLE: Received WiFi Config: {ssid}")
+                    self.config.set("wifi_ssid", ssid)
+                    self.config.set("wifi_pass", password or "")
 
-                            # Trigger connection attempt with a delay (async) to allow BLE write response to complete
-                            async def connect_with_delay() -> None:
-                                await asyncio.sleep_ms(800)
-                                if self.wifi:
-                                    await self.wifi.connect(on_status_change=on_wifi_status)
+                    def on_wifi_status(status: str, detail: str) -> None:
+                        # Send "WIFI:CONNECTED:SSID" or "WIFI:FAILED:Reason"
+                        payload = f"WIFI:{status}:{detail}".encode()
+                        self.ble.notify(payload, self.ble.wifi_config_handle)
+                        Logger.log(f"BLE: Notified WiFi Status: {status} ({detail})")
 
-                            asyncio.create_task(connect_with_delay())
+                    # Trigger connection attempt with a delay (async) to allow BLE write response to complete
+                    async def connect_with_delay() -> None:
+                        await asyncio.sleep_ms(800)
+                        if self.wifi:
+                            await self.wifi.connect(on_status_change=on_wifi_status)
+
+                    asyncio.create_task(connect_with_delay())
             except Exception as e:
                 Logger.log(f"BLE: WiFi Config Error: {e}")
         elif value_handle in (self.ble.ota_ctrl_handle, self.ble.ota_data_handle):

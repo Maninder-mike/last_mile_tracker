@@ -41,4 +41,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get speeding => 'Speeding Events';
+
+  @override
+  String get maintenanceTitle => 'Under Maintenance';
+
+  @override
+  String get maintenanceMessage =>
+      'We are currently performing scheduled maintenance. Please check back shortly.';
+
+  @override
+  String get retryButton => 'Check Status';
 }

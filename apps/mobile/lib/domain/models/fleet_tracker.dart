@@ -4,6 +4,7 @@ import 'package:last_mile_tracker/domain/models/shipment.dart';
 class FleetTracker {
   final String id;
   final String name;
+  final String? customName;
   final double? batteryLevel;
   final double? temp;
   final int? rssi;
@@ -20,6 +21,7 @@ class FleetTracker {
   const FleetTracker({
     required this.id,
     required this.name,
+    this.customName,
     this.batteryLevel,
     this.temp,
     this.rssi,
@@ -34,6 +36,8 @@ class FleetTracker {
     this.status = 'Unknown',
   });
 
+  String get displayName => (customName != null && customName!.trim().isNotEmpty) ? customName! : name;
+
   double get lat => latitude ?? 0;
   double get lon => longitude ?? 0;
 
@@ -46,6 +50,7 @@ class FleetTracker {
     return FleetTracker(
       id: tracker.id,
       name: tracker.name,
+      customName: tracker.customName,
       batteryLevel: tracker.batteryLevel,
       temp: tracker.temp,
       rssi: currentRssi,
@@ -64,6 +69,7 @@ class FleetTracker {
   FleetTracker copyWith({
     String? id,
     String? name,
+    String? customName,
     double? batteryLevel,
     double? temp,
     int? rssi,
@@ -80,6 +86,7 @@ class FleetTracker {
     return FleetTracker(
       id: id ?? this.id,
       name: name ?? this.name,
+      customName: customName ?? this.customName,
       batteryLevel: batteryLevel ?? this.batteryLevel,
       temp: temp ?? this.temp,
       rssi: rssi ?? this.rssi,

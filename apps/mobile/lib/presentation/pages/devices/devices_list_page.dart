@@ -479,6 +479,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                       final q = _searchQuery.toLowerCase();
                       final matchesSearch =
                           tracker.name.toLowerCase().contains(q) ||
+                          (tracker.customName?.toLowerCase().contains(q) ?? false) ||
                           tracker.id.toLowerCase().contains(q);
 
                       final isOnline =
@@ -518,6 +519,10 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                             connectedDevice?.remoteId.str == tracker.id &&
                             connectionState ==
                                 BluetoothConnectionState.connected;
+
+                        final displayName = (tracker.customName != null && tracker.customName!.isNotEmpty)
+                            ? tracker.customName!
+                            : (tracker.name.isEmpty ? 'Unknown Device' : tracker.name);
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: AppTheme.s12),
@@ -580,9 +585,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                                   CupertinoPageRoute(
                                     builder: (context) => DeviceDetailPage(
                                       deviceId: tracker.id,
-                                      name: tracker.name.isEmpty
-                                          ? 'Unknown Device'
-                                          : tracker.name,
+                                      name: displayName,
                                     ),
                                   ),
                                 );
@@ -593,9 +596,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                                   tag: 'device_card_${tracker.id}',
                                   child: _DeviceCard(
                                     id: tracker.id,
-                                    name: tracker.name.isEmpty
-                                        ? 'Unknown Device'
-                                        : tracker.name,
+                                    name: displayName,
                                     status: isConnected
                                         ? 'Connected'
                                         : tracker.status,

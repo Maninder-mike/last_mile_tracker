@@ -27,8 +27,29 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            apps/mobile/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          cd ../../packages/lmt_models
+          dart pub get
+          cd ../../apps/mobile
+          flutter pub get
+
+      - name: Generate Code (build_runner)
+        run: |
+          cd ../../packages/lmt_models
+          dart run build_runner build --delete-conflicting-outputs
+          cd ../../apps/mobile
+          dart run build_runner build --delete-conflicting-outputs
 
       - name: Check formatting
         run: dart format --set-exit-if-changed .

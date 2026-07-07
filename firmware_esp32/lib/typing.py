@@ -2,7 +2,7 @@
 
 
 class GenericMeta:
-    def __getitem__(self, params):
+    def __getitem__(self, params: object) -> object:
         return Any
 
 

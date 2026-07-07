@@ -101,14 +101,18 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
                       ),
                       child: EntranceAnimation(
                         index: index + 1,
-                        child: FleetTrackerCard(
-                          tracker: tracker,
-                          onTap: () => Navigator.push(
-                            context,
-                            CupertinoPageRoute(
-                              builder: (context) => DeviceDetailPage(
-                                deviceId: tracker.id,
-                                name: tracker.name,
+                        child: Semantics(
+                          label: 'Tracker card for ${tracker.displayName}',
+                          hint: 'Double tap to open tracker detail page',
+                          child: FleetTrackerCard(
+                            tracker: tracker,
+                            onTap: () => Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (context) => DeviceDetailPage(
+                                  deviceId: tracker.id,
+                                  name: tracker.displayName,
+                                ),
                               ),
                             ),
                           ),

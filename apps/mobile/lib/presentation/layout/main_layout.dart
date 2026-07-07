@@ -83,8 +83,11 @@ class _OfflineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return Semantics(
+      label: 'Offline status banner',
+      hint: 'Indicates the app is currently running in offline mode. Local changes will sync when connection is restored.',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: CupertinoColors.systemRed.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(16),
@@ -114,6 +117,7 @@ class _OfflineBanner extends StatelessWidget {
           ),
         ],
       ),
+     ),
     );
   }
 }

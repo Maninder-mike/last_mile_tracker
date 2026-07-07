@@ -1,0 +1,17 @@
+{
+    "@@locale": "zh",
+    "appTitle": "最后一公里追踪器",
+    "homeTab": "首页",
+    "shipmentsTab": "货运",
+    "fleetTab": "车队",
+    "settingsTab": "设置",
+    "offlineModeAlert": "离线模式已激活。更改将在稍后同步。",
+    "driverScorecard": "驾驶员评分卡",
+    "safetyScore": "安全得分",
+    "batteryEfficiency": "电池效率",
+    "hardBraking": "急刹车事件",
+    "speeding": "超速事件",
+    "maintenanceTitle": "系统维护中",
+    "maintenanceMessage": "我们目前正在进行例行维护。请稍后再试。",
+    "retryButton": "检查状态"
+}

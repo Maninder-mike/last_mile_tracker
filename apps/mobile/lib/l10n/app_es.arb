@@ -10,5 +10,8 @@
     "safetyScore": "Puntuación de Seguridad",
     "batteryEfficiency": "Eficiencia de Batería",
     "hardBraking": "Frenadas Bruscas",
-    "speeding": "Excesos de Velocidad"
+    "speeding": "Excesos de Velocidad",
+    "maintenanceTitle": "En Mantenimiento",
+    "maintenanceMessage": "Actualmente estamos realizando tareas de mantenimiento programadas. Por favor, vuelva a intentarlo pronto.",
+    "retryButton": "Comprobar Estado"
 }

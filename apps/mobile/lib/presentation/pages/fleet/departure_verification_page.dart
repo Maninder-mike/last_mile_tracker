@@ -157,7 +157,7 @@ class _VerificationItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tracker.name, style: AppTheme.title),
+                Text(tracker.displayName, style: AppTheme.title),
                 Text(
                   tracker.isInRange
                       ? 'In Range (${TelemetryDisplay.signalLabel(tracker.rssi)})'

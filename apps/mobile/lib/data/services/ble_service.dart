@@ -10,6 +10,7 @@ import 'package:last_mile_tracker/data/database/daos/sensor_dao.dart';
 import 'package:last_mile_tracker/core/utils/file_logger.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:lmt_models/lmt_models.dart' as models;
+import 'package:uuid/uuid.dart';
 
 import 'ble/ble_scanner.dart';
 import 'ble/scanned_tracker.dart';
@@ -254,6 +255,8 @@ class BleService {
       resetReason: drift.Value(reading.resetReason),
       uptime: drift.Value(reading.uptime),
       isSynced: drift.Value(reading.isSynced),
+      deviceId: drift.Value(_connectionManager.device?.remoteId.str),
+      clientUuid: drift.Value(const Uuid().v4()),
     );
 
     _readingsBuffer.add(companion);
@@ -344,6 +347,8 @@ class BleService {
 
   Stream<bool> get isWifiScanning => _isWifiScanningController.stream;
   Stream<String> get wifiStatus => _connectionManager.wifiStatus;
+  Stream<String> get otaNotifications =>
+      _connectionManager.otaNotificationStream;
 
   Future<void> scanForWifi() async {
     if (simulationActive) {

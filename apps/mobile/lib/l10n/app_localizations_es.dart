@@ -41,4 +41,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get speeding => 'Excesos de Velocidad';
+
+  @override
+  String get maintenanceTitle => 'En Mantenimiento';
+
+  @override
+  String get maintenanceMessage =>
+      'Actualmente estamos realizando tareas de mantenimiento programadas. Por favor, vuelva a intentarlo pronto.';
+
+  @override
+  String get retryButton => 'Comprobar Estado';
 }

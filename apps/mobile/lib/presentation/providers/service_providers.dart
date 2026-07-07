@@ -6,6 +6,8 @@ import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'package:last_mile_tracker/core/services/config_service.dart';
+
 part 'service_providers.g.dart';
 
 // Secure Storage
@@ -33,4 +35,15 @@ OtaService otaService(Ref ref) {
 @Riverpod(keepAlive: true)
 Future<PackageInfo> packageInfo(Ref ref) {
   return PackageInfo.fromPlatform();
+}
+
+@Riverpod(keepAlive: true)
+ConfigService configService(Ref ref) {
+  return ConfigService();
+}
+
+@Riverpod(keepAlive: true)
+bool maintenanceMode(Ref ref) {
+  final service = ref.watch(configServiceProvider);
+  return service.maintenanceMode;
 }

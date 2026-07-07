@@ -69,10 +69,10 @@ class BLEAdvertiser:
             bluetooth.FLAG_READ | bluetooth.FLAG_WRITE | bluetooth.FLAG_NOTIFY,
         )
 
-        # OTA Data: Write (No Response for speed)
+        # OTA Data: Write + Write No Response (Allow both)
         OTA_DATA_CHAR = (
             bluetooth.UUID("00000002-0000-1000-8000-00805F9B34FB"),
-            bluetooth.FLAG_WRITE_NO_RESPONSE,
+            bluetooth.FLAG_WRITE | bluetooth.FLAG_WRITE_NO_RESPONSE,
         )
 
         # WiFi Config: Write + Notify (for scan results)

@@ -19,16 +19,18 @@ const INITIAL_VIEW_STATE: MapViewState = {
     bearing: 0
 };
 
-// Map style for "Zero Cost" requirement (Carto Positron - Free for non-commercial/low volume)
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+// Map style for "Zero Cost" requirement (Carto Positron/Dark Matter - Free for non-commercial/low volume)
+const MAP_STYLE_LIGHT = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const MAP_STYLE_DARK = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
 interface DeckMapProps {
     devices: DeviceReading[];
     selectedDeviceId: string | null;
-    onSelectDevice?: (id: string) => void;
+    onSelectDevice?: (id: string | null) => void;
+    isDark?: boolean;
 }
 
-export default function DeckMap({ devices, selectedDeviceId, onSelectDevice }: DeckMapProps) {
+export default function DeckMap({ devices, selectedDeviceId, onSelectDevice, isDark = true }: DeckMapProps) {
     const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 
     // Update view state when selected device changes (FlyTo effect)
@@ -97,7 +99,7 @@ export default function DeckMap({ devices, selectedDeviceId, onSelectDevice }: D
     };
 
     return (
-        <div className="relative w-full h-full bg-slate-50">
+        <div className={`relative w-full h-full ${isDark ? 'bg-slate-950' : 'bg-slate-50'}`}>
             <DeckGL
                 initialViewState={INITIAL_VIEW_STATE}
                 viewState={viewState}
@@ -108,7 +110,7 @@ export default function DeckMap({ devices, selectedDeviceId, onSelectDevice }: D
             >
                 <Map
                     mapLib={maplibregl}
-                    mapStyle={MAP_STYLE}
+                    mapStyle={isDark ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
                     style={{ width: '100%', height: '100%' }}
                 />
             </DeckGL>

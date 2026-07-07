@@ -10,13 +10,15 @@ class BleOta:
     CMD_DATA = 0x02
     CMD_END = 0x03
 
-    def __init__(self, config: Any = None) -> None:
+    def __init__(self, config: Any = None, ble: Any = None) -> None:
         self._config = config
+        self._ble = ble
         self._update_filename: str | None = None
         self._file_handle: BinaryIO | None = None
         self._received_size = 0
         self._expected_size = 0
         self._hash: Any = None
+        self._version: str | None = None
 
     def handle_command(self, cmd_bytes: bytes) -> None:
         """Handle incoming OTA commands from BLE"""
@@ -34,12 +36,9 @@ class BleOta:
             self._handle_end(data)
 
     def _handle_start(self, data: bytes) -> None:
-        """Start update: [type(1), size(4)]"""
+        """Start update: [size(4), name_len(1), name(...), version_len(1), version(...)]"""
         try:
             import struct
-            # file_type = data[0] # 1=main.py, 2=lib... for now logic is simpler
-            # We'll expect a filename length and filename next, or just hardcode for main.py for v1
-            # Let's assume protocol: [size(4), name_len(1), name(...)]
 
             size = struct.unpack("<I", data[0:4])[0]
             name_len = data[4]
@@ -50,12 +49,28 @@ class BleOta:
             self._received_size = 0
             self._hash = hashlib.sha256()
 
+            # Parse optional target version if present
+            self._version = None
+            version_offset = 5 + name_len
+            if len(data) > version_offset:
+                version_len = data[version_offset]
+                self._version = data[
+                    version_offset + 1 : version_offset + 1 + version_len
+                ].decode()
+                Logger.log(f"OTA: Target version is {self._version}")
+
             self._file_handle = open(self._update_filename, "wb")
             Logger.log(f"OTA: Starting upload for {name} ({size} bytes)")
+
+            # Notify central that we are ready
+            if self._ble:
+                self._ble.notify(b"OTA:STATUS:READY", self._ble.ota_ctrl_handle)
 
         except Exception as e:
             Logger.log(f"OTA Start Error: {e}")
             self._close_file()
+            if self._ble:
+                self._ble.notify(b"OTA:STATUS:ERR_START", self._ble.ota_ctrl_handle)
 
     def _handle_data(self, data: bytes) -> None:
         """Append data chunk"""
@@ -74,6 +89,8 @@ class BleOta:
         except Exception as e:
             Logger.log(f"OTA Write Error: {e}")
             self._close_file()
+            if self._ble:
+                self._ble.notify(b"OTA:STATUS:ERR_WRITE", self._ble.ota_ctrl_handle)
 
     def _handle_end(self, data: bytes) -> None:
         """Finish: [checksum(32)]"""
@@ -87,9 +104,13 @@ class BleOta:
 
             if expected_hash == actual_hash:
                 Logger.log("OTA: Checksum OK. Applying update...")
+                if self._ble:
+                    self._ble.notify(b"OTA:STATUS:OK", self._ble.ota_ctrl_handle)
                 self._apply_update()
             else:
                 Logger.log("OTA: Checksum MISMATCH!")
+                if self._ble:
+                    self._ble.notify(b"OTA:STATUS:ERR_CHECKSUM", self._ble.ota_ctrl_handle)
                 try:
                     if self._update_filename:
                         os.remove(self._update_filename)
@@ -114,7 +135,12 @@ class BleOta:
 
             target = self._update_filename.replace(".tmp", "")
             apply_firmware_update(
-                config=self._config, temp_filename=self._update_filename, target_filename=target
+                config=self._config,
+                temp_filename=self._update_filename,
+                target_filename=target,
+                new_version=self._version,
             )
         except Exception as e:
             Logger.log(f"OTA Apply Error: {e}")
+            if self._ble:
+                self._ble.notify(b"OTA:STATUS:ERR_APPLY", self._ble.ota_ctrl_handle)

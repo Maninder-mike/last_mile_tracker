@@ -1,0 +1,17 @@
+{
+    "@@locale": "de",
+    "appTitle": "Letzte Meile Tracker",
+    "homeTab": "Startseite",
+    "shipmentsTab": "Lieferungen",
+    "fleetTab": "Flotte",
+    "settingsTab": "Einstellungen",
+    "offlineModeAlert": "Offline-Modus aktiv. Änderungen werden später synchronisiert.",
+    "driverScorecard": "Fahrerbewertung",
+    "safetyScore": "Sicherheitsbewertung",
+    "batteryEfficiency": "Batterieeffizienz",
+    "hardBraking": "Starkes Bremsen",
+    "speeding": "Geschwindigkeitsüberschreitung",
+    "maintenanceTitle": "Wartungsarbeiten",
+    "maintenanceMessage": "Wir führen derzeit geplante Wartungsarbeiten durch. Bitte versuchen Sie es bald wieder.",
+    "retryButton": "Status Prüfen"
+}

@@ -334,7 +334,7 @@ class _FleetTrackerPopup extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  tracker.name,
+                  tracker.displayName,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,

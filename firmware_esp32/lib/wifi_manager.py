@@ -81,11 +81,14 @@ class WiFiManager:
                     on_status_change("CONNECTED", ssid)
                 return True
 
-            if status == 202:  # STAT_WRONG_PASSWORD
+            if status == network.STAT_WRONG_PASSWORD:  # type: ignore
                 Logger.log("WiFi: Error - Wrong Password")
                 break
-            elif status == 201:  # STAT_NO_AP_FOUND
+            elif status == network.STAT_NO_AP_FOUND:  # type: ignore
                 Logger.log("WiFi: Error - AP Not Found")
+                break
+            elif status == network.STAT_CONNECT_FAIL:  # type: ignore
+                Logger.log("WiFi: Error - Connect Fail")
                 break
 
             if i % 4 == 0:
@@ -101,8 +104,8 @@ class WiFiManager:
         Logger.log(f"WiFi: Connection failed. Status: {self.wlan.status()}")
         try:
             self.wlan.disconnect()
-        except Exception:
-            pass
+        except Exception as e:
+            Logger.log(f"WiFi: Disconnect failed to execute: {e}")
         self._connecting = False
         if self._set_led:
             self._set_led((10, 0, 0))  # Red failure flash
@@ -111,10 +114,13 @@ class WiFiManager:
 
         if on_status_change:
             err = "Timeout"
-            if self.wlan.status() == 202:
+            status = self.wlan.status()
+            if status == network.STAT_WRONG_PASSWORD:  # type: ignore
                 err = "Wrong Password"
-            elif self.wlan.status() == 201:
+            elif status == network.STAT_NO_AP_FOUND:  # type: ignore
                 err = "AP Not Found"
+            elif status == network.STAT_CONNECT_FAIL:  # type: ignore
+                err = "Connect Fail"
             on_status_change("FAILED", err)
 
         return False
@@ -131,7 +137,10 @@ class WiFiManager:
         return bool(self.wlan.isconnected())
 
     async def manage_connection(self) -> None:
-        """Background task to keep WiFi alive"""
+        """Background task to keep WiFi alive with exponential backoff"""
+        retry_interval = 60  # Initial retry interval in seconds
+        max_retry_interval = 3600  # Max retry interval in seconds (1 hour)
+
         while True:
             # Check BLE connection status before attempting to reconnect WiFi
             # We want to avoid active WiFi connect attempts interfering with BLE
@@ -145,9 +154,20 @@ class WiFiManager:
             if not ble_connected and not self.wlan.isconnected() and not self._connecting:
                 ssid = self.config.get("wifi_ssid")
                 if ssid:  # Only try if we have config
-                    await self.connect()
+                    success = await self.connect()
+                    if success:
+                        retry_interval = 60  # Reset on successful connection
+                    else:
+                        # Double retry interval on failure
+                        retry_interval = min(retry_interval * 2, max_retry_interval)
+                        Logger.log(
+                            f"WiFi: Connection failed, backoff active. Next retry in {retry_interval}s"
+                        )
+            else:
+                if self.wlan.isconnected():
+                    retry_interval = 60  # Reset if currently connected
 
-            await asyncio.sleep(60)  # Check every minute
+            await asyncio.sleep(retry_interval)
 
     async def scan_networks(self) -> List[Tuple[str, int]]:
         """Scan for available WiFi networks"""

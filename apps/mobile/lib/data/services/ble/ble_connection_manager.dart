@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../../../core/constants/ble_constants.dart';
 import '../../../core/utils/file_logger.dart';
@@ -13,6 +14,7 @@ class BleConnectionManager {
   StreamSubscription? _connectionStateSubscription;
   StreamSubscription? _characteristicSubscription;
   StreamSubscription? _extCharacteristicSubscription;
+  StreamSubscription? _otaSubscription;
 
   BluetoothDevice? _device;
   BluetoothDevice? get device => _device;
@@ -44,7 +46,10 @@ class BleConnectionManager {
     _device = device;
 
     try {
-      await device.connect(license: License.nonprofit);
+      await device.connect(
+        timeout: const Duration(seconds: 15),
+        license: License.nonprofit,
+      );
       FileLogger.log("ConnectionManager: Connected to ${device.platformName}");
       _reconnectDelaySeconds = BleConstants.initialReconnectDelay.inSeconds;
       await _connectionStateSubscription?.cancel();
@@ -81,9 +86,14 @@ class BleConnectionManager {
         }
       });
     } catch (e) {
-      FileLogger.log("ConnectionManager: Connection error: $e");
+      FileLogger.log("ConnectionManager: Connection error: $e. Forcing disconnect cleanup.");
       _connectionState = BluetoothConnectionState.disconnected;
       onStateChanged(BluetoothConnectionState.disconnected);
+      try {
+        await device.disconnect();
+      } catch (discErr) {
+        FileLogger.log("ConnectionManager: Disconnect cleanup error: $discErr");
+      }
       _cleanupConnectionResources();
       onDisconnected();
     } finally {
@@ -102,6 +112,9 @@ class BleConnectionManager {
 
   final _wifiStatusController = StreamController<String>.broadcast();
   Stream<String> get wifiStatus => _wifiStatusController.stream;
+
+  final _otaNotificationController = StreamController<String>.broadcast();
+  Stream<String> get otaNotificationStream => _otaNotificationController.stream;
 
   final List<WifiScanResult> _currentScanResults = [];
 
@@ -170,6 +183,14 @@ class BleConnectionManager {
         else if (_isUuidMatch(charUuid, BleConstants.otaControlUuid)) {
           otaControl = characteristic;
           FileLogger.log("ConnectionManager: Identified OTA Control Char");
+          if (characteristic.properties.notify) {
+            await characteristic.setNotifyValue(true);
+            await _otaSubscription?.cancel();
+            _otaSubscription = characteristic.onValueReceived.listen((value) {
+              _handleOtaNotification(value);
+            });
+            FileLogger.log("ConnectionManager: Subscribed to OTA Control");
+          }
         }
         // 4. OTA Data (0002)
         else if (_isUuidMatch(charUuid, BleConstants.otaDataUuid)) {
@@ -246,6 +267,16 @@ class BleConnectionManager {
     }
   }
 
+  void _handleOtaNotification(List<int> value) {
+    try {
+      final message = String.fromCharCodes(value).trim();
+      FileLogger.log("ConnectionManager: Received OTA Notification: $message");
+      _otaNotificationController.add(message);
+    } catch (e) {
+      FileLogger.log("ConnectionManager: Error parsing OTA notification: $e");
+    }
+  }
+
   Future<void> scanForWifi() async {
     if (_wifiChar == null) throw Exception("WiFi Characteristic not found");
 
@@ -268,7 +299,8 @@ class BleConnectionManager {
   }
 
   Future<void> writeWifiConfig(String ssid, String password) async {
-    await writeRawConfig("$ssid:$password");
+    final payload = jsonEncode({'ssid': ssid, 'pass': password});
+    await writeRawConfig(payload);
   }
 
   Future<void> writeRawConfig(String command) async {
@@ -332,6 +364,8 @@ class BleConnectionManager {
     _extCharacteristicSubscription = null;
     _wifiSubscription?.cancel();
     _wifiSubscription = null;
+    _otaSubscription?.cancel();
+    _otaSubscription = null;
   }
 
   Future<void> disconnect() async {
@@ -345,6 +379,7 @@ class BleConnectionManager {
   void dispose() {
     disconnect();
     _wifiScanController.close();
+    _otaNotificationController.close();
   }
 }
 

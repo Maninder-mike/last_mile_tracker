@@ -68,6 +68,8 @@ class TrackerRepository {
       batteryDrop: isV2 ? Value(reading.batteryDrop) : const Value.absent(),
       isFavorite:
           const Value.absent(), // Don't overwrite favorite status on sync
+      customName:
+          const Value.absent(), // Don't overwrite custom friendly name on sync
     );
 
     await _trackerDao.upsertTracker(companion);
@@ -94,6 +96,8 @@ class TrackerRepository {
       lon: Value(scanned.telemetry?.lon),
       isFavorite:
           const Value.absent(), // Don't overwrite favorite status on scan
+      customName:
+          const Value.absent(), // Don't overwrite custom friendly name on scan
     );
 
     await _trackerDao.upsertTracker(companion);
@@ -109,6 +113,10 @@ class TrackerRepository {
 
   Future<void> updateFavorite(String id, bool isFavorite) async {
     await _trackerDao.updateFavorite(id, isFavorite);
+  }
+
+  Future<void> updateCustomName(String id, String? customName) async {
+    await _trackerDao.updateCustomName(id, customName);
   }
 
   Stream<List<Tracker>> watchFavorites() {

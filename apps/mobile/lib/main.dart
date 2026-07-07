@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,14 +15,24 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:last_mile_tracker/core/utils/file_logger.dart';
 import 'presentation/app.dart';
 import 'core/services/config_service.dart';
+import 'core/services/app_link_service.dart';
 import 'core/config/supabase_config.dart';
 import 'core/services/background_service.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
       debugPrint('Init: WidgetsFlutterBinding initialized');
+
+      await SentryFlutter.init(
+        (options) {
+          options.dsn = const String.fromEnvironment('SENTRY_DSN');
+          options.tracesSampleRate = 1.0;
+        },
+      );
+      debugPrint('Init: Sentry initialized');
 
       await Firebase.initializeApp();
       debugPrint('Init: Firebase initialized');
@@ -32,8 +43,8 @@ void main() {
       // Initialize App Check
       debugPrint('Init: Activating App Check...');
       await FirebaseAppCheck.instance.activate(
-        providerApple: const AppleDebugProvider(),
-        providerAndroid: const AndroidDebugProvider(),
+        providerApple: kReleaseMode ? AppleAppAttestProvider() : const AppleDebugProvider(),
+        providerAndroid: kReleaseMode ? AndroidPlayIntegrityProvider() : const AndroidDebugProvider(),
       );
       debugPrint('Init: App Check activated');
 
@@ -68,6 +79,9 @@ void main() {
       await ConfigService().init();
       debugPrint('Init: ConfigService initialized');
 
+      await AppLinkService().init();
+      debugPrint('Init: AppLinkService initialized');
+
       await trace.stop();
       debugPrint('Init: All secondary services initialized');
 
@@ -76,8 +90,11 @@ void main() {
         NotificationService.handleBackgroundMessage,
       );
 
-      // Pass all uncaught errors from the framework to Crashlytics.
-      FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+      // Pass all uncaught errors from the framework to Crashlytics and Sentry.
+      FlutterError.onError = (details) {
+        FirebaseCrashlytics.instance.recordFlutterError(details);
+        Sentry.captureException(details.exception, stackTrace: details.stack);
+      };
 
       // 3. Full screen immersive mode
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -93,6 +110,7 @@ void main() {
     (error, stack) {
       FileLogger.log("UNCAUGHT ERROR: $error\n$stack");
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      Sentry.captureException(error, stackTrace: stack);
     },
   );
 }

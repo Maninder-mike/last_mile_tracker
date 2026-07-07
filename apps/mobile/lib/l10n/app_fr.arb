@@ -1,0 +1,17 @@
+{
+    "@@locale": "fr",
+    "appTitle": "Rastreador de Última Milla",
+    "homeTab": "Accueil",
+    "shipmentsTab": "Expéditions",
+    "fleetTab": "Flotte",
+    "settingsTab": "Paramètres",
+    "offlineModeAlert": "Mode hors ligne actif. Les modifications seront synchronisées plus tard.",
+    "driverScorecard": "Carte de Score du Chauffeur",
+    "safetyScore": "Score de Sécurité",
+    "batteryEfficiency": "Efficacité de la Batterie",
+    "hardBraking": "Freinage Brutal",
+    "speeding": "Excès de Vitesse",
+    "maintenanceTitle": "En Maintenance",
+    "maintenanceMessage": "Nous effectuons actuellement une maintenance planifiée. Veuillez revenir plus tard.",
+    "retryButton": "Vérifier le Statut"
+}

@@ -34,8 +34,21 @@ class FileLogger {
     // Always print to console (un-sanitized for dev if needed, but let's be safe)
     debugPrint(entry.trim());
 
-    // Write to file if available
-    _logFile?.writeAsStringSync(entry, mode: FileMode.append);
+    // Write to file if available and rotate if size > 2MB
+    if (_logFile != null) {
+      try {
+        if (_logFile!.existsSync() && _logFile!.lengthSync() > 2 * 1024 * 1024) {
+          final oldFile = File('${_logFile!.path}.old');
+          if (oldFile.existsSync()) {
+            oldFile.deleteSync();
+          }
+          _logFile!.renameSync(oldFile.path);
+        }
+        _logFile!.writeAsStringSync(entry, mode: FileMode.append);
+      } catch (e) {
+        debugPrint("FileLogger: Write error: $e");
+      }
+    }
   }
 
   static Future<String> getLogs() async {

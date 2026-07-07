@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/presentation/app.dart';
 import 'package:last_mile_tracker/presentation/pages/shipments/shipments_page.dart';
+import 'package:last_mile_tracker/presentation/pages/devices/device_detail_page.dart';
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService();
@@ -92,26 +93,55 @@ class NotificationService {
     // 4. Configure Foreground Handling
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    // 5. Handle app opened via notification
+    // 5. Handle app opened via notification (FCM running/background)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint(
         'Notification: App opened via FCM: ${message.notification?.title}',
       );
       _handleNavigationFromMessage(message.data);
     });
+
+    // 6. Handle cold start from terminated state (FCM)
+    final initialMessage = await _fcm.getInitialMessage();
+    if (initialMessage != null) {
+      debugPrint('Notification: Cold start from FCM: ${initialMessage.notification?.title}');
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        _handleNavigationFromMessage(initialMessage.data);
+      });
+    }
+
+    // 7. Handle cold start from terminated state (Local)
+    final launchDetails = await _localNotifications.getNotificationAppLaunchDetails();
+    if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
+      final payload = launchDetails.notificationResponse?.payload;
+      if (payload != null) {
+        debugPrint('Notification: Cold start from Local payload: $payload');
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          _handleNavigationFromMessage({'type': payload});
+        });
+      }
+    }
   }
 
   void _handleNavigationFromMessage(Map<String, dynamic> data) {
     if (data.containsKey('type')) {
-      final type = data['type'];
+      final type = data['type'] as String;
       final navContext = navigatorKey.currentState?.context;
       if (navContext != null) {
         if (type == 'new_shipment' || type == 'shipment_update') {
-          // Navigate to Shipments tab (assuming main_layout handles this or pushing directly)
-          // For now, pushing ShipmentsPage over everything
           Navigator.of(
             navContext,
           ).push(CupertinoPageRoute(builder: (_) => const ShipmentsPage()));
+        } else if (type.startsWith('alert_')) {
+          final deviceId = type.replaceFirst('alert_', '');
+          Navigator.of(navContext).push(
+            CupertinoPageRoute(
+              builder: (_) => DeviceDetailPage(
+                deviceId: deviceId,
+                name: 'Device $deviceId',
+              ),
+            ),
+          );
         }
       }
     }

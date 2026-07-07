@@ -48,6 +48,15 @@ class TrackerDao extends DatabaseAccessor<AppDatabase> with _$TrackerDaoMixin {
     );
   }
 
+  // Update custom friendly name
+  Future<void> updateCustomName(String id, String? customName) async {
+    await (update(trackers)..where((t) => t.id.equals(id))).write(
+      TrackersCompanion(
+        customName: Value(customName == null || customName.trim().isEmpty ? null : customName.trim()),
+      ),
+    );
+  }
+
   // Watch only favorites
   Stream<List<Tracker>> watchFavorites() {
     return (select(trackers)..where((t) => t.isFavorite.equals(true))).watch();

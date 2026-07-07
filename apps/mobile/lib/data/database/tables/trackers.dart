@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 class Trackers extends Table {
   TextColumn get id => text()(); // BLE RemoteId
   TextColumn get name => text()();
+  TextColumn get customName => text().nullable()();
   DateTimeColumn get lastSeen => dateTime()();
 
   // Latest Telemetry Snapshot

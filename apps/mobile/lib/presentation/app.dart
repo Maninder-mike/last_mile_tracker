@@ -8,6 +8,8 @@ import 'package:last_mile_tracker/presentation/providers/onboarding_provider.dar
 import 'package:last_mile_tracker/presentation/providers/theme_provider.dart';
 import 'pages/home_page.dart';
 import 'pages/onboarding/onboarding_page.dart';
+import 'pages/settings/maintenance_page.dart';
+import 'package:last_mile_tracker/presentation/providers/service_providers.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -18,6 +20,7 @@ class LastMileTrackerApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeState = ref.watch(themeProvider);
     final hasSeenOnboarding = ref.watch(onboardingProvider);
+    final maintenanceActive = ref.watch(maintenanceModeProvider);
 
     return CupertinoApp(
       debugShowCheckedModeBanner: false,
@@ -30,10 +33,16 @@ class LastMileTrackerApp extends ConsumerWidget {
       ],
       supportedLocales: const [
         Locale('en'), // English
+        Locale('es'), // Spanish
+        Locale('fr'), // French
+        Locale('de'), // German
+        Locale('zh'), // Chinese
       ],
       navigatorKey: navigatorKey,
       theme: AppTheme.getTheme(themeState, context),
-      home: hasSeenOnboarding ? const HomePage() : const OnboardingPage(),
+      home: maintenanceActive
+          ? const MaintenancePage()
+          : (hasSeenOnboarding ? const HomePage() : const OnboardingPage()),
     );
   }
 }

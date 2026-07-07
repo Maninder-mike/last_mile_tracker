@@ -81,11 +81,9 @@ class OtaState {
 }
 
 class OtaService {
-  // MicroPython BLE default GATTS receive buffer is 20 bytes.
-  // Each OTA data packet has a 1-byte command prefix, so the maximum
-  // payload chunk is 19 bytes. This is slow but reliable until the
-  // ESP32 firmware is updated to expand the buffer via gatts_set_buffer().
-  static const int _chunkSize = 19;
+  // MicroPython BLE GATTS buffer has been expanded to 512 bytes on the firmware.
+  // Using BleConstants.otaChunkSize (240 bytes) allows much faster transfers.
+  static const int _chunkSize = BleConstants.otaChunkSize;
   static const int _cmdStart = 0x01;
   static const int _cmdData = 0x02;
   static const int _cmdEnd = 0x03;
@@ -326,11 +324,45 @@ class OtaService {
     }
   }
 
+  Future<void> _waitForOtaNotification(
+    BleService bleService,
+    String expectedPrefix,
+    Duration timeout,
+  ) async {
+    final completer = Completer<void>();
+    StreamSubscription? sub;
+
+    sub = bleService.otaNotifications.listen((msg) {
+      if (msg == 'OTA:STATUS:ERR_START') {
+        completer.completeError(Exception('Device rejected OTA start request.'));
+      } else if (msg == 'OTA:STATUS:ERR_WRITE') {
+        completer.completeError(Exception('Device write error during upload.'));
+      } else if (msg == 'OTA:STATUS:ERR_CHECKSUM') {
+        completer.completeError(Exception('Device reported checksum verification mismatch.'));
+      } else if (msg == 'OTA:STATUS:ERR_APPLY') {
+        completer.completeError(Exception('Device failed to apply update.'));
+      } else if (msg.startsWith(expectedPrefix)) {
+        completer.complete();
+      }
+    });
+
+    try {
+      await completer.future.timeout(timeout);
+    } on TimeoutException {
+      throw Exception('Timed out waiting for device response ($expectedPrefix).');
+    } finally {
+      await sub.cancel();
+    }
+  }
+
   Future<void> _uploadViaBle(
     Uint8List firmware,
     String fileName,
     BleService bleService,
   ) async {
+    final release = _state.release;
+    if (release == null) return;
+
     _emit(
       _state.copyWith(
         status: OtaStatus.uploading,
@@ -339,23 +371,49 @@ class OtaService {
       ),
     );
 
-    // CMD_START: [cmd(1), size(4), name_len(1), name(...)]
+    // CMD_START: [cmd(1), size(4), name_len(1), name(...), version_len(1), version(...)]
     final nameBytes = utf8.encode(fileName);
-    final startPacket = ByteData(6 + nameBytes.length);
+    final versionBytes = utf8.encode(release.version);
+    final startPacket = ByteData(7 + nameBytes.length + versionBytes.length);
     startPacket.setUint8(0, _cmdStart);
     startPacket.setUint32(1, firmware.length, Endian.little);
     startPacket.setUint8(5, nameBytes.length);
     for (int i = 0; i < nameBytes.length; i++) {
       startPacket.setUint8(6 + i, nameBytes[i]);
     }
+    final versionOffset = 6 + nameBytes.length;
+    startPacket.setUint8(versionOffset, versionBytes.length);
+    for (int i = 0; i < versionBytes.length; i++) {
+      startPacket.setUint8(versionOffset + 1 + i, versionBytes[i]);
+    }
 
-    await bleService.writeOtaControl(startPacket.buffer.asUint8List());
-    await Future.delayed(const Duration(milliseconds: 200));
+    // Start listening for notifications before writing the command to avoid race conditions
+    final readyFuture = _waitForOtaNotification(
+      bleService,
+      'OTA:STATUS:READY',
+      const Duration(seconds: 10),
+    );
+
+    final startBytes = startPacket.buffer.asUint8List();
+    FileLogger.log(
+      'OTA: Sending CMD_START — ${startBytes.length} bytes, '
+      'file: $fileName, version: ${release.version}',
+    );
+    await bleService.writeOtaControl(startBytes);
+    FileLogger.log('OTA: CMD_START write completed successfully.');
+
+    _emit(
+      _state.copyWith(
+        status: OtaStatus.uploading,
+        progress: 0.0,
+        message: 'Waiting for device ready...',
+      ),
+    );
+
+    await readyFuture;
 
     // CMD_DATA: chunked transfer
-    // Use smaller chunks + per-chunk delay because the OTA Data characteristic
-    // uses FLAG_WRITE_NO_RESPONSE (fire-and-forget). Without delays, the ESP32's
-    // GATTS buffer overflows and silently drops packets.
+    // Uses write-with-response under the hood since FLAG_WRITE is now enabled on the characteristic.
     final totalChunks = (firmware.length / _chunkSize).ceil();
     FileLogger.log(
       'OTA: Starting upload — ${firmware.length} bytes, '
@@ -383,13 +441,8 @@ class OtaService {
         ),
       );
 
-      // Delay after every chunk to prevent GATTS buffer overflow
-      await Future.delayed(const Duration(milliseconds: 30));
-
-      // Extra pause every 8 chunks for ESP32 to flush to flash
-      if (i % 8 == 7) {
-        await Future.delayed(const Duration(milliseconds: 50));
-      }
+      // Add a minimal delay to keep thread scheduling smooth on the mobile side
+      await Future.delayed(const Duration(milliseconds: 2));
     }
 
     FileLogger.log('OTA: All $totalChunks chunks sent.');
@@ -402,24 +455,34 @@ class OtaService {
     FileLogger.log(
       'OTA: Sending CMD_END with SHA-256 (${digest.length} bytes)',
     );
-    await bleService.writeOtaControl(endPacket);
+    // Start listening for notifications before writing the command to avoid race conditions
+    final successFuture = _waitForOtaNotification(
+      bleService,
+      'OTA:STATUS:OK',
+      const Duration(seconds: 15),
+    );
+
+    try {
+      await bleService.writeOtaControl(endPacket);
+    } catch (e) {
+      FileLogger.log('OTA: CMD_END write encountered a connection/GATT error: $e. Checking if device verified successfully...');
+    }
 
     _emit(
       _state.copyWith(
         status: OtaStatus.applying,
         progress: 1.0,
-        message: 'Applying update... Device will restart.',
+        message: 'Applying update... Device verifying checksum.',
       ),
     );
 
-    // Device will reset itself. After ~5s, show success.
-    await Future.delayed(const Duration(seconds: 5));
+    await successFuture;
 
     _emit(
       _state.copyWith(
         status: OtaStatus.success,
         progress: 1.0,
-        message: 'Firmware updated to ${_state.release?.tagName ?? "latest"}!',
+        message: 'Firmware updated to ${release.tagName}!',
       ),
     );
   }

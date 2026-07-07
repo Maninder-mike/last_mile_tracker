@@ -106,11 +106,19 @@ class SyncManager {
 
   Future<void> _uploadToSupabase(List<SensorReading> data) async {
     final client = Supabase.instance.client;
-    final deviceId = _bleService.connectedDevice?.remoteId.str ?? 'dev_001';
 
     final payload = data.map((r) {
+      final recordDeviceId = r.deviceId ??
+          _bleService.connectedDevice?.remoteId.str;
+
+      if (recordDeviceId == null) {
+        FileLogger.log("SyncManager: Skipping record ${r.id} due to missing device_id");
+        return null;
+      }
+
       return {
-        'device_id': deviceId,
+        'client_uuid': r.clientUuid,
+        'device_id': recordDeviceId,
         'lat': r.lat,
         'lon': r.lon,
         'speed': r.speed,
@@ -128,7 +136,9 @@ class SyncManager {
         'wifi_signal': r.wifiSignal,
         'timestamp': r.timestamp.toIso8601String(),
       };
-    }).toList();
+    }).whereType<Map<String, dynamic>>().toList();
+
+    if (payload.isEmpty) return;
 
     await client.from('sensor_readings').insert(payload);
   }

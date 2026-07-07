@@ -12,17 +12,20 @@ interface SensorReadingRaw {
     timestamp: string;
 }
 
-export function useLiveReadings(initialData: DeviceReading[]) {
+export function useLiveReadings(initialData: DeviceReading[], page = 0, pageSize = 50) {
     const [devices, setDevices] = useState<DeviceReading[]>(initialData);
 
     useEffect(() => {
         // 1. Initial Fetch
         const fetchLatest = async () => {
+            const fromRange = page * pageSize;
+            const toRange = fromRange + pageSize - 1;
+
             const { data, error } = await supabase
                 .from('sensor_readings')
                 .select('*')
                 .order('timestamp', { ascending: false })
-                .limit(20);
+                .range(fromRange, toRange);
 
             if (!error && data) {
                 // Simple logic to keep only the latest reading per device ID
@@ -82,7 +85,7 @@ export function useLiveReadings(initialData: DeviceReading[]) {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [page, pageSize]);
 
     return devices;
 }

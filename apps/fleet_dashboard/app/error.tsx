@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { captureException } from '@/utils/sentry.config';
 
 export default function Error({
     error,
@@ -10,7 +11,20 @@ export default function Error({
     reset: () => void;
 }) {
     useEffect(() => {
-        console.error(error);
+        console.error("Dashboard Error Captured:", error);
+        
+        try {
+            const telemetryPayload = {
+                message: error.message || 'Unknown Error',
+                stack: error.stack,
+                digest: error.digest,
+                timestamp: new Date().toISOString(),
+                url: typeof window !== 'undefined' ? window.location.href : 'SSR',
+            };
+            captureException(error, telemetryPayload);
+        } catch (e) {
+            console.error("Failed to submit telemetry:", e);
+        }
     }, [error]);
 
     return (
