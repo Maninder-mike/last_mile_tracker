@@ -36,7 +36,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final role = ref.watch(settingsModeProvider);
 
     return CupertinoPageScaffold(
-      backgroundColor: CupertinoDynamicColor.resolve(AppTheme.background, context),
+      backgroundColor: CupertinoDynamicColor.resolve(
+        AppTheme.background,
+        context,
+      ),
       child: Stack(
         children: [
           ListView(
@@ -80,9 +83,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           onTap: () {
             Navigator.push(
               context,
-              CupertinoPageRoute(
-                builder: (context) => const DevicesListPage(),
-              ),
+              CupertinoPageRoute(builder: (context) => const DevicesListPage()),
             );
           },
         ),
@@ -245,7 +246,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget _buildBackgroundSection() {
     final isTest = Platform.environment.containsKey('FLUTTER_TEST');
     return FutureBuilder<bool>(
-      future: isTest ? Future.value(false) : FlutterBackgroundService().isRunning(),
+      future: isTest
+          ? Future.value(false)
+          : FlutterBackgroundService().isRunning(),
       builder: (context, snapshot) {
         final isRunning = snapshot.data ?? false;
 

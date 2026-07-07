@@ -134,7 +134,8 @@ class BleService {
   void _setupAutoConnectListener() {
     discoveredDevices.listen((devices) {
       if (!_isAutoConnectEnabled || _approvedDeviceIds.isEmpty) return;
-      if (isConnecting || _lastState != BluetoothConnectionState.disconnected) return;
+      if (isConnecting || _lastState != BluetoothConnectionState.disconnected)
+        return;
 
       // Prevent connection attempts too close to a disconnection event
       if (_lastDisconnectTime != null) {
@@ -206,22 +207,33 @@ class BleService {
   }
 
   void _processTelemetryReading(models.SensorReading reading) {
-    final batPercent = BleConstants.batteryVoltageToPercent(reading.batteryLevel);
+    final batPercent = BleConstants.batteryVoltageToPercent(
+      reading.batteryLevel,
+    );
     final isUsbPowered = reading.batteryLevel < 1.0;
 
     Duration throttleInterval;
     if (isUsbPowered) {
-      throttleInterval = const Duration(seconds: 3); // 3 seconds on USB/wired power
+      throttleInterval = const Duration(
+        seconds: 3,
+      ); // 3 seconds on USB/wired power
     } else if (batPercent >= 50) {
-      throttleInterval = const Duration(seconds: 5); // 5 seconds when healthy battery
+      throttleInterval = const Duration(
+        seconds: 5,
+      ); // 5 seconds when healthy battery
     } else if (batPercent >= 20) {
-      throttleInterval = const Duration(seconds: 15); // 15 seconds when medium battery
+      throttleInterval = const Duration(
+        seconds: 15,
+      ); // 15 seconds when medium battery
     } else {
-      throttleInterval = const Duration(seconds: 30); // 30 seconds when low battery
+      throttleInterval = const Duration(
+        seconds: 30,
+      ); // 30 seconds when low battery
     }
 
     final now = DateTime.now();
-    if (_lastProcessingTime == null || now.difference(_lastProcessingTime!) >= throttleInterval) {
+    if (_lastProcessingTime == null ||
+        now.difference(_lastProcessingTime!) >= throttleInterval) {
       _lastProcessingTime = now;
       _liveTelemetryController.add(reading);
       _bufferReading(reading);

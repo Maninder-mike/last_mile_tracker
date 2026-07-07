@@ -18,7 +18,8 @@ class NotificationCenterPage extends ConsumerStatefulWidget {
       _NotificationCenterPageState();
 }
 
-class _NotificationCenterPageState extends ConsumerState<NotificationCenterPage> {
+class _NotificationCenterPageState
+    extends ConsumerState<NotificationCenterPage> {
   String _selectedFilter = 'all';
 
   @override
@@ -88,17 +89,17 @@ class _NotificationCenterPageState extends ConsumerState<NotificationCenterPage>
                   filteredAlerts.isEmpty
                       ? SliverToBoxAdapter(child: _buildEmptyState())
                       : SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              return EntranceAnimation(
-                                index: index,
-                                child: _NotificationTile(
-                                  alert: filteredAlerts[index],
-                                ),
-                              );
-                            },
-                            childCount: filteredAlerts.length,
-                          ),
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            return EntranceAnimation(
+                              index: index,
+                              child: _NotificationTile(
+                                alert: filteredAlerts[index],
+                              ),
+                            );
+                          }, childCount: filteredAlerts.length),
                         ),
                   const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
@@ -151,8 +152,10 @@ class _NotificationCenterPageState extends ConsumerState<NotificationCenterPage>
             Icon(
               icon,
               size: 64,
-              color: CupertinoDynamicColor.resolve(CupertinoColors.systemGrey, context)
-                  .withValues(alpha: 0.5),
+              color: CupertinoDynamicColor.resolve(
+                CupertinoColors.systemGrey,
+                context,
+              ).withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(

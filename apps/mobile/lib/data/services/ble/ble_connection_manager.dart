@@ -23,7 +23,8 @@ class BleConnectionManager {
   int _reconnectDelaySeconds = BleConstants.initialReconnectDelay.inSeconds;
   bool _isConnecting = false;
   bool get isConnecting => _isConnecting;
-  BluetoothConnectionState _connectionState = BluetoothConnectionState.disconnected;
+  BluetoothConnectionState _connectionState =
+      BluetoothConnectionState.disconnected;
 
   BleConnectionManager({
     required this.onStateChanged,
@@ -34,11 +35,16 @@ class BleConnectionManager {
 
   Future<void> connect(BluetoothDevice device) async {
     if (_isConnecting) {
-      FileLogger.log("ConnectionManager: Connection already in progress. Skipping connect request.");
+      FileLogger.log(
+        "ConnectionManager: Connection already in progress. Skipping connect request.",
+      );
       return;
     }
-    if (_device != null && _connectionState == BluetoothConnectionState.connected) {
-      FileLogger.log("ConnectionManager: Already connected to ${_device!.platformName}. Skipping connect request.");
+    if (_device != null &&
+        _connectionState == BluetoothConnectionState.connected) {
+      FileLogger.log(
+        "ConnectionManager: Already connected to ${_device!.platformName}. Skipping connect request.",
+      );
       return;
     }
 
@@ -86,7 +92,9 @@ class BleConnectionManager {
         }
       });
     } catch (e) {
-      FileLogger.log("ConnectionManager: Connection error: $e. Forcing disconnect cleanup.");
+      FileLogger.log(
+        "ConnectionManager: Connection error: $e. Forcing disconnect cleanup.",
+      );
       _connectionState = BluetoothConnectionState.disconnected;
       onStateChanged(BluetoothConnectionState.disconnected);
       try {
@@ -314,7 +322,9 @@ class BleConnectionManager {
       FileLogger.log("ConnectionManager: Wrote config command: $command");
     } catch (e) {
       final errorStr = e.toString();
-      FileLogger.log("ConnectionManager: Error writing config command '$command': $errorStr");
+      FileLogger.log(
+        "ConnectionManager: Error writing config command '$command': $errorStr",
+      );
 
       // In production, when the mobile app sends commands like WiFi Config (SSID:Password),
       // Scan, or Reboot to the tracker, the device might switch radio modes, reboot, or
@@ -322,16 +332,20 @@ class BleConnectionManager {
       // (like GATT_ERROR status 133) because the write ACK packet is not received.
       // If the error indicates a GATT status/timeout write issue, and the device has disconnected,
       // we suppress the exception and return success, as the command was successfully processed by the tracker.
-      final isGattOrWriteError = errorStr.contains('133') || 
-                                 errorStr.toUpperCase().contains('GATT') || 
-                                 errorStr.contains('status') ||
-                                 errorStr.contains('writeCharacteristic');
-      
+      final isGattOrWriteError =
+          errorStr.contains('133') ||
+          errorStr.toUpperCase().contains('GATT') ||
+          errorStr.contains('status') ||
+          errorStr.contains('writeCharacteristic');
+
       if (isGattOrWriteError) {
         // Wait briefly for the connection state to update in the Bluetooth stack
         await Future.delayed(const Duration(milliseconds: 600));
-        if (_connectionState == BluetoothConnectionState.disconnected || _device == null) {
-          FileLogger.log("ConnectionManager: Suppressed write error. Device disconnected as expected after command: $command");
+        if (_connectionState == BluetoothConnectionState.disconnected ||
+            _device == null) {
+          FileLogger.log(
+            "ConnectionManager: Suppressed write error. Device disconnected as expected after command: $command",
+          );
           return;
         }
       }

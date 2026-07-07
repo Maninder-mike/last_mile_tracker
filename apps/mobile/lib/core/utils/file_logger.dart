@@ -37,7 +37,8 @@ class FileLogger {
     // Write to file if available and rotate if size > 2MB
     if (_logFile != null) {
       try {
-        if (_logFile!.existsSync() && _logFile!.lengthSync() > 2 * 1024 * 1024) {
+        if (_logFile!.existsSync() &&
+            _logFile!.lengthSync() > 2 * 1024 * 1024) {
           final oldFile = File('${_logFile!.path}.old');
           if (oldFile.existsSync()) {
             oldFile.deleteSync();

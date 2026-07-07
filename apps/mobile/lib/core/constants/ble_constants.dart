@@ -22,7 +22,8 @@ class BleConstants {
   static const String firmwareVersionPrefix = 'FW:';
 
   // OTA Configuration
-  static const int otaChunkSize = 240; // bytes per BLE data chunk (safe for 256 MTU)
+  static const int otaChunkSize =
+      240; // bytes per BLE data chunk (safe for 256 MTU)
   static const int otaMinBatteryPercent = 50; // skip update below this
   static const Duration otaUpdateCooldown = Duration(hours: 1);
 

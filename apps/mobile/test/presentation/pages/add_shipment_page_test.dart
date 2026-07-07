@@ -35,7 +35,8 @@ class FakeBleService extends Fake implements BleService {
   Stream<BluetoothConnectionState> get connectionState =>
       Stream.value(BluetoothConnectionState.disconnected);
   @override
-  BluetoothConnectionState get lastState => BluetoothConnectionState.disconnected;
+  BluetoothConnectionState get lastState =>
+      BluetoothConnectionState.disconnected;
   @override
   BluetoothDevice? get connectedDevice => null;
 }
@@ -67,7 +68,9 @@ void main() {
     );
   }
 
-  testWidgets('AddShipmentPage renders all form fields and header', (WidgetTester tester) async {
+  testWidgets('AddShipmentPage renders all form fields and header', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -96,7 +99,9 @@ void main() {
     expect(find.text('CREATE SHIPMENT'), findsOneWidget);
   });
 
-  testWidgets('Input fields handle text entry and save flow works', (WidgetTester tester) async {
+  testWidgets('Input fields handle text entry and save flow works', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -154,12 +159,20 @@ void main() {
 
     // Verify shipment was saved
     expect(fakeSupabaseService.createdShipments.length, 1);
-    expect(fakeSupabaseService.createdShipments.first.trackingNumber, 'TRK12345');
+    expect(
+      fakeSupabaseService.createdShipments.first.trackingNumber,
+      'TRK12345',
+    );
     expect(fakeSupabaseService.createdShipments.first.origin, 'New York');
-    expect(fakeSupabaseService.createdShipments.first.destination, 'Los Angeles');
+    expect(
+      fakeSupabaseService.createdShipments.first.destination,
+      'Los Angeles',
+    );
   });
 
-  testWidgets('Shows alert dialog when fields are missing', (WidgetTester tester) async {
+  testWidgets('Shows alert dialog when fields are missing', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {

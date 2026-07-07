@@ -8,9 +8,7 @@ void main() {
       await tester.pumpWidget(
         const CupertinoApp(
           home: CupertinoPageScaffold(
-            child: GlassContainer(
-              child: Text('Hello Glass'),
-            ),
+            child: GlassContainer(child: Text('Hello Glass')),
           ),
         ),
       );
@@ -18,7 +16,9 @@ void main() {
       expect(find.text('Hello Glass'), findsOneWidget);
     });
 
-    testWidgets('triggers onTap callback when tapped', (WidgetTester tester) async {
+    testWidgets('triggers onTap callback when tapped', (
+      WidgetTester tester,
+    ) async {
       int tapCount = 0;
 
       await tester.pumpWidget(

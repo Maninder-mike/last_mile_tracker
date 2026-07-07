@@ -141,8 +141,11 @@ class HeroScannerCard extends StatelessWidget {
   }
 
   Widget _buildStatsSection(models.SensorReading? latest) {
-    final isUsbPowered = latest?.batteryLevel != null && latest!.batteryLevel < 1.0;
-    final batPct = latest?.batteryLevel != null ? BleConstants.batteryVoltageToPercent(latest!.batteryLevel) : 0;
+    final isUsbPowered =
+        latest?.batteryLevel != null && latest!.batteryLevel < 1.0;
+    final batPct = latest?.batteryLevel != null
+        ? BleConstants.batteryVoltageToPercent(latest!.batteryLevel)
+        : 0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
@@ -154,13 +157,13 @@ class HeroScannerCard extends StatelessWidget {
         ),
         _HeroStat(
           label: 'Signal',
-          value: latest != null ? TelemetryDisplay.signalLabel(latest.rssi) : '--',
+          value: latest != null
+              ? TelemetryDisplay.signalLabel(latest.rssi)
+              : '--',
         ),
         _HeroStat(
           label: 'Battery',
-          value: latest != null
-              ? (isUsbPowered ? 'USB' : '$batPct%')
-              : '--',
+          value: latest != null ? (isUsbPowered ? 'USB' : '$batPct%') : '--',
         ),
       ],
     );

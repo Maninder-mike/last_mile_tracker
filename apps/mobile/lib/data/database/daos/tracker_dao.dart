@@ -52,7 +52,11 @@ class TrackerDao extends DatabaseAccessor<AppDatabase> with _$TrackerDaoMixin {
   Future<void> updateCustomName(String id, String? customName) async {
     await (update(trackers)..where((t) => t.id.equals(id))).write(
       TrackersCompanion(
-        customName: Value(customName == null || customName.trim().isEmpty ? null : customName.trim()),
+        customName: Value(
+          customName == null || customName.trim().isEmpty
+              ? null
+              : customName.trim(),
+        ),
       ),
     );
   }

@@ -50,7 +50,10 @@ void main() {
         ),
         findsNWidgets(3),
       );
-      expect(find.text('Home'), findsOneWidget); // Only selected has label visible in current design
+      expect(
+        find.text('Home'),
+        findsOneWidget,
+      ); // Only selected has label visible in current design
       expect(find.text('Map'), findsNothing);
 
       // Tap on the second item
@@ -78,11 +81,7 @@ void main() {
       await tester.pumpWidget(
         CupertinoApp(
           home: CupertinoPageScaffold(
-            child: BlurNavbar(
-              currentIndex: 0,
-              onTap: (_) {},
-              items: items,
-            ),
+            child: BlurNavbar(currentIndex: 0, onTap: (_) {}, items: items),
           ),
         ),
       );
@@ -90,7 +89,9 @@ void main() {
       expect(find.text('5'), findsOneWidget);
     });
 
-    testWidgets('shows 9+ badge when badgeCount > 9', (WidgetTester tester) async {
+    testWidgets('shows 9+ badge when badgeCount > 9', (
+      WidgetTester tester,
+    ) async {
       final items = [
         const BlurNavbarItem(
           icon: CupertinoIcons.home,
@@ -108,11 +109,7 @@ void main() {
       await tester.pumpWidget(
         CupertinoApp(
           home: CupertinoPageScaffold(
-            child: BlurNavbar(
-              currentIndex: 0,
-              onTap: (_) {},
-              items: items,
-            ),
+            child: BlurNavbar(currentIndex: 0, onTap: (_) {}, items: items),
           ),
         ),
       );
@@ -120,7 +117,9 @@ void main() {
       expect(find.text('9+'), findsOneWidget);
     });
 
-    testWidgets('throws assertion error when items > 5', (WidgetTester tester) async {
+    testWidgets('throws assertion error when items > 5', (
+      WidgetTester tester,
+    ) async {
       final items = List.generate(
         6,
         (index) => const BlurNavbarItem(
@@ -131,11 +130,7 @@ void main() {
       );
 
       expect(
-        () => BlurNavbar(
-          currentIndex: 0,
-          onTap: (_) {},
-          items: items,
-        ),
+        () => BlurNavbar(currentIndex: 0, onTap: (_) {}, items: items),
         throwsAssertionError,
       );
     });

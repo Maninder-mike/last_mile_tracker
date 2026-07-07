@@ -31,12 +31,18 @@ class SettingsTile extends StatelessWidget {
     final Color rawTextColor = isDestructive
         ? AppTheme.critical
         : (enabled ? AppTheme.textPrimary : AppTheme.textSecondary);
-    final Color effectiveTextColor = CupertinoDynamicColor.resolve(rawTextColor, context);
+    final Color effectiveTextColor = CupertinoDynamicColor.resolve(
+      rawTextColor,
+      context,
+    );
 
     final Color rawIconColor = enabled
         ? (isDestructive ? AppTheme.critical : iconColor)
         : AppTheme.textSecondary;
-    final Color effectiveIconColor = CupertinoDynamicColor.resolve(rawIconColor, context);
+    final Color effectiveIconColor = CupertinoDynamicColor.resolve(
+      rawIconColor,
+      context,
+    );
 
     return Opacity(
       opacity: enabled ? 1.0 : 0.5,

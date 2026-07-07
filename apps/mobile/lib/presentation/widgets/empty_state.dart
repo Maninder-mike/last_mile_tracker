@@ -19,7 +19,7 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primaryColor = CupertinoTheme.of(context).primaryColor;
-    
+
     return Center(
       child: Padding(
         padding: AppPadding.section,

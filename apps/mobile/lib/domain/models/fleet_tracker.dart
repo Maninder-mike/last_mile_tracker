@@ -36,7 +36,10 @@ class FleetTracker {
     this.status = 'Unknown',
   });
 
-  String get displayName => (customName != null && customName!.trim().isNotEmpty) ? customName! : name;
+  String get displayName =>
+      (customName != null && customName!.trim().isNotEmpty)
+      ? customName!
+      : name;
 
   double get lat => latitude ?? 0;
   double get lon => longitude ?? 0;

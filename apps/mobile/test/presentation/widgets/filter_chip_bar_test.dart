@@ -28,7 +28,9 @@ void main() {
       expect(find.text('Pending'), findsOneWidget);
     });
 
-    testWidgets('triggers onSelected callback when a chip is tapped', (WidgetTester tester) async {
+    testWidgets('triggers onSelected callback when a chip is tapped', (
+      WidgetTester tester,
+    ) async {
       String? selectedValue;
       final items = [
         FilterItem(label: 'All', value: 'all'),

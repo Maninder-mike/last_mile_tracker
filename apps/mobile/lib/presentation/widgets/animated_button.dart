@@ -101,20 +101,20 @@ class _AnimatedButtonState extends State<AnimatedButton> {
       final hsl = HSLColor.fromColor(primary);
       final Color startColor = isDark
           ? hsl
-              .withSaturation((hsl.saturation + 0.15).clamp(0.0, 1.0))
-              .withLightness((hsl.lightness + 0.05).clamp(0.0, 1.0))
-              .toColor()
+                .withSaturation((hsl.saturation + 0.15).clamp(0.0, 1.0))
+                .withLightness((hsl.lightness + 0.05).clamp(0.0, 1.0))
+                .toColor()
           : primary;
       final Color endColor = isDark
           ? hsl
-              .withHue((hsl.hue + 15) % 360)
-              .withSaturation((hsl.saturation + 0.15).clamp(0.0, 1.0))
-              .withLightness((hsl.lightness - 0.02).clamp(0.0, 1.0))
-              .toColor()
+                .withHue((hsl.hue + 15) % 360)
+                .withSaturation((hsl.saturation + 0.15).clamp(0.0, 1.0))
+                .withLightness((hsl.lightness - 0.02).clamp(0.0, 1.0))
+                .toColor()
           : hsl
-              .withHue((hsl.hue + 15) % 360)
-              .withLightness((hsl.lightness - 0.05).clamp(0.0, 1.0))
-              .toColor();
+                .withHue((hsl.hue + 15) % 360)
+                .withLightness((hsl.lightness - 0.05).clamp(0.0, 1.0))
+                .toColor();
 
       effectiveGradient = LinearGradient(
         colors: [startColor, endColor],

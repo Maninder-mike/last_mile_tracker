@@ -107,36 +107,43 @@ class SyncManager {
   Future<void> _uploadToSupabase(List<SensorReading> data) async {
     final client = Supabase.instance.client;
 
-    final payload = data.map((r) {
-      final recordDeviceId = r.deviceId ??
-          _bleService.connectedDevice?.remoteId.str;
+    final payload = data
+        .map((r) {
+          final recordDeviceId =
+              r.deviceId ?? _bleService.connectedDevice?.remoteId.str;
 
-      if (recordDeviceId == null) {
-        FileLogger.log("SyncManager: Skipping record ${r.id} due to missing device_id");
-        return null;
-      }
+          if (recordDeviceId == null) {
+            FileLogger.log(
+              "SyncManager: Skipping record ${r.id} due to missing device_id",
+            );
+            return null;
+          }
 
-      return {
-        'client_uuid': r.clientUuid,
-        'device_id': recordDeviceId,
-        'lat': r.lat,
-        'lon': r.lon,
-        'speed': r.speed,
-        'temp': r.temp,
-        'shock_value': r.shockValue,
-        'battery_level': r.batteryLevel,
-        'trip_state': r.tripState,
-        'internal_temp': r.internalTemp,
-        'additional_temps': r.additionalTemps != null ? jsonDecode(r.additionalTemps!) : null,
-        'battery_drop': r.batteryDrop,
-        'rssi': r.rssi,
-        'reset_reason': r.resetReason,
-        'uptime': r.uptime,
-        'wifi_ssid': r.wifiSsid,
-        'wifi_signal': r.wifiSignal,
-        'timestamp': r.timestamp.toIso8601String(),
-      };
-    }).whereType<Map<String, dynamic>>().toList();
+          return {
+            'client_uuid': r.clientUuid,
+            'device_id': recordDeviceId,
+            'lat': r.lat,
+            'lon': r.lon,
+            'speed': r.speed,
+            'temp': r.temp,
+            'shock_value': r.shockValue,
+            'battery_level': r.batteryLevel,
+            'trip_state': r.tripState,
+            'internal_temp': r.internalTemp,
+            'additional_temps': r.additionalTemps != null
+                ? jsonDecode(r.additionalTemps!)
+                : null,
+            'battery_drop': r.batteryDrop,
+            'rssi': r.rssi,
+            'reset_reason': r.resetReason,
+            'uptime': r.uptime,
+            'wifi_ssid': r.wifiSsid,
+            'wifi_signal': r.wifiSignal,
+            'timestamp': r.timestamp.toIso8601String(),
+          };
+        })
+        .whereType<Map<String, dynamic>>()
+        .toList();
 
     if (payload.isEmpty) return;
 

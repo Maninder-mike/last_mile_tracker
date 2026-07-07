@@ -19,7 +19,8 @@ class FakeBleService extends Fake implements BleService {
   Stream<BluetoothConnectionState> get connectionState =>
       Stream.value(BluetoothConnectionState.disconnected);
   @override
-  BluetoothConnectionState get lastState => BluetoothConnectionState.disconnected;
+  BluetoothConnectionState get lastState =>
+      BluetoothConnectionState.disconnected;
   @override
   BluetoothDevice? get connectedDevice => null;
 }
@@ -67,7 +68,9 @@ void main() {
     );
   }
 
-  testWidgets('DevicesListPage renders search row and filter button', (WidgetTester tester) async {
+  testWidgets('DevicesListPage renders search row and filter button', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(createTestWidget());
     await tester.pumpAndSettle();
 
@@ -82,7 +85,9 @@ void main() {
     expect(find.text('Ble Sensor B'), findsOneWidget);
   });
 
-  testWidgets('Tapping filter button opens filter modal and filters status', (WidgetTester tester) async {
+  testWidgets('Tapping filter button opens filter modal and filters status', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(createTestWidget());
     await tester.pumpAndSettle();
 

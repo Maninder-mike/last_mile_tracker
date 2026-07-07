@@ -55,7 +55,9 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                   bottom: MediaQuery.of(context).padding.bottom + 20,
                 ),
                 decoration: BoxDecoration(
-                  color: CupertinoTheme.of(context).barBackgroundColor.withValues(alpha: 0.8),
+                  color: CupertinoTheme.of(
+                    context,
+                  ).barBackgroundColor.withValues(alpha: 0.8),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -266,7 +268,8 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
   }
 
   Widget _buildFilterButton() {
-    final bool hasActiveFilters = _selectedStatus != 'All' || _selectedBattery != 'All';
+    final bool hasActiveFilters =
+        _selectedStatus != 'All' || _selectedBattery != 'All';
     final activeColor = CupertinoTheme.of(context).primaryColor;
 
     return GlassContainer(
@@ -350,11 +353,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onDeleted,
-            child: Icon(
-              CupertinoIcons.xmark,
-              size: 10,
-              color: activeColor,
-            ),
+            child: Icon(CupertinoIcons.xmark, size: 10, color: activeColor),
           ),
         ],
       ),
@@ -400,7 +399,8 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                       Expanded(
                         child: CupertinoSearchTextField(
                           controller: _searchController,
-                          onChanged: (value) => setState(() => _searchQuery = value),
+                          onChanged: (value) =>
+                              setState(() => _searchQuery = value),
                           style: TextStyle(
                             color: CupertinoDynamicColor.resolve(
                               AppTheme.textPrimary,
@@ -423,7 +423,11 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
               if (_selectedStatus != 'All' || _selectedBattery != 'All')
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+                    padding: const EdgeInsets.only(
+                      left: 16,
+                      right: 16,
+                      bottom: 12,
+                    ),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -436,7 +440,8 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                                 setState(() => _selectedStatus = 'All');
                               },
                             ),
-                          if (_selectedStatus != 'All' && _selectedBattery != 'All')
+                          if (_selectedStatus != 'All' &&
+                              _selectedBattery != 'All')
                             const SizedBox(width: 8),
                           if (_selectedBattery != 'All')
                             _buildActiveFilterChip(
@@ -479,7 +484,8 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                       final q = _searchQuery.toLowerCase();
                       final matchesSearch =
                           tracker.name.toLowerCase().contains(q) ||
-                          (tracker.customName?.toLowerCase().contains(q) ?? false) ||
+                          (tracker.customName?.toLowerCase().contains(q) ??
+                              false) ||
                           tracker.id.toLowerCase().contains(q);
 
                       final isOnline =
@@ -520,9 +526,13 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                             connectionState ==
                                 BluetoothConnectionState.connected;
 
-                        final displayName = (tracker.customName != null && tracker.customName!.isNotEmpty)
+                        final displayName =
+                            (tracker.customName != null &&
+                                tracker.customName!.isNotEmpty)
                             ? tracker.customName!
-                            : (tracker.name.isEmpty ? 'Unknown Device' : tracker.name);
+                            : (tracker.name.isEmpty
+                                  ? 'Unknown Device'
+                                  : tracker.name);
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: AppTheme.s12),
@@ -601,11 +611,17 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                                         ? 'Connected'
                                         : tracker.status,
                                     battery: tracker.batteryLevel != null
-                                        ? BleConstants.batteryVoltageToPercent(tracker.batteryLevel!)
+                                        ? BleConstants.batteryVoltageToPercent(
+                                            tracker.batteryLevel!,
+                                          )
                                         : 100,
                                     lastSeen: _formatLastSeen(tracker.lastSeen),
                                     isCritical:
-                                        (tracker.batteryLevel != null && BleConstants.batteryVoltageToPercent(tracker.batteryLevel!) < 20) ||
+                                        (tracker.batteryLevel != null &&
+                                            BleConstants.batteryVoltageToPercent(
+                                                  tracker.batteryLevel!,
+                                                ) <
+                                                20) ||
                                         (tracker.shockValue ?? 0) > 0,
                                     isFavorite: ref.watch(
                                       isFavoriteProvider(tracker.id),
@@ -648,10 +664,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
             top: 0,
             left: 0,
             right: 0,
-            child: FloatingHeader(
-              title: 'Devices',
-              showBackButton: true,
-            ),
+            child: FloatingHeader(title: 'Devices', showBackButton: true),
           ),
         ],
       ),

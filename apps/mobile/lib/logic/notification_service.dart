@@ -48,7 +48,8 @@ class NotificationService {
     // Create Android Notification Channels
     final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (androidPlugin != null) {
       await androidPlugin.createNotificationChannel(
         const AndroidNotificationChannel(
@@ -104,14 +105,17 @@ class NotificationService {
     // 6. Handle cold start from terminated state (FCM)
     final initialMessage = await _fcm.getInitialMessage();
     if (initialMessage != null) {
-      debugPrint('Notification: Cold start from FCM: ${initialMessage.notification?.title}');
+      debugPrint(
+        'Notification: Cold start from FCM: ${initialMessage.notification?.title}',
+      );
       Future.delayed(const Duration(milliseconds: 1000), () {
         _handleNavigationFromMessage(initialMessage.data);
       });
     }
 
     // 7. Handle cold start from terminated state (Local)
-    final launchDetails = await _localNotifications.getNotificationAppLaunchDetails();
+    final launchDetails = await _localNotifications
+        .getNotificationAppLaunchDetails();
     if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
       final payload = launchDetails.notificationResponse?.payload;
       if (payload != null) {

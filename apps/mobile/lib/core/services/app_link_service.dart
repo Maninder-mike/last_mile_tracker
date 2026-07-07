@@ -49,13 +49,13 @@ class AppLinkService {
     }
 
     if (path == 'shipments') {
-      Navigator.of(context).push(
-        CupertinoPageRoute(builder: (_) => const ShipmentsPage()),
-      );
+      Navigator.of(
+        context,
+      ).push(CupertinoPageRoute(builder: (_) => const ShipmentsPage()));
     } else if (path == 'settings') {
-      Navigator.of(context).push(
-        CupertinoPageRoute(builder: (_) => const SettingsPage()),
-      );
+      Navigator.of(
+        context,
+      ).push(CupertinoPageRoute(builder: (_) => const SettingsPage()));
     } else {
       FileLogger.log("AppLink: Unknown path '$path'");
     }

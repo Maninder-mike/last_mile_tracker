@@ -200,9 +200,15 @@ class DeviceCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildConnectedStats(BuildContext context, models.SensorReading? latest) {
-    final isUsbPowered = latest?.batteryLevel != null && latest!.batteryLevel < 1.0;
-    final batPct = latest?.batteryLevel != null ? BleConstants.batteryVoltageToPercent(latest!.batteryLevel) : 0;
+  Widget _buildConnectedStats(
+    BuildContext context,
+    models.SensorReading? latest,
+  ) {
+    final isUsbPowered =
+        latest?.batteryLevel != null && latest!.batteryLevel < 1.0;
+    final batPct = latest?.batteryLevel != null
+        ? BleConstants.batteryVoltageToPercent(latest!.batteryLevel)
+        : 0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
@@ -210,9 +216,7 @@ class DeviceCard extends ConsumerWidget {
           child: _buildStatItem(
             context,
             'Battery',
-            latest != null
-                ? (isUsbPowered ? 'USB' : '$batPct%')
-                : '--',
+            latest != null ? (isUsbPowered ? 'USB' : '$batPct%') : '--',
           ),
         ),
         Expanded(

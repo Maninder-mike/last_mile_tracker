@@ -37,7 +37,8 @@ class FakeBleService extends Fake implements BleService {
       Stream.value(BluetoothConnectionState.disconnected);
 
   @override
-  BluetoothConnectionState get lastState => BluetoothConnectionState.disconnected;
+  BluetoothConnectionState get lastState =>
+      BluetoothConnectionState.disconnected;
 
   @override
   Stream<List<ScannedTracker>> get discoveredDevices => Stream.value([]);
@@ -66,7 +67,9 @@ class FakeOtaService extends Fake implements OtaService {
 }
 
 class FakeAlertManager extends Fake implements AlertManager {}
+
 class FakeProximityService extends Fake implements ProximityService {}
+
 class FakeFleetInventoryService extends Fake implements FleetInventoryService {}
 
 class FakeUserLocation extends UserLocation {
@@ -85,15 +88,25 @@ void main() {
             bleServiceProvider.overrideWith((ref) => FakeBleService()),
             otaServiceProvider.overrideWith((ref) => FakeOtaService()),
             alertManagerProvider.overrideWith((ref) => FakeAlertManager()),
-            proximityServiceProvider.overrideWith((ref) => FakeProximityService()),
-            fleetInventoryServiceProvider.overrideWith((ref) => FakeFleetInventoryService()),
-            connectivityStatusProvider.overrideWith((ref) => Stream.value(true)),
+            proximityServiceProvider.overrideWith(
+              (ref) => FakeProximityService(),
+            ),
+            fleetInventoryServiceProvider.overrideWith(
+              (ref) => FakeFleetInventoryService(),
+            ),
+            connectivityStatusProvider.overrideWith(
+              (ref) => Stream.value(true),
+            ),
             bleConnectionStateProvider.overrideWith(
               (ref) => Stream.value(BluetoothConnectionState.disconnected),
             ),
-            unreadNotificationCountProvider.overrideWith((ref) => Stream.value(0)),
+            unreadNotificationCountProvider.overrideWith(
+              (ref) => Stream.value(0),
+            ),
             fleetTrackersProvider.overrideWithValue(const AsyncValue.data([])),
-            mergedShipmentsProvider.overrideWithValue(const AsyncValue.data([])),
+            mergedShipmentsProvider.overrideWithValue(
+              const AsyncValue.data([]),
+            ),
             userLocationProvider.overrideWith(FakeUserLocation.new),
             latestReadingProvider.overrideWith((ref) => Stream.value(null)),
             packageInfoProvider.overrideWith(
@@ -125,7 +138,10 @@ void main() {
       // Verify there are 4 tabs rendered (gesture detectors in bottom nav)
       // Since it's a row of items, let's verify item texts that are selected
       expect(find.text('Home'), findsOneWidget); // Default selected tab text
-      expect(find.text('Map'), findsNothing); // Unselected tabs don't show text in BlurNavbar
+      expect(
+        find.text('Map'),
+        findsNothing,
+      ); // Unselected tabs don't show text in BlurNavbar
 
       // Clear pending stream and overlay timers
       await tester.pump(const Duration(seconds: 3));

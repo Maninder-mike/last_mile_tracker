@@ -355,7 +355,11 @@ class _DeviceHeader extends ConsumerWidget {
 
   const _DeviceHeader({required this.deviceId, required this.name});
 
-  void _showRenameDialog(BuildContext context, WidgetRef ref, String currentName) {
+  void _showRenameDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String currentName,
+  ) {
     final controller = TextEditingController(text: currentName);
     showCupertinoDialog(
       context: context,
@@ -383,7 +387,9 @@ class _DeviceHeader extends ConsumerWidget {
               onPressed: () async {
                 final newName = controller.text.trim();
                 Navigator.pop(context);
-                await ref.read(trackerRepositoryProvider).updateCustomName(deviceId, newName);
+                await ref
+                    .read(trackerRepositoryProvider)
+                    .updateCustomName(deviceId, newName);
               },
             ),
           ],
@@ -396,13 +402,14 @@ class _DeviceHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final connectionState = ref.watch(bleConnectionStateProvider).value;
     final isConnected = connectionState == BluetoothConnectionState.connected;
-    
+
     // Watch the tracker stream reactively to capture rename updates
     final trackerAsync = ref.watch(trackerProvider(deviceId));
     final tracker = trackerAsync.value;
-    
+
     final lastSeen = tracker?.lastSeen;
-    final displayName = (tracker?.customName != null && tracker!.customName!.trim().isNotEmpty)
+    final displayName =
+        (tracker?.customName != null && tracker!.customName!.trim().isNotEmpty)
         ? tracker.customName!
         : (tracker?.name ?? name);
     final firmwareVersion = ref.watch(deviceFirmwareVersionProvider).value;
@@ -462,26 +469,31 @@ class _DeviceHeader extends ConsumerWidget {
         ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1, end: 0),
         const SizedBox(height: 16),
         GestureDetector(
-          onTap: () => _showRenameDialog(context, ref, displayName),
-          behavior: HitTestBehavior.opaque,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  displayName,
-                  style: AppTheme.heading1.copyWith(height: 1.1, letterSpacing: -1),
-                ),
+              onTap: () => _showRenameDialog(context, ref, displayName),
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      displayName,
+                      style: AppTheme.heading1.copyWith(
+                        height: 1.1,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    CupertinoIcons.pencil,
+                    size: 20,
+                    color: AppTheme.resolvedTextSecondary(
+                      context,
+                    ).withValues(alpha: 0.6),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Icon(
-                CupertinoIcons.pencil,
-                size: 20,
-                color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.6),
-              ),
-            ],
-          ),
-        )
+            )
             .animate()
             .fadeIn(delay: 100.ms, duration: 400.ms)
             .slideX(begin: -0.05, end: 0),
@@ -774,7 +786,10 @@ class _UpdateBanner extends ConsumerWidget {
                   ),
                 ),
                 CupertinoButton(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   color: AppTheme.warning,
                   minimumSize: Size.zero,
                   borderRadius: BorderRadius.circular(12),
@@ -823,10 +838,7 @@ class _UpdateBanner extends ConsumerWidget {
                           color: AppTheme.success,
                         ),
                       ),
-                      Text(
-                        otaState.message,
-                        style: AppTheme.caption,
-                      ),
+                      Text(otaState.message, style: AppTheme.caption),
                     ],
                   ),
                 ),
@@ -963,54 +975,62 @@ class _DeviceActions extends ConsumerWidget {
     final bleService = ref.watch(bleServiceProvider);
 
     return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'DEVICE ACTIONS',
-              style: AppTheme.label.copyWith(fontSize: 12),
-            ),
-            const SizedBox(height: 16),
-            _ActionButton(
-              title: 'Identify Device',
-              subtitle: 'Flash LED and play buzzer',
-              icon: CupertinoIcons.light_max,
-              onTap: isConnected ? bleService.identifyDevice : null,
-            ),
-            const SizedBox(height: 12),
-            _ActionButton(
-              title: 'Update Firmware',
-              subtitle: 'Check and install updates',
-              icon: CupertinoIcons.cloud_upload,
-              onTap: isConnected
-                  ? () async {
-                      // Check for update using the current device version
-                      final currentVersion = ref.read(deviceFirmwareVersionProvider).value;
-                      
-                      // Show checking dialog
-                      showCupertinoDialog(
-                        context: context,
-                        builder: (checkingCtx) {
-                          // We trigger the update check
-                          ref.read(otaServiceProvider).checkForUpdate(
-                            deviceFirmwareVersion: currentVersion,
-                          ).then((release) {
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('DEVICE ACTIONS', style: AppTheme.label.copyWith(fontSize: 12)),
+        const SizedBox(height: 16),
+        _ActionButton(
+          title: 'Identify Device',
+          subtitle: 'Flash LED and play buzzer',
+          icon: CupertinoIcons.light_max,
+          onTap: isConnected ? bleService.identifyDevice : null,
+        ),
+        const SizedBox(height: 12),
+        _ActionButton(
+          title: 'Update Firmware',
+          subtitle: 'Check and install updates',
+          icon: CupertinoIcons.cloud_upload,
+          onTap: isConnected
+              ? () async {
+                  // Check for update using the current device version
+                  final currentVersion = ref
+                      .read(deviceFirmwareVersionProvider)
+                      .value;
+
+                  // Show checking dialog
+                  showCupertinoDialog(
+                    context: context,
+                    builder: (checkingCtx) {
+                      // We trigger the update check
+                      ref
+                          .read(otaServiceProvider)
+                          .checkForUpdate(deviceFirmwareVersion: currentVersion)
+                          .then((release) {
                             if (!checkingCtx.mounted) return;
                             Navigator.pop(checkingCtx);
-                            
+
                             if (!context.mounted) return;
                             if (release != null) {
-                              _showUpdateConfirmationDialog(context, ref, ref.read(otaServiceProvider).currentState);
+                              _showUpdateConfirmationDialog(
+                                context,
+                                ref,
+                                ref.read(otaServiceProvider).currentState,
+                              );
                             } else {
-                              final state = ref.read(otaServiceProvider).currentState;
+                              final state = ref
+                                  .read(otaServiceProvider)
+                                  .currentState;
                               showCupertinoDialog(
                                 context: context,
                                 builder: (resultCtx) => CupertinoAlertDialog(
                                   title: const Text('Firmware Update'),
                                   content: Padding(
                                     padding: const EdgeInsets.only(top: 8.0),
-                                    child: Text(state.status == OtaStatus.error
-                                        ? 'Update check failed: ${state.errorMessage}'
-                                        : 'Your device firmware is up to date (v$currentVersion).'),
+                                    child: Text(
+                                      state.status == OtaStatus.error
+                                          ? 'Update check failed: ${state.errorMessage}'
+                                          : 'Your device firmware is up to date (v$currentVersion).',
+                                    ),
                                   ),
                                   actions: [
                                     CupertinoDialogAction(
@@ -1026,41 +1046,38 @@ class _DeviceActions extends ConsumerWidget {
                               );
                             }
                           });
-                          
-                          return const CupertinoAlertDialog(
-                            title: Text('Checking for Updates'),
-                            content: Padding(
-                              padding: EdgeInsets.only(top: 16.0),
-                              child: CupertinoActivityIndicator(),
-                            ),
-                          );
-                        },
+
+                      return const CupertinoAlertDialog(
+                        title: Text('Checking for Updates'),
+                        content: Padding(
+                          padding: EdgeInsets.only(top: 16.0),
+                          child: CupertinoActivityIndicator(),
+                        ),
                       );
-                    }
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            _ActionButton(
-              title: 'Automatic Updates',
-              subtitle: 'Configure background updates',
-              icon: CupertinoIcons.wifi,
-              onTap: isConnected
-                  ? () => _showWiFiOtaDialog(context, ref, bleService)
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            _ActionButton(
-              title: 'Reboot Device',
-              subtitle: 'Safe restart microcontroller',
-              icon: CupertinoIcons.restart,
-              isDestructive: true,
-              onTap: isConnected ? bleService.rebootDevice : null,
-            ),
-          ],
-        )
-        .animate()
-        .fadeIn(delay: 700.ms, duration: 400.ms)
-        .slideY(begin: 0.1, end: 0);
+                    },
+                  );
+                }
+              : null,
+        ),
+        const SizedBox(height: 12),
+        _ActionButton(
+          title: 'Automatic Updates',
+          subtitle: 'Configure background updates',
+          icon: CupertinoIcons.wifi,
+          onTap: isConnected
+              ? () => _showWiFiOtaDialog(context, ref, bleService)
+              : null,
+        ),
+        const SizedBox(height: 12),
+        _ActionButton(
+          title: 'Reboot Device',
+          subtitle: 'Safe restart microcontroller',
+          icon: CupertinoIcons.restart,
+          isDestructive: true,
+          onTap: isConnected ? bleService.rebootDevice : null,
+        ),
+      ],
+    ).animate().fadeIn(delay: 700.ms, duration: 400.ms).slideY(begin: 0.1, end: 0);
   }
 }
 
@@ -1172,8 +1189,9 @@ class _TelemetryModule extends StatelessWidget {
 
   void _showHelpPopover(BuildContext context) {
     if (helpKey == null) return;
-    final message = TelemetryDisplay.cardHelpText[helpKey] ?? 'No information available.';
-    
+    final message =
+        TelemetryDisplay.cardHelpText[helpKey] ?? 'No information available.';
+
     showCupertinoDialog(
       context: context,
       barrierDismissible: true,
@@ -1254,7 +1272,9 @@ class _TelemetryModule extends StatelessWidget {
                               child: Icon(
                                 CupertinoIcons.info_circle,
                                 size: 12,
-                                color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.6),
+                                color: AppTheme.resolvedTextSecondary(
+                                  context,
+                                ).withValues(alpha: 0.6),
                               ),
                             ),
                           ],

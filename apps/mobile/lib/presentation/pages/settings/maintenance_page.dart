@@ -13,7 +13,9 @@ class MaintenancePage extends ConsumerWidget {
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     return CupertinoPageScaffold(
-      backgroundColor: isDark ? CupertinoColors.black : CupertinoColors.systemBackground,
+      backgroundColor: isDark
+          ? CupertinoColors.black
+          : CupertinoColors.systemBackground,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -24,7 +26,9 @@ class MaintenancePage extends ConsumerWidget {
               Icon(
                 CupertinoIcons.wrench,
                 size: 80,
-                color: isDark ? CupertinoColors.systemGrey3 : CupertinoColors.systemGrey2,
+                color: isDark
+                    ? CupertinoColors.systemGrey3
+                    : CupertinoColors.systemGrey2,
               ),
               const SizedBox(height: 24),
               Text(
@@ -39,7 +43,9 @@ class MaintenancePage extends ConsumerWidget {
               Text(
                 l10n.maintenanceMessage,
                 style: AppTheme.body.copyWith(
-                  color: isDark ? CupertinoColors.systemGrey4 : CupertinoColors.systemGrey,
+                  color: isDark
+                      ? CupertinoColors.systemGrey4
+                      : CupertinoColors.systemGrey,
                 ),
                 textAlign: TextAlign.center,
               ),

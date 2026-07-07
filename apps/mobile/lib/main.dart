@@ -26,12 +26,10 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       debugPrint('Init: WidgetsFlutterBinding initialized');
 
-      await SentryFlutter.init(
-        (options) {
-          options.dsn = const String.fromEnvironment('SENTRY_DSN');
-          options.tracesSampleRate = 1.0;
-        },
-      );
+      await SentryFlutter.init((options) {
+        options.dsn = const String.fromEnvironment('SENTRY_DSN');
+        options.tracesSampleRate = 1.0;
+      });
       debugPrint('Init: Sentry initialized');
 
       await Firebase.initializeApp();
@@ -43,8 +41,12 @@ void main() {
       // Initialize App Check
       debugPrint('Init: Activating App Check...');
       await FirebaseAppCheck.instance.activate(
-        providerApple: kReleaseMode ? AppleAppAttestProvider() : const AppleDebugProvider(),
-        providerAndroid: kReleaseMode ? AndroidPlayIntegrityProvider() : const AndroidDebugProvider(),
+        providerApple: kReleaseMode
+            ? AppleAppAttestProvider()
+            : const AppleDebugProvider(),
+        providerAndroid: kReleaseMode
+            ? AndroidPlayIntegrityProvider()
+            : const AndroidDebugProvider(),
       );
       debugPrint('Init: App Check activated');
 

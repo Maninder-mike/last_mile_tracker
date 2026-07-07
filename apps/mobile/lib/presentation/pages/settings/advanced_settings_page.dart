@@ -31,7 +31,8 @@ class _AdvancedSettingsPageState extends ConsumerState<AdvancedSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final role = ref.watch(settingsModeProvider);
-    final isDeveloper = role == SettingsRole.admin || role == SettingsRole.operations;
+    final isDeveloper =
+        role == SettingsRole.admin || role == SettingsRole.operations;
 
     return CupertinoPageScaffold(
       backgroundColor: AppTheme.background,
@@ -183,7 +184,8 @@ class _AdvancedSettingsPageState extends ConsumerState<AdvancedSettingsPage> {
         _showAlert('Command Sent', successMessage);
       }
     } catch (e) {
-      if (mounted) _showAlert('Error', TelemetryDisplay.friendlyBleError(e.toString()));
+      if (mounted)
+        _showAlert('Error', TelemetryDisplay.friendlyBleError(e.toString()));
     }
   }
 

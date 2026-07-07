@@ -14,7 +14,9 @@ class SupabaseService {
           .from('shipments')
           .select()
           .order('lastUpdate', ascending: false);
-      return response.map((json) => Shipment.fromJson(json as Map<String, dynamic>)).toList();
+      return response
+          .map((json) => Shipment.fromJson(json as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       FileLogger.log("Supabase: Failed to fetch shipments: $e");
       return [];
@@ -25,9 +27,7 @@ class SupabaseService {
   Future<void> createShipment(Shipment shipment) async {
     FileLogger.log("Supabase: Creating shipment ${shipment.id}");
     try {
-      await _client
-          .from('shipments')
-          .insert(shipment.toJson());
+      await _client.from('shipments').insert(shipment.toJson());
     } catch (e) {
       FileLogger.log("Supabase: Failed to create shipment: $e");
       rethrow;

@@ -587,7 +587,8 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
   }
 
   Widget _buildDiagnosticsGrid(models.SensorReading? reading) {
-    final isUsbPowered = reading?.batteryLevel != null && reading!.batteryLevel < 1.0;
+    final isUsbPowered =
+        reading?.batteryLevel != null && reading!.batteryLevel < 1.0;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.count(
@@ -599,11 +600,13 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
         childAspectRatio: 0.9,
         children: [
           _buildDiagCard(
-            icon: isUsbPowered ? CupertinoIcons.bolt_fill : CupertinoIcons.battery_100,
+            icon: isUsbPowered
+                ? CupertinoIcons.bolt_fill
+                : CupertinoIcons.battery_100,
             value: reading?.batteryLevel != null
                 ? (isUsbPowered
-                    ? 'USB'
-                    : '${BleConstants.batteryVoltageToPercent(reading!.batteryLevel)}%')
+                      ? 'USB'
+                      : '${BleConstants.batteryVoltageToPercent(reading!.batteryLevel)}%')
                 : '--',
             label: reading?.batteryLevel != null && reading!.batteryLevel >= 1.0
                 ? 'Battery (${reading.batteryLevel.toStringAsFixed(1)}V)'
@@ -613,7 +616,9 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
           _buildDiagCard(
             icon: CupertinoIcons.antenna_radiowaves_left_right,
             value: TelemetryDisplay.signalLabel(reading?.rssi),
-            label: reading?.rssi != null ? 'Signal (${reading!.rssi} dBm)' : 'Signal',
+            label: reading?.rssi != null
+                ? 'Signal (${reading!.rssi} dBm)'
+                : 'Signal',
             color: _getSignalColor(reading?.rssi ?? -100),
           ),
           _buildDiagCard(
@@ -624,7 +629,9 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
           ),
           _buildDiagCard(
             icon: CupertinoIcons.thermometer,
-            value: reading != null ? '${reading.internalTemp.toStringAsFixed(1)}°C' : '--',
+            value: reading != null
+                ? '${reading.internalTemp.toStringAsFixed(1)}°C'
+                : '--',
             label: 'Core Temp',
             color: CupertinoColors.systemOrange,
           ),
@@ -634,7 +641,9 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
             label: reading?.batteryDrop != null
                 ? 'Health (${(reading!.batteryDrop! * 1000).toStringAsFixed(0)} mV)'
                 : 'Health',
-            color: (reading?.batteryDrop ?? 0) > 0.150 ? AppTheme.critical : AppTheme.success,
+            color: (reading?.batteryDrop ?? 0) > 0.150
+                ? AppTheme.critical
+                : AppTheme.success,
           ),
           _buildDiagCard(
             icon: CupertinoIcons.info_circle,
@@ -688,8 +697,6 @@ class _ConnectivityPageState extends ConsumerState<ConnectivityPage> {
     if (rssi > -80) return CupertinoColors.systemYellow;
     return CupertinoColors.systemRed;
   }
-
-
 
   Widget _buildToolAction({
     required IconData icon,

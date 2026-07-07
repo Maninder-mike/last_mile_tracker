@@ -149,15 +149,20 @@ class TelemetryDisplay {
 
   static const Map<String, String> cardHelpText = {
     'battery': 'Shows how much charge is left in the tracker\'s battery.',
-    'temperature': 'The temperature reading from the tracker\'s sensor. '
+    'temperature':
+        'The temperature reading from the tracker\'s sensor. '
         'Useful for monitoring cold chain or heat-sensitive shipments.',
-    'impact': 'Measures physical impact or vibration on the package. '
+    'impact':
+        'Measures physical impact or vibration on the package. '
         'High values may indicate rough handling during transit.',
-    'signal': 'How strong the Bluetooth connection is between your phone '
+    'signal':
+        'How strong the Bluetooth connection is between your phone '
         'and the tracker. Stay within 10 meters for best results.',
-    'health': 'Indicates overall battery condition. A "Degraded" reading '
+    'health':
+        'Indicates overall battery condition. A "Degraded" reading '
         'means the battery may need replacement soon.',
-    'location': 'The last known GPS position of the tracker. '
+    'location':
+        'The last known GPS position of the tracker. '
         'Updates every few seconds when connected.',
   };
 }

@@ -4,7 +4,9 @@ import 'package:last_mile_tracker/presentation/widgets/empty_state.dart';
 
 void main() {
   group('EmptyState Widget Tests', () {
-    testWidgets('renders icon, title, and subtitle', (WidgetTester tester) async {
+    testWidgets('renders icon, title, and subtitle', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const CupertinoApp(
           home: CupertinoPageScaffold(
@@ -22,7 +24,9 @@ void main() {
       expect(find.text('Empty Subtitle'), findsOneWidget);
     });
 
-    testWidgets('renders action button when provided', (WidgetTester tester) async {
+    testWidgets('renders action button when provided', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         CupertinoApp(
           home: CupertinoPageScaffold(

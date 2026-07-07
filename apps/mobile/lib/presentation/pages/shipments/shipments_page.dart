@@ -97,20 +97,26 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
               if (_selectedStatus != null || _selectedTimeRange != 'All')
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+                    padding: const EdgeInsets.only(
+                      left: 16,
+                      right: 16,
+                      bottom: 12,
+                    ),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
                           if (_selectedStatus != null)
                             _buildActiveFilterChip(
-                              label: 'Status: ${_selectedStatus!.name[0].toUpperCase()}${_selectedStatus!.name.substring(1)}',
+                              label:
+                                  'Status: ${_selectedStatus!.name[0].toUpperCase()}${_selectedStatus!.name.substring(1)}',
                               onDeleted: () {
                                 HapticFeedback.lightImpact();
                                 setState(() => _selectedStatus = null);
                               },
                             ),
-                          if (_selectedStatus != null && _selectedTimeRange != 'All')
+                          if (_selectedStatus != null &&
+                              _selectedTimeRange != 'All')
                             const SizedBox(width: 8),
                           if (_selectedTimeRange != 'All')
                             _buildActiveFilterChip(
@@ -321,7 +327,9 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                   bottom: MediaQuery.of(context).padding.bottom + 20,
                 ),
                 decoration: BoxDecoration(
-                  color: CupertinoTheme.of(context).barBackgroundColor.withValues(alpha: 0.8),
+                  color: CupertinoTheme.of(
+                    context,
+                  ).barBackgroundColor.withValues(alpha: 0.8),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -394,7 +402,9 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                           },
                         ),
                         ...ShipmentStatus.values.map((status) {
-                          final label = status.name[0].toUpperCase() + status.name.substring(1);
+                          final label =
+                              status.name[0].toUpperCase() +
+                              status.name.substring(1);
                           return _buildFilterPill(
                             label: label,
                             isSelected: _selectedStatus == status,
@@ -424,22 +434,19 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: [
-                        'All',
-                        'Today',
-                        'This Week',
-                        'This Month',
-                      ].map((time) {
-                        final label = time == 'All' ? 'All Time' : time;
-                        return _buildFilterPill(
-                          label: label,
-                          isSelected: _selectedTimeRange == time,
-                          setModalState: setModalState,
-                          onTap: () {
-                            setState(() => _selectedTimeRange = time);
-                          },
-                        );
-                      }).toList(),
+                      children: ['All', 'Today', 'This Week', 'This Month'].map(
+                        (time) {
+                          final label = time == 'All' ? 'All Time' : time;
+                          return _buildFilterPill(
+                            label: label,
+                            isSelected: _selectedTimeRange == time,
+                            setModalState: setModalState,
+                            onTap: () {
+                              setState(() => _selectedTimeRange = time);
+                            },
+                          );
+                        },
+                      ).toList(),
                     ),
                     const SizedBox(height: 28),
 
@@ -525,7 +532,8 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
   }
 
   Widget _buildFilterButton() {
-    final bool hasActiveFilters = _selectedStatus != null || _selectedTimeRange != 'All';
+    final bool hasActiveFilters =
+        _selectedStatus != null || _selectedTimeRange != 'All';
     final activeColor = CupertinoTheme.of(context).primaryColor;
 
     return GlassContainer(
@@ -609,11 +617,7 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onDeleted,
-            child: Icon(
-              CupertinoIcons.xmark,
-              size: 10,
-              color: activeColor,
-            ),
+            child: Icon(CupertinoIcons.xmark, size: 10, color: activeColor),
           ),
         ],
       ),
@@ -666,7 +670,9 @@ class _ShipmentListItem extends StatelessWidget {
               Row(
                 children: [
                   _RouteDot(
-                    color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.5),
+                    color: AppTheme.resolvedTextSecondary(
+                      context,
+                    ).withValues(alpha: 0.5),
                   ),
                   AppGaps.horizontalMedium,
                   Expanded(

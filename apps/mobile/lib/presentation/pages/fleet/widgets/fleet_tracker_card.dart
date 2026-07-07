@@ -17,9 +17,10 @@ class FleetTrackerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(context);
-    final isWiredPower = tracker.batteryLevel != null && tracker.batteryLevel! < 1.0;
-    final batPercent = tracker.batteryLevel != null 
-        ? BleConstants.batteryVoltageToPercent(tracker.batteryLevel!) 
+    final isWiredPower =
+        tracker.batteryLevel != null && tracker.batteryLevel! < 1.0;
+    final batPercent = tracker.batteryLevel != null
+        ? BleConstants.batteryVoltageToPercent(tracker.batteryLevel!)
         : 0;
 
     return GestureDetector(
@@ -63,7 +64,9 @@ class FleetTrackerCard extends StatelessWidget {
                         Text(
                           tracker.id.toUpperCase(),
                           style: AppTheme.caption.copyWith(
-                            color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.6),
+                            color: AppTheme.resolvedTextSecondary(
+                              context,
+                            ).withValues(alpha: 0.6),
                             fontFamily: 'monospace',
                             fontSize: 9.5,
                           ),
@@ -84,7 +87,9 @@ class FleetTrackerCard extends StatelessWidget {
                       style: AppTheme.caption.copyWith(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w500,
-                        color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.6),
+                        color: AppTheme.resolvedTextSecondary(
+                          context,
+                        ).withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -93,11 +98,13 @@ class FleetTrackerCard extends StatelessWidget {
                 Icon(
                   CupertinoIcons.chevron_right,
                   size: 13,
-                  color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.4),
+                  color: AppTheme.resolvedTextSecondary(
+                    context,
+                  ).withValues(alpha: 0.4),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
 
             // Inline Telemetry Row: Battery, Temp, and Signal Status
@@ -107,28 +114,34 @@ class FleetTrackerCard extends StatelessWidget {
                 // 1. Battery
                 _buildMinimalMetric(
                   context: context,
-                  icon: isWiredPower 
-                      ? CupertinoIcons.battery_charging 
-                      : (batPercent >= 80 ? CupertinoIcons.battery_100 : CupertinoIcons.battery_25),
-                  value: tracker.batteryLevel != null 
-                      ? (isWiredPower ? 'USB' : '$batPercent%') 
+                  icon: isWiredPower
+                      ? CupertinoIcons.battery_charging
+                      : (batPercent >= 80
+                            ? CupertinoIcons.battery_100
+                            : CupertinoIcons.battery_25),
+                  value: tracker.batteryLevel != null
+                      ? (isWiredPower ? 'USB' : '$batPercent%')
                       : '--',
-                  color: tracker.batteryLevel != null 
-                      ? (isWiredPower 
-                          ? AppTheme.success 
-                          : (batPercent < 20 ? AppTheme.critical : AppTheme.success)) 
+                  color: tracker.batteryLevel != null
+                      ? (isWiredPower
+                            ? AppTheme.success
+                            : (batPercent < 20
+                                  ? AppTheme.critical
+                                  : AppTheme.success))
                       : AppTheme.resolvedTextSecondary(context),
                 ),
-                
+
                 // 2. Core Temp
                 _buildMinimalMetric(
                   context: context,
                   icon: CupertinoIcons.thermometer,
-                  value: tracker.temp != null 
-                      ? '${tracker.temp!.toStringAsFixed(1)}°C' 
+                  value: tracker.temp != null
+                      ? '${tracker.temp!.toStringAsFixed(1)}°C'
                       : '--',
-                  color: tracker.temp != null 
-                      ? (tracker.temp! > 30.0 ? AppTheme.critical : AppTheme.success) 
+                  color: tracker.temp != null
+                      ? (tracker.temp! > 30.0
+                            ? AppTheme.critical
+                            : AppTheme.success)
                       : AppTheme.resolvedTextSecondary(context),
                 ),
 
@@ -145,7 +158,7 @@ class FleetTrackerCard extends StatelessWidget {
   Widget _buildDeviceAvatar(BuildContext context) {
     final statusColor = _getStatusColor(context);
     final resolvedColor = CupertinoDynamicColor.resolve(statusColor, context);
-    
+
     return Container(
       width: 36,
       height: 36,
@@ -206,22 +219,24 @@ class FleetTrackerCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            CupertinoIcons.wifi_slash, 
-            size: 13, 
-            color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.4)
+            CupertinoIcons.wifi_slash,
+            size: 13,
+            color: AppTheme.resolvedTextSecondary(
+              context,
+            ).withValues(alpha: 0.4),
           ),
           const SizedBox(width: 4),
           Text(
-            'Offline', 
+            'Offline',
             style: AppTheme.caption.copyWith(
-              fontSize: 11, 
-              fontWeight: FontWeight.w500
-            )
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       );
     }
-    
+
     final rssi = tracker.rssi ?? -100;
     final int activeBars;
     final Color barColor;
@@ -256,9 +271,11 @@ class FleetTrackerCard extends StatelessWidget {
               height: barHeight,
               margin: const EdgeInsets.symmetric(horizontal: 0.5),
               decoration: BoxDecoration(
-                color: isActive 
-                    ? resolvedColor 
-                    : AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.15),
+                color: isActive
+                    ? resolvedColor
+                    : AppTheme.resolvedTextSecondary(
+                        context,
+                      ).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(0.75),
               ),
             );
@@ -284,7 +301,10 @@ class FleetTrackerCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: resolvedColor.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: resolvedColor.withValues(alpha: 0.15), width: 0.5),
+        border: Border.all(
+          color: resolvedColor.withValues(alpha: 0.15),
+          width: 0.5,
+        ),
       ),
       child: Text(
         tracker.isInRange ? 'NEARBY' : 'REMOTE',

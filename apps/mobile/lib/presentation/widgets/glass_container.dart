@@ -55,9 +55,11 @@ class _GlassContainerState extends State<GlassContainer> {
     final resolvedColor = CupertinoDynamicColor.resolve(baseColor, context);
 
     // Calculate final background color if no gradient is present
-    final effectiveOpacity = widget.opacity ?? (widget.color != null
-        ? (resolvedColor.a == 1.0 ? 0.7 : resolvedColor.a)
-        : (isDark ? 0.85 : resolvedColor.a));
+    final effectiveOpacity =
+        widget.opacity ??
+        (widget.color != null
+            ? (resolvedColor.a == 1.0 ? 0.7 : resolvedColor.a)
+            : (isDark ? 0.85 : resolvedColor.a));
 
     final finalColor = widget.gradient == null
         ? resolvedColor.withValues(alpha: effectiveOpacity)
@@ -103,14 +105,18 @@ class _GlassContainerState extends State<GlassContainer> {
             boxShadow: [
               if (!_isPressed) ...[
                 BoxShadow(
-                  color: CupertinoColors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                  color: CupertinoColors.black.withValues(
+                    alpha: isDark ? 0.2 : 0.05,
+                  ),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                   spreadRadius: -5,
                 ),
                 if (isDark)
                   BoxShadow(
-                    color: CupertinoTheme.of(context).primaryColor.withValues(alpha: 0.03),
+                    color: CupertinoTheme.of(
+                      context,
+                    ).primaryColor.withValues(alpha: 0.03),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),

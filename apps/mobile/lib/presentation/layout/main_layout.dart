@@ -40,7 +40,9 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         systemNavigationBarColor: CupertinoColors.transparent,
-        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness: isDark
+            ? Brightness.light
+            : Brightness.dark,
       ),
       child: CupertinoPageScaffold(
         backgroundColor: CupertinoDynamicColor.resolve(
@@ -85,39 +87,40 @@ class _OfflineBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: 'Offline status banner',
-      hint: 'Indicates the app is currently running in offline mode. Local changes will sync when connection is restored.',
+      hint:
+          'Indicates the app is currently running in offline mode. Local changes will sync when connection is restored.',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemRed.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: CupertinoColors.systemRed.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            CupertinoIcons.wifi_exclamationmark,
-            color: CupertinoColors.white,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Offline Mode - Changes will sync later',
-            style: AppTheme.caption.copyWith(
-              color: CupertinoColors.white,
-              fontWeight: FontWeight.w600,
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemRed.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: CupertinoColors.systemRed.withValues(alpha: 0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              CupertinoIcons.wifi_exclamationmark,
+              color: CupertinoColors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Offline Mode - Changes will sync later',
+              style: AppTheme.caption.copyWith(
+                color: CupertinoColors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
-     ),
     );
   }
 }

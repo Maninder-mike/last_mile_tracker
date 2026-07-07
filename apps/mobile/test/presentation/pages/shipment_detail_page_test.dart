@@ -28,7 +28,8 @@ class FakeBleService extends Fake implements BleService {
   Stream<BluetoothConnectionState> get connectionState =>
       Stream.value(BluetoothConnectionState.disconnected);
   @override
-  BluetoothConnectionState get lastState => BluetoothConnectionState.disconnected;
+  BluetoothConnectionState get lastState =>
+      BluetoothConnectionState.disconnected;
   @override
   Stream<List<ScannedTracker>> get discoveredDevices => Stream.value([]);
   @override
@@ -47,12 +48,15 @@ class FakeOtaService extends Fake implements OtaService {
   }) async {
     return null;
   }
+
   @override
   void dispose() {}
 }
 
 class FakeAlertManager extends Fake implements AlertManager {}
+
 class FakeProximityService extends Fake implements ProximityService {}
+
 class FakeFleetInventoryService extends Fake implements FleetInventoryService {}
 
 void main() {
@@ -78,7 +82,9 @@ void main() {
         otaServiceProvider.overrideWith((ref) => FakeOtaService()),
         alertManagerProvider.overrideWith((ref) => FakeAlertManager()),
         proximityServiceProvider.overrideWith((ref) => FakeProximityService()),
-        fleetInventoryServiceProvider.overrideWith((ref) => FakeFleetInventoryService()),
+        fleetInventoryServiceProvider.overrideWith(
+          (ref) => FakeFleetInventoryService(),
+        ),
         connectivityStatusProvider.overrideWith((ref) => Stream.value(true)),
         bleConnectionStateProvider.overrideWith(
           (ref) => Stream.value(BluetoothConnectionState.disconnected),
@@ -93,7 +99,9 @@ void main() {
     );
   }
 
-  testWidgets('ShipmentDetailPage renders details cleanly', (WidgetTester tester) async {
+  testWidgets('ShipmentDetailPage renders details cleanly', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -107,112 +115,136 @@ void main() {
     expect(find.text('LMT-1001', skipOffstage: false), findsOneWidget);
   });
 
-  testWidgets('ShipmentDetailPage renders with valid location and active path', (WidgetTester tester) async {
-    final shipmentWithLocation = testShipment.copyWith(
-      latitude: 37.7749,
-      longitude: -122.4194,
-    );
-
-    Widget createTestWidgetWithLocation() {
-      return ProviderScope(
-        overrides: [
-          recentPathProvider.overrideWithValue(AsyncValue.data([
-            models.SensorReading(
-              id: 1,
-              timestamp: DateTime.now(),
-              lat: 37.7749,
-              lon: -122.4194,
-              speed: 10.0,
-              temp: 4.5,
-              shockValue: 120,
-              batteryLevel: 85.0,
-              tripState: 1,
-              internalTemp: 25.0,
-            ),
-            models.SensorReading(
-              id: 2,
-              timestamp: DateTime.now().add(const Duration(minutes: 5)),
-              lat: 37.7849,
-              lon: -122.4094,
-              speed: 12.0,
-              temp: 4.6,
-              shockValue: 110,
-              batteryLevel: 84.0,
-              tripState: 1,
-              internalTemp: 25.1,
-            ),
-          ])),
-          bleServiceProvider.overrideWith((ref) => FakeBleService()),
-          otaServiceProvider.overrideWith((ref) => FakeOtaService()),
-          alertManagerProvider.overrideWith((ref) => FakeAlertManager()),
-          proximityServiceProvider.overrideWith((ref) => FakeProximityService()),
-          fleetInventoryServiceProvider.overrideWith((ref) => FakeFleetInventoryService()),
-          connectivityStatusProvider.overrideWith((ref) => Stream.value(true)),
-          bleConnectionStateProvider.overrideWith(
-            (ref) => Stream.value(BluetoothConnectionState.disconnected),
-          ),
-          unreadNotificationCountProvider.overrideWith((ref) => Stream.value(0)),
-        ],
-        child: CupertinoApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: ShipmentDetailPage(shipment: shipmentWithLocation),
-        ),
+  testWidgets(
+    'ShipmentDetailPage renders with valid location and active path',
+    (WidgetTester tester) async {
+      final shipmentWithLocation = testShipment.copyWith(
+        latitude: 37.7749,
+        longitude: -122.4194,
       );
-    }
 
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
-
-    await tester.pumpWidget(createTestWidgetWithLocation());
-    await tester.pumpAndSettle();
-
-    expect(find.text('LMT-1001', skipOffstage: false), findsOneWidget);
-  });
-
-  testWidgets('ShipmentDetailPage renders with valid location and loading path', (WidgetTester tester) async {
-    final shipmentWithLocation = testShipment.copyWith(
-      latitude: 37.7749,
-      longitude: -122.4194,
-    );
-
-    Widget createTestWidgetLoadingPath() {
-      return ProviderScope(
-        overrides: [
-          recentPathProvider.overrideWithValue(const AsyncValue.loading()),
-          bleServiceProvider.overrideWith((ref) => FakeBleService()),
-          otaServiceProvider.overrideWith((ref) => FakeOtaService()),
-          alertManagerProvider.overrideWith((ref) => FakeAlertManager()),
-          proximityServiceProvider.overrideWith((ref) => FakeProximityService()),
-          fleetInventoryServiceProvider.overrideWith((ref) => FakeFleetInventoryService()),
-          connectivityStatusProvider.overrideWith((ref) => Stream.value(true)),
-          bleConnectionStateProvider.overrideWith(
-            (ref) => Stream.value(BluetoothConnectionState.disconnected),
+      Widget createTestWidgetWithLocation() {
+        return ProviderScope(
+          overrides: [
+            recentPathProvider.overrideWithValue(
+              AsyncValue.data([
+                models.SensorReading(
+                  id: 1,
+                  timestamp: DateTime.now(),
+                  lat: 37.7749,
+                  lon: -122.4194,
+                  speed: 10.0,
+                  temp: 4.5,
+                  shockValue: 120,
+                  batteryLevel: 85.0,
+                  tripState: 1,
+                  internalTemp: 25.0,
+                ),
+                models.SensorReading(
+                  id: 2,
+                  timestamp: DateTime.now().add(const Duration(minutes: 5)),
+                  lat: 37.7849,
+                  lon: -122.4094,
+                  speed: 12.0,
+                  temp: 4.6,
+                  shockValue: 110,
+                  batteryLevel: 84.0,
+                  tripState: 1,
+                  internalTemp: 25.1,
+                ),
+              ]),
+            ),
+            bleServiceProvider.overrideWith((ref) => FakeBleService()),
+            otaServiceProvider.overrideWith((ref) => FakeOtaService()),
+            alertManagerProvider.overrideWith((ref) => FakeAlertManager()),
+            proximityServiceProvider.overrideWith(
+              (ref) => FakeProximityService(),
+            ),
+            fleetInventoryServiceProvider.overrideWith(
+              (ref) => FakeFleetInventoryService(),
+            ),
+            connectivityStatusProvider.overrideWith(
+              (ref) => Stream.value(true),
+            ),
+            bleConnectionStateProvider.overrideWith(
+              (ref) => Stream.value(BluetoothConnectionState.disconnected),
+            ),
+            unreadNotificationCountProvider.overrideWith(
+              (ref) => Stream.value(0),
+            ),
+          ],
+          child: CupertinoApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ShipmentDetailPage(shipment: shipmentWithLocation),
           ),
-          unreadNotificationCountProvider.overrideWith((ref) => Stream.value(0)),
-        ],
-        child: CupertinoApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: ShipmentDetailPage(shipment: shipmentWithLocation),
-        ),
+        );
+      }
+
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(createTestWidgetWithLocation());
+      await tester.pumpAndSettle();
+
+      expect(find.text('LMT-1001', skipOffstage: false), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'ShipmentDetailPage renders with valid location and loading path',
+    (WidgetTester tester) async {
+      final shipmentWithLocation = testShipment.copyWith(
+        latitude: 37.7749,
+        longitude: -122.4194,
       );
-    }
 
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+      Widget createTestWidgetLoadingPath() {
+        return ProviderScope(
+          overrides: [
+            recentPathProvider.overrideWithValue(const AsyncValue.loading()),
+            bleServiceProvider.overrideWith((ref) => FakeBleService()),
+            otaServiceProvider.overrideWith((ref) => FakeOtaService()),
+            alertManagerProvider.overrideWith((ref) => FakeAlertManager()),
+            proximityServiceProvider.overrideWith(
+              (ref) => FakeProximityService(),
+            ),
+            fleetInventoryServiceProvider.overrideWith(
+              (ref) => FakeFleetInventoryService(),
+            ),
+            connectivityStatusProvider.overrideWith(
+              (ref) => Stream.value(true),
+            ),
+            bleConnectionStateProvider.overrideWith(
+              (ref) => Stream.value(BluetoothConnectionState.disconnected),
+            ),
+            unreadNotificationCountProvider.overrideWith(
+              (ref) => Stream.value(0),
+            ),
+          ],
+          child: CupertinoApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ShipmentDetailPage(shipment: shipmentWithLocation),
+          ),
+        );
+      }
 
-    await tester.pumpWidget(createTestWidgetLoadingPath());
-    await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    expect(find.text('LMT-1001', skipOffstage: false), findsOneWidget);
-  });
+      await tester.pumpWidget(createTestWidgetLoadingPath());
+      await tester.pumpAndSettle();
+
+      expect(find.text('LMT-1001', skipOffstage: false), findsOneWidget);
+    },
+  );
 }

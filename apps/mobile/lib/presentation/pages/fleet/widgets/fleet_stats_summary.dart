@@ -13,7 +13,12 @@ class FleetStatsSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeShipments = trackers.where((t) => t.shipmentId != null).length;
     final atRisk = trackers
-        .where((t) => t.status == 'critical' || (t.batteryLevel != null && BleConstants.batteryVoltageToPercent(t.batteryLevel!) < 15))
+        .where(
+          (t) =>
+              t.status == 'critical' ||
+              (t.batteryLevel != null &&
+                  BleConstants.batteryVoltageToPercent(t.batteryLevel!) < 15),
+        )
         .length;
     final nearby = trackers.where((t) => t.isInRange).length;
 
@@ -74,7 +79,11 @@ class FleetStatsSummary extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: CupertinoDynamicColor.resolve(color, context)),
+          Icon(
+            icon,
+            size: 20,
+            color: CupertinoDynamicColor.resolve(color, context),
+          ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,

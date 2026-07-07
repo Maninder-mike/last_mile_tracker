@@ -334,11 +334,15 @@ class OtaService {
 
     sub = bleService.otaNotifications.listen((msg) {
       if (msg == 'OTA:STATUS:ERR_START') {
-        completer.completeError(Exception('Device rejected OTA start request.'));
+        completer.completeError(
+          Exception('Device rejected OTA start request.'),
+        );
       } else if (msg == 'OTA:STATUS:ERR_WRITE') {
         completer.completeError(Exception('Device write error during upload.'));
       } else if (msg == 'OTA:STATUS:ERR_CHECKSUM') {
-        completer.completeError(Exception('Device reported checksum verification mismatch.'));
+        completer.completeError(
+          Exception('Device reported checksum verification mismatch.'),
+        );
       } else if (msg == 'OTA:STATUS:ERR_APPLY') {
         completer.completeError(Exception('Device failed to apply update.'));
       } else if (msg.startsWith(expectedPrefix)) {
@@ -349,7 +353,9 @@ class OtaService {
     try {
       await completer.future.timeout(timeout);
     } on TimeoutException {
-      throw Exception('Timed out waiting for device response ($expectedPrefix).');
+      throw Exception(
+        'Timed out waiting for device response ($expectedPrefix).',
+      );
     } finally {
       await sub.cancel();
     }
@@ -465,7 +471,9 @@ class OtaService {
     try {
       await bleService.writeOtaControl(endPacket);
     } catch (e) {
-      FileLogger.log('OTA: CMD_END write encountered a connection/GATT error: $e. Checking if device verified successfully...');
+      FileLogger.log(
+        'OTA: CMD_END write encountered a connection/GATT error: $e. Checking if device verified successfully...',
+      );
     }
 
     _emit(

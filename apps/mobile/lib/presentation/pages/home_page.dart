@@ -34,7 +34,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     // Auto-check for firmware updates on startup
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       // Initialize sync manager to start background syncing
       ref.read(syncManagerProvider);
 

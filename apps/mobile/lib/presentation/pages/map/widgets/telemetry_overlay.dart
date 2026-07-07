@@ -50,8 +50,13 @@ class TelemetryOverlay extends ConsumerWidget {
                     _StatItem(
                       icon: CupertinoIcons.battery_100,
                       label: 'Battery',
-                      value: '${BleConstants.batteryVoltageToPercent(reading.batteryLevel)}%',
-                      color: BleConstants.batteryVoltageToPercent(reading.batteryLevel) > 20
+                      value:
+                          '${BleConstants.batteryVoltageToPercent(reading.batteryLevel)}%',
+                      color:
+                          BleConstants.batteryVoltageToPercent(
+                                reading.batteryLevel,
+                              ) >
+                              20
                           ? CupertinoColors.activeGreen
                           : CupertinoColors.systemRed,
                     ),

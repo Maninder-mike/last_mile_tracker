@@ -122,7 +122,9 @@ class AppDatabase extends _$AppDatabase {
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
       try {
-        final result = await customSelect('PRAGMA integrity_check(1)').getSingle();
+        final result = await customSelect(
+          'PRAGMA integrity_check(1)',
+        ).getSingle();
         final check = result.read<String>('integrity_check');
         if (check != 'ok') {
           FileLogger.log('AppDatabase: Integrity check failed: $check');
@@ -140,18 +142,22 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'milow_driver.sqlite'));
-    
+
     try {
       // In background creation should succeed unless the directory is unwritable or file is locked
       return NativeDatabase.createInBackground(file);
     } catch (e) {
-      FileLogger.log("AppDatabase: Database initialization error: $e. Performing self-healing delete.");
+      FileLogger.log(
+        "AppDatabase: Database initialization error: $e. Performing self-healing delete.",
+      );
       try {
         if (await file.exists()) {
           await file.delete();
         }
       } catch (delError) {
-        FileLogger.log("AppDatabase: Failed to delete corrupted database: $delError");
+        FileLogger.log(
+          "AppDatabase: Failed to delete corrupted database: $delError",
+        );
       }
       return NativeDatabase.createInBackground(file);
     }

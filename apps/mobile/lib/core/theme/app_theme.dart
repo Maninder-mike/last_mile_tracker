@@ -39,7 +39,10 @@ class AppTheme {
   );
 
   static const LinearGradient primaryGradientDark = LinearGradient(
-    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)], // More vibrant for dark backgrounds
+    colors: [
+      Color(0xFF6366F1),
+      Color(0xFF8B5CF6),
+    ], // More vibrant for dark backgrounds
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

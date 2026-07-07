@@ -115,7 +115,9 @@ class _AddShipmentPageState extends ConsumerState<AddShipmentPage> {
               right: AppTheme.s16,
               bottom: MediaQuery.of(context).padding.bottom + AppTheme.s16,
             ),
-            color: CupertinoTheme.of(context).barBackgroundColor.withValues(alpha: 0.8),
+            color: CupertinoTheme.of(
+              context,
+            ).barBackgroundColor.withValues(alpha: 0.8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -336,10 +338,7 @@ class _AddShipmentPageState extends ConsumerState<AddShipmentPage> {
             top: 0,
             left: 0,
             right: 0,
-            child: FloatingHeader(
-              title: 'Add Shipment',
-              showBackButton: true,
-            ),
+            child: FloatingHeader(title: 'Add Shipment', showBackButton: true),
           ),
         ],
       ),
@@ -434,8 +433,8 @@ class _InputFieldState extends State<_InputField> {
           color: _hasFocus
               ? activeColor
               : (isDark
-                  ? CupertinoColors.white.withValues(alpha: 0.15)
-                  : CupertinoColors.white.withValues(alpha: 0.6)),
+                    ? CupertinoColors.white.withValues(alpha: 0.15)
+                    : CupertinoColors.white.withValues(alpha: 0.6)),
           width: _hasFocus ? 1.5 : 1.0,
         ),
         child: Padding(
@@ -466,7 +465,9 @@ class _InputFieldState extends State<_InputField> {
                       fontWeight: FontWeight.bold,
                       color: _hasFocus
                           ? activeColor
-                          : AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.7),
+                          : AppTheme.resolvedTextSecondary(
+                              context,
+                            ).withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -476,7 +477,9 @@ class _InputFieldState extends State<_InputField> {
                 focusNode: _focusNode,
                 placeholder: widget.placeholder,
                 placeholderStyle: AppTheme.body.copyWith(
-                  color: AppTheme.resolvedTextSecondary(context).withValues(alpha: 0.3),
+                  color: AppTheme.resolvedTextSecondary(
+                    context,
+                  ).withValues(alpha: 0.3),
                 ),
                 style: AppTheme.body.copyWith(
                   fontWeight: FontWeight.w600,

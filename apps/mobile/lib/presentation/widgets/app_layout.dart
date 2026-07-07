@@ -41,9 +41,7 @@ class AppPadding {
 
   /// Safe area padding (top) for content below headers
   static EdgeInsets safeTop(BuildContext context) {
-    return EdgeInsets.only(
-      top: MediaQuery.of(context).padding.top + 60,
-    );
+    return EdgeInsets.only(top: MediaQuery.of(context).padding.top + 60);
   }
 
   /// Safe area padding (bottom) for content above bottom nav
