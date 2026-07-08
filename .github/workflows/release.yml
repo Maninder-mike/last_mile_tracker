@@ -1,0 +1,224 @@
+name: Unified App Stores Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Update track (internal, alpha, beta, production)'
+        required: true
+        default: 'alpha'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      status:
+        description: 'Release status (completed, draft, inProgress, halted)'
+        required: true
+        default: 'completed'
+        type: choice
+        options:
+          - completed
+          - draft
+          - inProgress
+          - halted
+
+permissions:
+  contents: write
+
+jobs:
+  release_android:
+    name: 🤖 Android Build & Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check and Increment Version
+        id: version
+        run: |
+          FULL_VERSION=$(grep '^version:' apps/mobile/pubspec.yaml | sed 's/version: //')
+          CURRENT_VERSION="$FULL_VERSION"
+          TAG="v$CURRENT_VERSION"
+          UPDATED=false
+
+          while git rev-parse "$TAG" >/dev/null 2>&1; do
+            echo "⚠️ Version $TAG already exists. Auto-incrementing build number..."
+            UPDATED=true
+            BASE_VERSION=$(echo $CURRENT_VERSION | sed 's/+.*//')
+            BUILD_NUMBER=$(echo $CURRENT_VERSION | sed 's/.*+//')
+            NEW_BUILD_NUMBER=$((BUILD_NUMBER + 1))
+            CURRENT_VERSION="$BASE_VERSION+$NEW_BUILD_NUMBER"
+            TAG="v$CURRENT_VERSION"
+          done
+
+          if [ "$UPDATED" = true ]; then
+             echo "🆙 Bumping version to: $CURRENT_VERSION"
+             sed -i "s/version: $FULL_VERSION/version: $CURRENT_VERSION/" apps/mobile/pubspec.yaml
+             git config user.name "GitHub Actions"
+             git config user.email "actions@github.com"
+             git add apps/mobile/pubspec.yaml
+             git commit -m "chore: bump version to $CURRENT_VERSION [skip ci]"
+             git push
+          fi
+
+          echo "version=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          FINAL_BUILD_NUMBER=$(echo $CURRENT_VERSION | sed 's/.*+//')
+          echo "version_code=$FINAL_BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "version_number=$(echo $CURRENT_VERSION | sed 's/+.*//')" >> $GITHUB_OUTPUT
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Decode Keystore & Secrets
+        env:
+            GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release.jks
+          echo "storePassword=$KEYSTORE_PASSWORD" > apps/mobile/android/key.properties
+          echo "keyPassword=$KEY_PASSWORD" >> apps/mobile/android/key.properties
+          echo "keyAlias=$(echo $KEY_ALIAS | xargs)" >> apps/mobile/android/key.properties
+          echo "storeFile=$GITHUB_WORKSPACE/release.jks" >> apps/mobile/android/key.properties
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > apps/mobile/android/app/google-services.json
+
+      - name: Build Android Release
+        run: |
+          cd apps/mobile
+          flutter clean
+          flutter pub get
+          cd ../../packages/lmt_models
+          dart pub get
+          dart run build_runner build --delete-conflicting-outputs
+          cd ../../apps/mobile
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+          flutter build apk --release --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
+          flutter build appbundle --release --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
+
+      - name: Stage Artifacts
+        run: |
+          mkdir -p staging
+          cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk staging/
+          cp apps/mobile/build/app/outputs/bundle/release/app-release.aab staging/
+          cp apps/mobile/build/app/outputs/mapping/release/mapping.txt staging/ || echo "No mapping file found"
+
+      - name: Upload to Play Store
+        uses: r0adkll/upload-google-play@v1
+        with:
+            serviceAccountJsonPlainText: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
+            packageName: maninder.co.in.last_mile_tracker
+            releaseFiles: staging/app-release.aab
+            track: ${{ github.event.inputs.track || 'alpha' }}
+            status: ${{ github.event.inputs.status || 'completed' }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+            tag_name: ${{ steps.version.outputs.version }}
+            name: Release Android ${{ steps.version.outputs.version }}
+            files: |
+              staging/app-release.apk
+              staging/mapping.txt
+            fail_on_unmatched_files: false
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release_ios:
+    name: 🍎 iOS Build & Release
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            apps/mobile/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        run: |
+          cd apps/mobile
+          flutter pub get
+
+      - name: Generate Code
+        run: |
+          cd packages/lmt_models
+          dart pub get
+          dart run build_runner build --delete-conflicting-outputs
+          cd ../../apps/mobile
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+
+      - name: Install Apple Certificate and Provisioning Profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_BUILD_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      - name: Build iOS IPA
+        run: |
+          cd apps/mobile
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: 'apps/mobile/build/ios/ipa/last_mile_tracker.ipa'
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}

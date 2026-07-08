@@ -134,8 +134,9 @@ class BleService {
   void _setupAutoConnectListener() {
     discoveredDevices.listen((devices) {
       if (!_isAutoConnectEnabled || _approvedDeviceIds.isEmpty) return;
-      if (isConnecting || _lastState != BluetoothConnectionState.disconnected)
+      if (isConnecting || _lastState != BluetoothConnectionState.disconnected) {
         return;
+      }
 
       // Prevent connection attempts too close to a disconnection event
       if (_lastDisconnectTime != null) {

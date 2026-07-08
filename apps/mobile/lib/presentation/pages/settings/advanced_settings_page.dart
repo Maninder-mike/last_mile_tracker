@@ -184,8 +184,9 @@ class _AdvancedSettingsPageState extends ConsumerState<AdvancedSettingsPage> {
         _showAlert('Command Sent', successMessage);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         _showAlert('Error', TelemetryDisplay.friendlyBleError(e.toString()));
+      }
     }
   }
 

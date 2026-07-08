@@ -1,0 +1,141 @@
+name: Monorepo CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  secrets_scan:
+    name: 🛡️ Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          extra_args: --debug --only-verified
+
+  # Determine what paths changed
+  changes:
+    needs: secrets_scan
+    runs-on: ubuntu-latest
+    outputs:
+      mobile: ${{ steps.filter.outputs.mobile }}
+      dashboard: ${{ steps.filter.outputs.dashboard }}
+      firmware: ${{ steps.filter.outputs.firmware }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            mobile:
+              - 'apps/mobile/**'
+              - 'packages/lmt_models/**'
+              - '.github/workflows/ci.yml'
+            dashboard:
+              - 'apps/fleet_dashboard/**'
+              - '.github/workflows/ci.yml'
+            firmware:
+              - 'firmware_esp32/**'
+              - '.github/workflows/ci.yml'
+
+  mobile_ci:
+    needs: [changes, secrets_scan]
+    if: ${{ needs.changes.outputs.mobile == 'true' }}
+    name: 📱 Mobile Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            apps/mobile/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+      - name: Install dependencies
+        run: |
+          cd ../../packages/lmt_models
+          dart pub get
+          cd ../../apps/mobile
+          flutter pub get
+      - name: Generate Code (build_runner)
+        run: |
+          cd ../../packages/lmt_models
+          dart run build_runner build --delete-conflicting-outputs
+          cd ../../apps/mobile
+          dart run build_runner build --delete-conflicting-outputs
+      - name: Check formatting
+        run: dart format --set-exit-if-changed .
+      - name: Analyze code
+        run: flutter analyze
+      - name: Run tests
+        run: flutter test
+
+  dashboard_ci:
+    needs: [changes, secrets_scan]
+    if: ${{ needs.changes.outputs.dashboard == 'true' }}
+    name: 💻 Dashboard Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/fleet_dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/fleet_dashboard/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+
+  firmware_ci:
+    needs: [changes, secrets_scan]
+    if: ${{ needs.changes.outputs.firmware == 'true' }}
+    name: 🔌 Firmware Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff bandit mypy pytest
+      - name: Run Linter (Ruff)
+        run: ruff check firmware_esp32/
+      - name: Check Format (Ruff)
+        run: ruff format firmware_esp32/ --check
+      - name: Security Scan (Bandit)
+        run: bandit -r firmware_esp32/ -c firmware_esp32/pyproject.toml
+      - name: Static Type Check (Mypy)
+        run: mypy firmware_esp32/ --config-file firmware_esp32/pyproject.toml
+      - name: Unit Tests (Pytest)
+        run: pytest firmware_esp32/
