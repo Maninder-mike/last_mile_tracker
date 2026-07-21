@@ -2,7 +2,7 @@ name: last_mile_tracker
 description: "Last Mile Tracker"
 publish_to: 'none'
 
-version: 0.1.0+6
+version: 0.1.0+7
 
 environment:
   sdk: ^3.10.8
