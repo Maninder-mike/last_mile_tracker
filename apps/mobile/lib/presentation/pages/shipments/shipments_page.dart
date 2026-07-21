@@ -16,6 +16,8 @@ import 'package:last_mile_tracker/presentation/widgets/empty_state.dart';
 import 'package:last_mile_tracker/logic/share_service.dart';
 import 'package:last_mile_tracker/presentation/pages/shipments/shipment_detail_page.dart';
 import 'package:last_mile_tracker/presentation/pages/shipments/add_shipment_page.dart';
+import 'package:last_mile_tracker/presentation/providers/database_config_provider.dart';
+import 'package:last_mile_tracker/presentation/widgets/error_state_view.dart';
 
 class ShipmentsPage extends ConsumerStatefulWidget {
   const ShipmentsPage({super.key});
@@ -263,15 +265,13 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                       childCount: 5,
                     ),
                   ),
-                  error: (err, stack) => SliverToBoxAdapter(
-                    child: Center(
-                      child: Padding(
-                        padding: AppPadding.all,
-                        child: Text(
-                          'Error: $err',
-                          style: const TextStyle(color: AppTheme.critical),
-                        ),
-                      ),
+                  error: (err, stack) => SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: ErrorStateView(
+                      error: err,
+                      onRetry: () => ref.invalidate(mergedShipmentsProvider),
+                      onResetToDemo: () =>
+                          ref.read(databaseConfigProvider.notifier).enableDemoMode(),
                     ),
                   ),
                 ),
@@ -455,9 +455,9 @@ class _ShipmentsPageState extends ConsumerState<ShipmentsPage> {
                       width: double.infinity,
                       child: Container(
                         decoration: BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
+                          gradient: AppTheme.primaryGradient(context),
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: AppTheme.glow,
+                          boxShadow: AppTheme.glowOf(context),
                         ),
                         child: CupertinoButton(
                           padding: const EdgeInsets.symmetric(vertical: 14),

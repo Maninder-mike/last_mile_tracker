@@ -18,8 +18,11 @@ import 'widgets/settings_tile.dart';
 import 'widgets/device_card.dart';
 import 'advanced_settings_page.dart';
 import 'notifications_settings_page.dart';
+import 'dynamic_color_page.dart';
 import 'widgets/glass_settings_section.dart';
 import '../devices/devices_list_page.dart';
+import 'package:last_mile_tracker/presentation/providers/database_config_provider.dart';
+import 'package:last_mile_tracker/presentation/widgets/cloud_connection_modal.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -92,9 +95,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _buildOperationsSection() {
+    final config = ref.watch(databaseConfigProvider);
     return GlassSettingsSection(
       title: 'Data & Sync',
       children: [
+        SettingsTile(
+          title: 'Configure Cloud Database',
+          subtitle: config.isDemoMode
+              ? 'Running in Demo Sandbox Mode'
+              : 'Connected to custom Supabase',
+          icon: CupertinoIcons.cloud,
+          iconColor: CupertinoColors.activeBlue,
+          onTap: () => CloudConnectionModal.show(context),
+        ),
         SettingsTile(
           title: 'Sync Data',
           subtitle: 'Back up to the cloud',
@@ -121,50 +134,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       title: 'Appearance',
       children: [
         _buildThemeModeItem(themeState, themeNotifier),
-        CupertinoListTile(
-          title: const Text('Accent Color'),
-          subtitle: const Text('Personalize your workspace'),
-          leading: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: themeState.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              CupertinoIcons.paintbrush,
-              color: themeState.accentColor,
-              size: 20,
-            ),
-          ),
-          additionalInfo: SizedBox(
-            height: 32,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              shrinkWrap: true,
-              children: [
-                _buildColorOption(
-                  CupertinoColors.activeBlue,
-                  themeState,
-                  themeNotifier,
-                ),
-                _buildColorOption(
-                  CupertinoColors.systemPurple,
-                  themeState,
-                  themeNotifier,
-                ),
-                _buildColorOption(
-                  CupertinoColors.systemOrange,
-                  themeState,
-                  themeNotifier,
-                ),
-                _buildColorOption(
-                  CupertinoColors.systemIndigo,
-                  themeState,
-                  themeNotifier,
-                ),
-              ],
-            ),
-          ),
+        SettingsTile(
+          title: 'Dynamic Theme Color',
+          subtitle: 'M3 User-Generated Scheme',
+          icon: CupertinoIcons.paintbrush,
+          iconColor: themeState.accentColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              CupertinoPageRoute(builder: (context) => const DynamicColorPage()),
+            );
+          },
         ),
       ],
     );
@@ -204,41 +184,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             notifier.setTheme(value);
           }
         },
-      ),
-    );
-  }
-
-  Widget _buildColorOption(
-    Color color,
-    ThemeState state,
-    ThemeNotifier notifier,
-  ) {
-    final isSelected = state.accentColor.toARGB32() == color.toARGB32();
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        notifier.setAccentColor(color);
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: isSelected
-              ? Border.all(color: CupertinoColors.white, width: 2)
-              : null,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.4),
-                    blurRadius: 4,
-                    spreadRadius: 1,
-                  ),
-                ]
-              : null,
-        ),
       ),
     );
   }

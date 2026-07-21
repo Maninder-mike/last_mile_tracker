@@ -74,7 +74,7 @@ class AnimatedButton extends StatefulWidget {
     this.height,
     this.enabled = true,
     this.semanticsLabel,
-  }) : color = AppTheme.surfaceGlassWeak,
+  }) : color = null,
        gradient = null,
        _isPrimary = false,
        borderRadius = AppTheme.radiusMedium,
@@ -96,6 +96,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
 
     Gradient? effectiveGradient = widget.gradient;
     List<BoxShadow>? effectiveShadow;
+    final Color? resolvedColor = widget.color ?? (widget.gradient == null && !widget._isPrimary ? AppTheme.surfaceGlassWeak : null);
 
     if (widget._isPrimary) {
       final hsl = HSLColor.fromColor(primary);
@@ -132,7 +133,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
         ];
       }
     } else if (widget.enabled && widget.gradient != null) {
-      effectiveShadow = AppTheme.glow
+      effectiveShadow = AppTheme.glowOf(context)
           .map(
             (e) => BoxShadow(
               color: e.color.withValues(alpha: isDark ? 0.4 : 0.3),
@@ -172,7 +173,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
               height: widget.height,
               padding: widget.padding,
               decoration: BoxDecoration(
-                color: widget.color,
+                color: resolvedColor,
                 gradient: effectiveGradient,
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: widget._isPrimary && isDark

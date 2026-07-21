@@ -191,9 +191,9 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
                       width: double.infinity,
                       child: Container(
                         decoration: BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
+                          gradient: AppTheme.primaryGradient(context),
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: AppTheme.glow,
+                          boxShadow: AppTheme.glowOf(context),
                         ),
                         child: CupertinoButton(
                           padding: const EdgeInsets.symmetric(vertical: 14),

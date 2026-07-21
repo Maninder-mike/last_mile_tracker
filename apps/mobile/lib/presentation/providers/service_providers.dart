@@ -21,7 +21,9 @@ FlutterSecureStorage secureStorage(Ref ref) {
 SyncManager syncManager(Ref ref) {
   final dao = ref.watch(sensorDaoProvider);
   final bleService = ref.watch(bleServiceProvider);
-  return SyncManager(dao, bleService);
+  final manager = SyncManager(dao, bleService, ref);
+  ref.onDispose(() => manager.dispose());
+  return manager;
 }
 
 // OTA Service

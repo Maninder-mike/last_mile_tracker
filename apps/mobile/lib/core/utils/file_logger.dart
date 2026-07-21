@@ -21,11 +21,28 @@ class FileLogger {
   }
 
   static void log(String message) {
-    // Sanitize coordinates for privacy in logs
-    // Example: "lat: 45.12345, lon: -75.12345" -> "lat: 45.12***, lon: -75.12***"
+    // 1. Sanitize coordinates for privacy in logs
     String sanitized = message.replaceAllMapped(
       RegExp(r'(lat|lon):\s*(-?\d+\.\d{2})\d+'),
       (match) => "${match.group(1)}: ${match.group(2)}***",
+    );
+
+    // 2. Redact JWT tokens (eyJ...)
+    sanitized = sanitized.replaceAll(
+      RegExp(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'),
+      '[REDACTED_JWT_TOKEN]',
+    );
+
+    // 3. Redact Bearer Authorization headers
+    sanitized = sanitized.replaceAll(
+      RegExp(r'Bearer\s+[^\s\n]+', caseSensitive: false),
+      'Bearer [REDACTED]',
+    );
+
+    // 4. Redact API keys, secrets, and passwords
+    sanitized = sanitized.replaceAllMapped(
+      RegExp(r'(anonKey|apiKey|password|secret|anon_key)=\s*([^\s,;&]+)', caseSensitive: false),
+      (match) => "${match.group(1)}=[REDACTED]",
     );
 
     final timestamp = DateTime.now().toIso8601String();

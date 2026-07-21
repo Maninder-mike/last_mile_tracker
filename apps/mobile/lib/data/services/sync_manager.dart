@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:last_mile_tracker/presentation/providers/database_config_provider.dart';
+import 'package:last_mile_tracker/presentation/providers/supabase_providers.dart';
 import '../database/daos/sensor_dao.dart';
 import '../database/app_database.dart';
 import 'ble_service.dart';
@@ -10,12 +12,13 @@ import '../../core/utils/file_logger.dart';
 class SyncManager {
   final SensorDao _sensorDao;
   final BleService _bleService;
+  final Ref _ref;
 
   StreamSubscription? _connectivitySubscription;
   bool _isSyncing = false;
   bool _syncRequested = false;
 
-  SyncManager(this._sensorDao, this._bleService) {
+  SyncManager(this._sensorDao, this._bleService, this._ref) {
     _init();
   }
 
@@ -52,6 +55,11 @@ class SyncManager {
 
     try {
       while (true) {
+        if (_ref.read(databaseConfigProvider).isDemoMode) {
+          FileLogger.log("SyncManager: In Demo Mode, skipping cloud upload loop.");
+          break;
+        }
+
         if (!await _hasNetwork()) {
           FileLogger.log("SyncManager: No network. Pausing sync.");
           break;
@@ -105,7 +113,11 @@ class SyncManager {
   }
 
   Future<void> _uploadToSupabase(List<SensorReading> data) async {
-    final client = Supabase.instance.client;
+    final client = _ref.read(supabaseClientProvider);
+    if (client == null) {
+      FileLogger.log("SyncManager: No Supabase client available.");
+      throw StateError("No active Supabase client available for data sync.");
+    }
 
     final payload = data
         .map((r) {
@@ -145,7 +157,12 @@ class SyncManager {
         .whereType<Map<String, dynamic>>()
         .toList();
 
-    if (payload.isEmpty) return;
+    if (payload.isEmpty) {
+      if (data.isNotEmpty) {
+        throw StateError("Unable to prepare payload (missing device IDs).");
+      }
+      return;
+    }
 
     await client.from('sensor_readings').insert(payload);
   }

@@ -50,14 +50,21 @@ void main() {
       );
       debugPrint('Init: App Check activated');
 
+      final isPlaceholder = SupabaseConfig.url.isEmpty ||
+          SupabaseConfig.url == 'https://your-project.supabase.co' ||
+          SupabaseConfig.anonKey.isEmpty;
+
       // Parallel initializations
       debugPrint('Init: Starting parallel initializations...');
       await Future.wait([
         FileLogger.init(),
-        Supabase.initialize(
-          url: SupabaseConfig.url,
-          publishableKey: SupabaseConfig.anonKey,
-        ),
+        if (!isPlaceholder)
+          Supabase.initialize(
+            url: SupabaseConfig.url,
+            publishableKey: SupabaseConfig.anonKey,
+          )
+        else
+          Future.value(null),
         [
           Permission.bluetoothScan,
           Permission.bluetoothConnect,

@@ -4,10 +4,67 @@ import 'package:last_mile_tracker/domain/models/shipment.dart';
 import 'package:last_mile_tracker/presentation/providers/tracker_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/ble_providers.dart';
 import 'package:last_mile_tracker/presentation/providers/supabase_providers.dart';
+import 'package:last_mile_tracker/presentation/providers/database_config_provider.dart';
 
 // part 'fleet_tracker_provider.g.dart';
 
+import 'package:last_mile_tracker/presentation/providers/mock_shipments_provider.dart';
+
 final fleetTrackersProvider = Provider<AsyncValue<List<FleetTracker>>>((ref) {
+  final config = ref.watch(databaseConfigProvider);
+  if (config.isDemoMode) {
+    final mockShipments = ref.watch(mockShipmentsProvider);
+    final List<FleetTracker> mockTrackers = [];
+
+    for (final shipment in mockShipments) {
+      for (final deviceId in shipment.deviceIds) {
+        mockTrackers.add(
+          FleetTracker(
+            id: deviceId,
+            name: 'TRK-${deviceId.toUpperCase()}',
+            customName: '${shipment.origin} Cargo',
+            batteryLevel: shipment.batteryLevel?.toDouble() ?? 85.0,
+            temp: shipment.temperature ?? 4.2,
+            rssi: -65,
+            lastSeen: DateTime.now(),
+            isInRange: true,
+            isFavorite: shipment.isFavorite,
+            shipmentId: shipment.id,
+            trackingNumber: shipment.trackingNumber,
+            latitude: 37.7749,
+            longitude: -122.4194,
+            shockValue: 0,
+            status: shipment.status.name,
+          ),
+        );
+      }
+    }
+
+    if (mockTrackers.isEmpty) {
+      mockTrackers.addAll([
+        FleetTracker(
+          id: 'dev_001',
+          name: 'TRK-ESP32-A',
+          customName: 'San Francisco Cargo 1',
+          batteryLevel: 45.0,
+          temp: 8.2,
+          rssi: -65,
+          lastSeen: DateTime.now(),
+          isInRange: true,
+          isFavorite: true,
+          shipmentId: 'shp_001',
+          trackingNumber: 'TRK-8821-X',
+          latitude: 37.7749,
+          longitude: -122.4194,
+          shockValue: 125,
+          status: 'Active',
+        ),
+      ]);
+    }
+
+    return AsyncValue.data(mockTrackers);
+  }
+
   final trackersAsync = ref.watch(allTrackersProvider);
   final scanResultsAsync = ref.watch(bleScanResultsProvider);
   final shipmentsAsync = ref.watch(shipmentsProvider);

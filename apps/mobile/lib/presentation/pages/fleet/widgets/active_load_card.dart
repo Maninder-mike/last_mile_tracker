@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/domain/models/fleet_tracker.dart';
@@ -87,7 +88,10 @@ class ActiveLoadCard extends ConsumerWidget {
                 ),
                 color: isComplete ? AppTheme.success : primaryColor,
                 borderRadius: BorderRadius.circular(20),
-                onPressed: onVerify,
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  onVerify();
+                },
                 child: Text(
                   isComplete ? 'VERIFIED' : 'VERIFY',
                   style: const TextStyle(

@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/presentation/providers/fleet_tracker_provider.dart';
@@ -12,6 +13,9 @@ import 'widgets/fleet_tracker_card.dart';
 import 'widgets/fleet_stats_summary.dart';
 import 'widgets/active_load_card.dart';
 import 'departure_verification_page.dart';
+import 'package:last_mile_tracker/presentation/providers/database_config_provider.dart';
+import 'package:last_mile_tracker/presentation/widgets/cloud_connection_modal.dart';
+import 'package:last_mile_tracker/presentation/widgets/error_state_view.dart';
 
 class FleetOverviewPage extends ConsumerStatefulWidget {
   const FleetOverviewPage({super.key});
@@ -34,6 +38,7 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
               slivers: [
                 CupertinoSliverRefreshControl(
                   onRefresh: () async {
+                    HapticFeedback.mediumImpact();
                     ref.invalidate(fleetTrackersProvider);
                     await Future.delayed(const Duration(milliseconds: 800));
                   },
@@ -49,6 +54,8 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (ref.watch(databaseConfigProvider).isDemoMode)
+                          const _DemoModeBanner(),
                         EntranceAnimation(
                           index: 0,
                           child: FleetStatsSummary(trackers: trackers),
@@ -125,7 +132,12 @@ class _FleetOverviewPageState extends ConsumerState<FleetOverviewPage> {
               ],
             ),
             loading: () => const Center(child: CupertinoActivityIndicator()),
-            error: (err, stack) => Center(child: Text('Error: $err')),
+            error: (err, stack) => ErrorStateView(
+              error: err,
+              onRetry: () => ref.invalidate(fleetTrackersProvider),
+              onResetToDemo: () =>
+                  ref.read(databaseConfigProvider.notifier).enableDemoMode(),
+            ),
           ),
           FloatingHeader(
             title: 'Fleet Overview',
@@ -167,7 +179,10 @@ class _NotificationBadge extends ConsumerWidget {
 
     return CupertinoButton(
       padding: EdgeInsets.zero,
-      onPressed: onTap,
+      onPressed: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -212,3 +227,65 @@ class _NotificationBadge extends ConsumerWidget {
     );
   }
 }
+
+class _DemoModeBanner extends StatelessWidget {
+  const _DemoModeBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => CloudConnectionModal.show(context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemOrange.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: CupertinoColors.systemOrange.withValues(alpha: 0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              CupertinoIcons.info_circle_fill,
+              color: CupertinoColors.systemOrange,
+              size: 28,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Demo Sandbox Mode',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: CupertinoColors.systemOrange,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tap here to connect your own Supabase database to track live shipments.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.resolvedTextPrimary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              CupertinoIcons.chevron_right,
+              size: 16,
+              color: AppTheme.resolvedTextSecondary(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

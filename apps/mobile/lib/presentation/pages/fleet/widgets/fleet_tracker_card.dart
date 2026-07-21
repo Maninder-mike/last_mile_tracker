@@ -1,4 +1,6 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:last_mile_tracker/core/theme/app_theme.dart';
 import 'package:last_mile_tracker/domain/models/fleet_tracker.dart';
 import 'package:last_mile_tracker/presentation/widgets/glass_container.dart';
@@ -24,9 +26,25 @@ class FleetTrackerCard extends StatelessWidget {
         : 0;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
       child: GlassContainer(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: tracker.status == 'critical'
+            ? AppTheme.critical.withValues(alpha: 0.05)
+            : (tracker.status == 'warning'
+                ? AppTheme.warning.withValues(alpha: 0.05)
+                : null),
+        border: Border.all(
+          color: tracker.status == 'critical'
+              ? AppTheme.critical.withValues(alpha: 0.25)
+              : (tracker.status == 'warning'
+                  ? AppTheme.warning.withValues(alpha: 0.25)
+                  : CupertinoColors.white.withValues(alpha: 0.08)),
+          width: tracker.status == 'critical' || tracker.status == 'warning' ? 1.5 : 0.5,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -200,13 +218,18 @@ class FleetTrackerCard extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: resolvedColor.withValues(alpha: 0.3),
+                    color: resolvedColor.withValues(alpha: 0.4),
                     blurRadius: 3,
                     spreadRadius: 0.5,
                   ),
                 ],
               ),
-            ),
+            )
+            .animate(
+              target: (tracker.status == 'critical' || tracker.status == 'warning') ? 1.0 : 0.0,
+              onPlay: (c) => c.repeat(reverse: true),
+            )
+            .scale(begin: const Offset(1.0, 1.0), end: const Offset(1.3, 1.3), duration: 1.seconds, curve: Curves.easeInOut),
           ),
         ],
       ),

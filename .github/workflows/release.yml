@@ -1,4 +1,4 @@
-name: Unified App Stores Release
+name: Android Play Store Release
 
 on:
   push:
@@ -113,8 +113,8 @@ jobs:
           cd ../../apps/mobile
           flutter pub get
           dart run build_runner build --delete-conflicting-outputs
-          flutter build apk --release --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
-          flutter build appbundle --release --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
+          flutter build apk --release --obfuscate --split-debug-info=build/symbols --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
+          flutter build appbundle --release --obfuscate --split-debug-info=build/symbols --build-number=${{ steps.version.outputs.version_code }} --no-tree-shake-icons
 
       - name: Stage Artifacts
         run: |
@@ -122,6 +122,7 @@ jobs:
           cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk staging/
           cp apps/mobile/build/app/outputs/bundle/release/app-release.aab staging/
           cp apps/mobile/build/app/outputs/mapping/release/mapping.txt staging/ || echo "No mapping file found"
+          cp -r apps/mobile/build/symbols staging/ || echo "No symbols directory"
 
       - name: Upload to Play Store
         uses: r0adkll/upload-google-play@v1
@@ -144,81 +145,3 @@ jobs:
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  release_ios:
-    name: 🍎 iOS Build & Release
-    runs-on: macos-latest
-    timeout-minutes: 45
-    env:
-      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            apps/mobile/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Install dependencies
-        run: |
-          cd apps/mobile
-          flutter pub get
-
-      - name: Generate Code
-        run: |
-          cd packages/lmt_models
-          dart pub get
-          dart run build_runner build --delete-conflicting-outputs
-          cd ../../apps/mobile
-          flutter pub get
-          dart run build_runner build --delete-conflicting-outputs
-
-      - name: Install Apple Certificate and Provisioning Profile
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_BUILD_PROVISION_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
-        run: |
-          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
-
-      - name: Build iOS IPA
-        run: |
-          cd apps/mobile
-          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
-
-      - name: Upload to TestFlight
-        uses: apple-actions/upload-testflight-build@v1
-        with:
-          app-path: 'apps/mobile/build/ios/ipa/last_mile_tracker.ipa'
-          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
